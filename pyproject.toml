@@ -1,7 +1,7 @@
 [project]
-name = "team-ai-project"
+name = "team-ai-project monorepo"
 version = "0.1.0"
-description = "Team AI Project"
+description = "Team newbiz AI Project for smishing detection"
 requires-python = ">=3.12"
 dependencies = []
 
@@ -27,7 +27,16 @@ quote-style = "double"
 indent-style = "space"
 
 [tool.pytest.ini_options]
-testpaths = ["tests"]
+python_files = "test_*.py"      # 인식할 파일 패턴
+addopts = "-v --durations=10"   # 기본 옵션 (상세 출력, 느린 테스트 표시 등)
+
+[tool.uv.workspace]
+members = [
+    "apps/frontend/python",
+    "apps/backend",
+    "apps/ai_service", # 또는 "apps/*"
+    "packages/*"
+]
 
 [dependency-groups]
 dev = [
