@@ -17,6 +17,8 @@ venv/
 
 # uv
 .python-version
+# ruff
+.ruff_cache
 
 # Jupyter
 .ipynb_checkpoints/
