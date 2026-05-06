@@ -42,3 +42,6 @@ data/
 logs/
 wandb/
 mlruns/
+
+# custom folders
+raw_data
