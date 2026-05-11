@@ -14,3 +14,9 @@ frontend-python = "frontend_python:main"
 [build-system]
 requires = ["uv_build>=0.11.7,<0.12.0"]
 build-backend = "uv_build"
+
+[tool.pytest.ini_options]
+pythonpath=["src"] # 파이썬 import용
+testpaths = ["tests"]           # 테스트 파일을 찾을 기본 디렉터리
+python_files = "test_*.py"      # 인식할 파일 패턴
+addopts = "-v --durations=10"   # 기본 옵션 (상세 출력, 느린 테스트 표시 등)
