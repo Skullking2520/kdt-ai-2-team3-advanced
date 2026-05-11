@@ -7,7 +7,8 @@ authors = [
 ]
 requires-python = ">=3.12"
 dependencies = [ # 운영용 의존성
-    "fastapi>=0.136.1",
+    "fastapi[standard]>=0.136.1",
+    "gunicorn>=26.0.0",
     "uvicorn>=0.46.0",
 ]
 
