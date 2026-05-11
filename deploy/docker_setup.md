@@ -24,10 +24,12 @@ python-dotenv
 docker compose -f deploy/docker-compose.example.yml up --build
 ```
 
+`docker-compose.example.yml`의 `env_file` 경로는 compose 파일 위치인 `deploy/`를 기준으로 한다. 따라서 예시 실행 명령은 repo root에서 실행하고, compose 파일 안에서는 `.env.example`로 참조한다.
+
 ## Notes
 
 - `docker-compose.example.yml`은 예시 파일이다.
 - 실제 운영용으로 사용하기 전에 build context, Dockerfile 위치, port, env file 경로를 확인해야 한다.
+- `AI_SERVICE_MODE` 기본값은 `deploy/.env.example`에서 관리한다. compose `environment`로 하드코딩하면 `hf_endpoint` 전환 시 env file 값을 덮어쓸 수 있으므로 피한다.
 - 실제 secret은 `.env.example`에 작성하지 않는다.
 - 운영 환경에서는 GitHub Secrets, cloud secret manager, server environment variables 중 하나로 secret을 주입한다.
-
