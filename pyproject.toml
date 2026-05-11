@@ -1,5 +1,5 @@
 [project]
-name = "team-ai-project monorepo"
+name = "team-ai-project-monorepo"
 version = "0.1.0"
 description = "Team newbiz AI Project for smishing detection"
 requires-python = ">=3.12"
@@ -32,10 +32,9 @@ addopts = "-v --durations=10"   # 기본 옵션 (상세 출력, 느린 테스트
 
 [tool.uv.workspace]
 members = [
-    "apps/frontend/python",
-    "apps/backend",
-    "apps/ai_service", # 또는 "apps/*"
-    "packages/*"
+    "frontend_python",
+    "backend",
+    "ai_service"
 ]
 
 [dependency-groups]
