@@ -1,0 +1,22 @@
+# Example only.
+# This compose file documents the intended ai_service deployment shape.
+# Before using it for a real deployment, verify the build context, Dockerfile path,
+# service command, ports, and environment file path.
+
+services:
+  ai_service:
+    build:
+      context: ..
+      # Example path only. Create or update this Dockerfile when ai_service is implemented.
+      dockerfile: deploy/Dockerfile.example
+    ports:
+      - "8001:8001"
+    env_file:
+      # Example only. Do not put real secrets in .env.example.
+      - deploy/.env.example
+    environment:
+      # Keep mock as the default until the Hugging Face Endpoints are ready.
+      AI_SERVICE_MODE: mock
+    # Example command only. Replace with the real module path after ai_service is implemented.
+    command: ["uvicorn", "ai_service.main:app", "--host", "0.0.0.0", "--port", "8001"]
+
