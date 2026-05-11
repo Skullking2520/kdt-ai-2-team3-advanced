@@ -3,7 +3,16 @@ name = "team-ai-project-monorepo"
 version = "0.1.0"
 description = "Team newbiz AI Project for smishing detection"
 requires-python = ">=3.12"
-dependencies = []
+dependencies = [
+    "backend", # 워크스페이스 내의 backend 패키지를 등록
+    "frontend_python",
+    "ai_service"
+] # backend를 로컬 편집 가능(editable) 패키지로 등록
+
+[tool.uv.sources]
+backend = { workspace = true }
+frontend_python = { workspace = true }
+ai_service = { workspace = true }
 
 [project.optional-dependencies]
 dev = [
