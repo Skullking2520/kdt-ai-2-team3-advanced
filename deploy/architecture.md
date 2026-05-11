@@ -1,0 +1,62 @@
+# Deployment Architecture
+
+이 문서는 최종 목표인 B안 구조를 기준으로 전체 서비스 흐름을 설명한다.
+
+현재는 프론트엔드, 백엔드, 모델이 개발 중이므로 `Mock Inference Mode`를 먼저 사용한다. 모델 학습과 Hugging Face Inference Endpoint 준비가 끝나면 환경변수만 교체하여 `hf_endpoint` mode로 전환하는 것을 목표로 한다.
+
+```mermaid
+graph LR
+    subgraph Frontend [Frontend - Developing]
+        ST[Streamlit App]
+    end
+
+    subgraph Backend [Backend - Developing]
+        BE[Backend API]
+        DB[(External Database)]
+    end
+
+    subgraph AI_Service [AI Service Wrapper]
+        API[FastAPI Wrapper API]
+        Client[HF Endpoint Client]
+        Normalize[Response Normalizer]
+        Mock[Mock Inference Mode]
+    end
+
+    subgraph HF [Future Hugging Face Endpoints]
+        ENC[Encoder Endpoint - KcELECTRA Classifier]
+        DEC[Decoder Endpoint - Explanation LLM]
+    end
+
+    ST -->|Future Request| BE
+    BE -->|POST /analyze| API
+    API --> Client
+    Client --> ENC
+    Client --> DEC
+    ENC --> Client
+    DEC --> Client
+    Client --> Normalize
+    Normalize --> API
+    API -->|Label + Confidence + Reason| BE
+    BE --> DB
+    Mock -.->|Used before model is ready| Normalize
+```
+
+## Target Flow
+
+1. Streamlit frontend가 backend API를 호출한다.
+2. Backend API가 `ai_service`의 `POST /analyze`를 호출한다.
+3. `ai_service` FastAPI wrapper가 현재 serving mode를 확인한다.
+4. `AI_SERVICE_MODE=mock`이면 mock inference 결과를 반환한다.
+5. `AI_SERVICE_MODE=hf_endpoint`이면 Hugging Face Encoder/Decoder Endpoint를 호출한다.
+6. Encoder는 피싱 분류 label과 confidence를 반환한다.
+7. Decoder는 사용자가 이해할 수 있는 explanation/reason을 생성한다.
+8. `ai_service`가 응답을 정규화해 backend에 반환한다.
+9. Backend가 결과를 DB에 저장하고 frontend에 전달한다.
+
+## Current Assumption
+
+- 모델은 아직 학습 중이다.
+- 실제 HF Endpoint URL은 아직 없다.
+- DB와 backend schema는 확정 전이다.
+- 따라서 API 응답 필드와 mock mode를 먼저 고정해 병렬 개발이 가능하게 한다.
+
