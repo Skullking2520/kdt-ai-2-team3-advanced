@@ -6,7 +6,8 @@ requires-python = ">=3.12"
 dependencies = [
     "backend", # 워크스페이스 내의 backend 패키지를 등록
     "frontend_python",
-    "ai_service"
+    "ai_service",
+    "python-dotenv>=1.2.2",
 ] # backend를 로컬 편집 가능(editable) 패키지로 등록
 
 [tool.uv.sources]

@@ -50,3 +50,4 @@ mlruns/
 
 # custom folders
 raw_data
+my_local_model/

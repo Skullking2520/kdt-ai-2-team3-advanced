@@ -9,7 +9,7 @@ uv run --package backend fastapi dev backend/src/backend/main.py
 cd backend 후 시작하기
 
 ```bash
-uv run fastapi dev backend/src/backend/main.py
+uv run fastapi dev src/backend/main.py
 ```
 
 production 배포 환경에서 시동
