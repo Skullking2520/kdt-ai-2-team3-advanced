@@ -12,11 +12,7 @@ services:
     ports:
       - "8001:8001"
     env_file:
-      # Example only. Do not put real secrets in .env.example.
-      - deploy/.env.example
-    environment:
-      # Keep mock as the default until the Hugging Face Endpoints are ready.
-      AI_SERVICE_MODE: mock
+      # Relative to this compose file. Do not put real secrets in .env.example.
+      - .env.example
     # Example command only. Replace with the real module path after ai_service is implemented.
     command: ["uvicorn", "ai_service.main:app", "--host", "0.0.0.0", "--port", "8001"]
-
