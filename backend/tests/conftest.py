@@ -6,14 +6,12 @@ from ..src.backend.main import app  # 실제 FastAPI 인스턴스 위치
 
 
 # 1. 테스트용 클라이언트 Fixture
+# def test_read_root(client): 로 바로 주입 가능
 @pytest.fixture
 def client():
     """FastAPI 테스트 클라이언트를 반환합니다."""
     with TestClient(app) as c:
         yield c
-
-
-# def test_read_root(client): 로 바로 주입 가능
 
 
 # 2. 테스트 환경 변수 설정 (필요 시)
