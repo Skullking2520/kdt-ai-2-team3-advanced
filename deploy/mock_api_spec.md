@@ -88,3 +88,5 @@ HF_TOKEN=
 ```
 
 Backend는 `/analyze` contract가 유지되는 한 별도 변경 없이 동일 API를 호출한다.
+
+실제 endpoint 전환 전에는 Encoder가 반환하는 원시 label mapping을 확인해야 한다. 예를 들어 `LABEL_0`이 정상인지 피싱인지 모델 학습 설정에 따라 달라질 수 있다.
