@@ -13,6 +13,7 @@ graph LR
     subgraph Backend [Backend - Developing]
         BE[Backend API]
         DB[(External Database)]
+        Report[Report Flow and Phone Number Count]
     end
 
     subgraph Deploy [Deploy Wrapper]
@@ -38,6 +39,8 @@ graph LR
     Normalize --> API
     API -->|Label + Confidence + Reason| BE
     BE --> DB
+    BE --> Report
+    Report --> DB
     Mock -.->|Used before model is ready| Normalize
 ```
 
@@ -52,6 +55,7 @@ graph LR
 7. Decoder는 사용자가 이해할 수 있는 explanation/reason을 생성한다.
 8. deploy wrapper가 응답을 정규화해 backend에 반환한다.
 9. Backend가 결과를 DB에 저장하고 frontend에 전달한다.
+10. 사용자가 신고를 누르고 전화번호가 입력된 경우, frontend/backend가 신고 안내 흐름과 전화번호 신고 횟수 저장을 처리한다.
 
 ## Current Assumption
 
@@ -60,3 +64,4 @@ graph LR
 - DB와 backend schema는 확정 전이다.
 - 따라서 API 응답 필드와 mock mode를 먼저 고정해 병렬 개발이 가능하게 한다.
 - `ai_service/`는 모델링 담당자 영역이므로 deployment wrapper 코드는 `deploy/app/`에 둔다.
+- deploy wrapper는 `text`만 분석하고, `phone_number`와 신고 DB 관리는 backend 영역으로 둔다.

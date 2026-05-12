@@ -8,7 +8,7 @@ Base URL 예시:
 http://localhost:8001
 ```
 
-운영 환경에서는 `AI_SERVICE_URL` 환경변수로 관리한다.
+Backend가 deploy wrapper를 호출할 때는 backend 환경에서 `AI_SERVICE_URL` 같은 변수로 이 base URL을 관리하는 것을 권장한다. Deploy wrapper 자체는 이 값을 사용하지 않는다.
 
 ## GET `/health`
 
@@ -28,6 +28,8 @@ Deploy wrapper 상태 확인용 endpoint다.
 
 입력 문장을 분석해 피싱 여부, confidence, 설명을 반환한다.
 
+Deploy wrapper는 문자 내용만 분석한다. `phone_number`는 선택 입력값이지만 deploy wrapper request에 포함하지 않는다. 전화번호 저장, 신고 횟수 증가, 신고 안내 페이지 이동은 backend/frontend 책임이다.
+
 ### Request
 
 ```json
@@ -42,8 +44,8 @@ Deploy wrapper 상태 확인용 endpoint다.
 {
   "success": true,
   "label": "phishing",
-  "confidence": 0.94,
-  "reason": "계정 정지와 인증 링크 클릭을 유도하는 표현이 포함되어 피싱 가능성이 높습니다.",
+  "confidence": 0.91,
+  "reason": "계정 정지, 인증 요구, 링크 클릭 유도와 같은 피싱 의심 표현으로 위험도가 높게 분류되었습니다.",
   "encoder_model_id": "team/kcelectra-smishing-classifier",
   "encoder_model_version": "v1.0.0",
   "decoder_model_id": "team/decoder-explainer",
@@ -72,11 +74,37 @@ Deploy wrapper 상태 확인용 endpoint다.
 }
 ```
 
+### Verified Curl Examples
+
+Health check:
+
+```bash
+curl http://localhost:8001/health
+```
+
+Analyze mock request:
+
+```bash
+curl -X POST http://localhost:8001/analyze \
+  -H "Content-Type: application/json" \
+  -d '{"text":"고객님의 계정이 정지되었습니다. 아래 링크에서 인증하세요."}'
+```
+
+Invalid request:
+
+```bash
+curl -X POST http://localhost:8001/analyze \
+  -H "Content-Type: application/json" \
+  -d '{}'
+```
+
 ## Request Fields
 
 | Field | Type | Required | Description |
 | --- | --- | --- | --- |
 | `text` | string | yes | 분석할 메시지 원문 |
+
+추가 필드는 허용하지 않는다. 예를 들어 `phone_number`는 backend가 별도로 관리해야 하며 `/analyze`에 전달하지 않는다.
 
 ## Response Fields
 
@@ -99,6 +127,7 @@ Deploy wrapper 상태 확인용 endpoint다.
 - Backend는 `/analyze` 응답을 받은 뒤 DB에 prediction log를 저장한다.
 - `success=false`이면 frontend에 일반화된 오류 메시지를 전달하고 내부 로그에 상세 내용을 남긴다.
 - `model_id`, `model_version`, `serving_mode`는 추후 모델 변경과 rollback 추적을 위해 함께 저장한다.
+- 사용자가 신고를 누르고 전화번호가 입력된 경우, backend가 전화번호와 신고 횟수를 별도 DB 테이블 또는 필드로 관리한다.
 
 ## Label Normalization
 

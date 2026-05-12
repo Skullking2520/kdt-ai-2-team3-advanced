@@ -22,11 +22,25 @@ python-dotenv
 
 ## Example Command
 
+repo root에서 실행할 때:
+
 ```bash
 docker compose -f deploy/docker-compose.example.yml up --build
 ```
 
 `docker-compose.example.yml`의 `env_file` 경로는 compose 파일 위치인 `deploy/`를 기준으로 한다. 따라서 예시 실행 명령은 repo root에서 실행하고, compose 파일 안에서는 `.env.example`로 참조한다.
+
+`deploy/` 디렉터리에서 실행할 때:
+
+```bash
+cd deploy
+docker compose -f docker-compose.example.yml config
+docker compose -f docker-compose.example.yml up --build
+```
+
+## Verification Status
+
+Docker compose validation is pending because Docker CLI is not available in the current local environment.
 
 ## Notes
 

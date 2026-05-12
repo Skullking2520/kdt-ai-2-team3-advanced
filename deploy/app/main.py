@@ -51,6 +51,9 @@ class Settings(BaseModel):
 class AnalyzeRequest(BaseModel):
     text: str = Field(min_length=1)
 
+    class Config:
+        extra = "forbid"
+
 
 class AnalyzeResponse(BaseModel):
     success: bool
