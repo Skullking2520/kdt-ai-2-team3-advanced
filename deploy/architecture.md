@@ -15,7 +15,7 @@ graph LR
         DB[(External Database)]
     end
 
-    subgraph AI_Service [AI Service Wrapper]
+    subgraph Deploy [Deploy Wrapper]
         API[FastAPI Wrapper API]
         Client[HF Endpoint Client]
         Normalize[Response Normalizer]
@@ -44,13 +44,13 @@ graph LR
 ## Target Flow
 
 1. Streamlit frontend가 backend API를 호출한다.
-2. Backend API가 `ai_service`의 `POST /analyze`를 호출한다.
-3. `ai_service` FastAPI wrapper가 현재 serving mode를 확인한다.
+2. Backend API가 deploy wrapper의 `POST /analyze`를 호출한다.
+3. deploy wrapper FastAPI app이 현재 serving mode를 확인한다.
 4. `AI_SERVICE_MODE=mock`이면 mock inference 결과를 반환한다.
 5. `AI_SERVICE_MODE=hf_endpoint`이면 Hugging Face Encoder/Decoder Endpoint를 호출한다.
 6. Encoder는 피싱 분류 label과 confidence를 반환한다.
 7. Decoder는 사용자가 이해할 수 있는 explanation/reason을 생성한다.
-8. `ai_service`가 응답을 정규화해 backend에 반환한다.
+8. deploy wrapper가 응답을 정규화해 backend에 반환한다.
 9. Backend가 결과를 DB에 저장하고 frontend에 전달한다.
 
 ## Current Assumption
@@ -59,4 +59,4 @@ graph LR
 - 실제 HF Endpoint URL은 아직 없다.
 - DB와 backend schema는 확정 전이다.
 - 따라서 API 응답 필드와 mock mode를 먼저 고정해 병렬 개발이 가능하게 한다.
-
+- `ai_service/`는 모델링 담당자 영역이므로 deployment wrapper 코드는 `deploy/app/`에 둔다.

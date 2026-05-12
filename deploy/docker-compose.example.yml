@@ -1,18 +1,18 @@
 # Example only.
-# This compose file documents the intended ai_service deployment shape.
+# This compose file documents the intended deploy wrapper shape.
 # Before using it for a real deployment, verify the build context, Dockerfile path,
 # service command, ports, and environment file path.
 
 services:
-  ai_service:
+  deploy_wrapper:
     build:
       context: ..
-      # Example path only. Create or update this Dockerfile when ai_service is implemented.
+      # Example path only. Review before using this Dockerfile for deployment.
       dockerfile: deploy/Dockerfile.example
     ports:
       - "8001:8001"
     env_file:
       # Relative to this compose file. Do not put real secrets in .env.example.
       - .env.example
-    # Example command only. Replace with the real module path after ai_service is implemented.
-    command: ["uvicorn", "ai_service.main:app", "--host", "0.0.0.0", "--port", "8001"]
+    # Example command only. The wrapper app lives under deploy/app, not ai_service/.
+    command: ["uvicorn", "deploy.app.main:app", "--host", "0.0.0.0", "--port", "8001"]

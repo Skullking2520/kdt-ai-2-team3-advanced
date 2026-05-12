@@ -2,7 +2,9 @@
 
 현재 단계에서는 실제 Docker image를 완성하지 않고, `deploy/` 폴더에서 적용 방향과 예시 파일만 정리한다.
 
-`ai_service`가 FastAPI wrapper라면 Docker image는 비교적 가볍게 구성할 수 있다. Hugging Face Inference Endpoint를 사용하면 wrapper image 안에 PyTorch나 Transformers 전체 runtime을 포함하지 않아도 될 수 있다.
+Deploy wrapper가 FastAPI app이라면 Docker image는 비교적 가볍게 구성할 수 있다. Hugging Face Inference Endpoint를 사용하면 wrapper image 안에 PyTorch나 Transformers 전체 runtime을 포함하지 않아도 될 수 있다.
+
+Wrapper app은 `deploy/app/` 아래에 둔다. `ai_service/`는 모델링 담당자가 모델 학습, 평가, inference 실험 코드를 관리하는 영역이므로 Docker wrapper 구현에서 수정하지 않는다.
 
 ## Expected Packages
 
@@ -16,7 +18,7 @@ pydantic
 python-dotenv
 ```
 
-실제 dependency는 `ai_service` 구현 시점에 `pyproject.toml` 또는 requirements 파일에서 관리한다.
+예시 dependency는 `deploy/requirements.example.txt`에 둔다. 실제 운영 dependency는 배포 방식이 확정될 때 별도 잠금 파일이나 프로젝트 설정으로 관리한다.
 
 ## Example Command
 

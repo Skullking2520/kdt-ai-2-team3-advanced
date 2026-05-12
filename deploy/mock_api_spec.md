@@ -10,6 +10,8 @@ AI_SERVICE_MODE=mock
 
 mock mode에서는 실제 Hugging Face Endpoint를 호출하지 않는다. 대신 간단한 rule 또는 고정 응답으로 `/analyze` API response shape을 유지한다.
 
+Mock mode는 `deploy/app/`의 FastAPI wrapper에서 지원한다. `ai_service/` 폴더는 모델링 담당자 영역이므로 mock wrapper 구현을 두지 않는다.
+
 ## Purpose
 
 - 실제 모델 연결 전 API 응답 형식을 고정한다.
@@ -86,4 +88,3 @@ HF_TOKEN=
 ```
 
 Backend는 `/analyze` contract가 유지되는 한 별도 변경 없이 동일 API를 호출한다.
-

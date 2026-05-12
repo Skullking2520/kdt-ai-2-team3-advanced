@@ -1,14 +1,17 @@
 # Deploy Documentation
 
-이 폴더는 실제 서비스 코드가 아니라 AI 모델 배포, 모델 서빙, `ai_service` 연동 구조를 정리하기 위한 설계 문서와 예시 파일을 담는다.
+이 폴더는 AI 모델 배포, 모델 서빙, backend 연동 구조를 정리하기 위한 설계 문서와 deployment wrapper 예시 코드를 담는다.
 
 현재 `frontend_python`, `backend`, `ai_service`, 모델 학습이 모두 진행 중이므로 이 단계에서는 실제 백엔드나 실제 모델에 직접 연결하지 않는다. 대신 mock-first 방식으로 API 형태와 배포 구조를 먼저 고정한다.
 
-최종 목표는 `ai_service`가 Hugging Face Inference Endpoint를 직접 감싸는 FastAPI wrapper 역할을 하는 구조다. 백엔드는 `ai_service`의 `/analyze` API만 호출하고, `ai_service`는 Encoder Endpoint와 Decoder Endpoint 호출 결과를 서비스 응답 형식으로 정규화한다.
+중요한 책임 경계가 있다. `ai_service/` 폴더는 모델링 담당자가 학습, 평가, inference 실험 코드를 관리하는 영역이므로 이 작업에서는 수정하지 않는다. Hugging Face Endpoint 기반 FastAPI wrapper가 필요하면 `deploy/app/` 아래에 작성한다.
+
+최종 목표는 `deploy` wrapper가 Hugging Face Inference Endpoint를 직접 감싸는 FastAPI wrapper 역할을 하는 구조다. 백엔드는 deploy wrapper의 `/analyze` API만 호출하고, deploy wrapper는 Encoder Endpoint와 Decoder Endpoint 호출 결과를 `label`, `confidence`, `reason` 형식으로 정규화한다.
 
 ## Scope
 
 - `deploy/` 내부 문서 및 예시 파일 작성
+- `deploy/app/` 내부 mock-first FastAPI wrapper 작성
 - mock mode 기준 API contract 정리
 - Hugging Face Endpoint 전환을 위한 환경변수와 체크리스트 정리
 - Docker/docker-compose 적용 방향 초안 정리
@@ -29,4 +32,3 @@
 - 실제 DB 비밀번호 금지
 - 실제 운영 endpoint secret 금지
 - `.env` 파일 대신 `.env.example`만 사용
-

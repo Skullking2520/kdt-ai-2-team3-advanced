@@ -1,6 +1,6 @@
-# AI Service API Contract
+# Deploy Wrapper API Contract
 
-이 문서는 backend 담당자가 `ai_service`를 호출할 때 참고할 API contract다.
+이 문서는 backend 담당자가 deploy wrapper를 호출할 때 참고할 API contract다. Deploy wrapper FastAPI app은 `deploy/app/` 아래에 두며, `ai_service/` 폴더는 모델링 담당자 영역으로 유지한다.
 
 Base URL 예시:
 
@@ -12,14 +12,15 @@ http://localhost:8001
 
 ## GET `/health`
 
-`ai_service` 상태 확인용 endpoint다.
+Deploy wrapper 상태 확인용 endpoint다.
 
 ### Response
 
 ```json
 {
   "status": "ok",
-  "service": "ai_service"
+  "service": "deploy_wrapper",
+  "serving_mode": "mock"
 }
 ```
 
@@ -57,7 +58,7 @@ http://localhost:8001
 {
   "success": false,
   "error_code": "INFERENCE_FAILED",
-  "message": "AI service inference failed"
+  "message": "Deploy wrapper inference failed"
 }
 ```
 
@@ -88,4 +89,3 @@ http://localhost:8001
 - Backend는 `/analyze` 응답을 받은 뒤 DB에 prediction log를 저장한다.
 - `success=false`이면 frontend에 일반화된 오류 메시지를 전달하고 내부 로그에 상세 내용을 남긴다.
 - `model_id`, `model_version`, `serving_mode`는 추후 모델 변경과 rollback 추적을 위해 함께 저장한다.
-
