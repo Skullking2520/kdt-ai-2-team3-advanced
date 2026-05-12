@@ -26,14 +26,17 @@ resource "ncloud_subnet" "db_subnet" {
 
 # 3. Cloud DB for MySQL 생성
 resource "ncloud_mysql" "smishing_db" {
-  database_name      = "smishing-static-checking-db"
-  subnet_no          = ncloud_subnet.db_subnet.id
-  server_name_prefix = "smishing-db"
-  service_name       = "smishing-db"
-  user_name          = var.db_username
-  user_password      = var.db_password
-  host_ip            = "10.0.2.%"
-  is_ha              = false # stnadby server, 멀티존 해제
+  database_name       = "smishing-static-checking-db"
+  subnet_no           = ncloud_subnet.db_subnet.id
+  server_name_prefix  = "smishing-db"
+  service_name        = "smishing-db"
+  user_name           = var.db_username
+  user_password       = var.db_password
+  host_ip             = "10.0.2.%"
+  is_ha               = false # standby server, 멀티존 해제
+  is_backup           = true
+  is_automatic_backup = true
+  #port = 3306(default)
   # DB 서버 사양 (기본: 가장 낮은 사양 선택)
   # vcpu 2개, 메모리 4gb, 디스크 50gb, 요금 한달 17만원, 세대 g2
 }
