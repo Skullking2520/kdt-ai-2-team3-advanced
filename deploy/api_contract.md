@@ -62,6 +62,16 @@ Deploy wrapper 상태 확인용 endpoint다.
 }
 ```
 
+잘못된 요청 body는 같은 error shape로 반환한다.
+
+```json
+{
+  "success": false,
+  "error_code": "INVALID_REQUEST",
+  "message": "Request body is invalid"
+}
+```
+
 ## Request Fields
 
 | Field | Type | Required | Description |
@@ -89,3 +99,19 @@ Deploy wrapper 상태 확인용 endpoint다.
 - Backend는 `/analyze` 응답을 받은 뒤 DB에 prediction log를 저장한다.
 - `success=false`이면 frontend에 일반화된 오류 메시지를 전달하고 내부 로그에 상세 내용을 남긴다.
 - `model_id`, `model_version`, `serving_mode`는 추후 모델 변경과 rollback 추적을 위해 함께 저장한다.
+
+## Label Normalization
+
+Deploy wrapper는 backend에 원시 모델 label을 그대로 넘기지 않고 `phishing` 또는 `normal`로 정규화한다.
+
+현재 wrapper 예시의 기본 mapping:
+
+| Raw encoder label | API label |
+| --- | --- |
+| `LABEL_0` | `normal` |
+| `LABEL_1` | `phishing` |
+| `NORMAL` | `normal` |
+| `PHISHING` | `phishing` |
+| `SMISHING` | `phishing` |
+
+실제 Encoder 학습 label mapping이 다르면 Hugging Face Endpoint 연결 전에 wrapper mapping을 수정해야 한다.

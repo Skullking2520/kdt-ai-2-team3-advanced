@@ -2,12 +2,12 @@
 
 from __future__ import annotations
 
-import json
 import os
 from typing import Any
-from urllib import error, request
 
-from fastapi import FastAPI
+import requests
+from fastapi import FastAPI, Request
+from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 
@@ -24,6 +24,16 @@ MOCK_KEYWORDS = (
     "즉시",
     "차단",
 )
+
+LABEL_ALIASES = {
+    "LABEL_0": "normal",
+    "LABEL_1": "phishing",
+    "NORMAL": "normal",
+    "PHISHING": "phishing",
+    "SMISHING": "phishing",
+    "0": "normal",
+    "1": "phishing",
+}
 
 
 class Settings(BaseModel):
@@ -63,7 +73,26 @@ class ErrorResponse(BaseModel):
 app = FastAPI(title="Deploy Wrapper API", version="0.1.0")
 
 
+@app.exception_handler(RequestValidationError)
+def validation_exception_handler(
+    _request: Request,
+    _exc: RequestValidationError,
+) -> JSONResponse:
+    return JSONResponse(
+        status_code=422,
+        content={
+            "success": False,
+            "error_code": "INVALID_REQUEST",
+            "message": "Request body is invalid",
+        },
+    )
+
+
 def load_settings() -> Settings:
+    timeout_seconds = parse_positive_int(
+        os.getenv("REQUEST_TIMEOUT_SECONDS"), default=60
+    )
+
     return Settings(
         serving_mode=os.getenv("AI_SERVICE_MODE", "mock"),
         hf_token=os.getenv("HF_TOKEN", ""),
@@ -75,8 +104,23 @@ def load_settings() -> Settings:
         encoder_model_version=os.getenv("ENCODER_MODEL_VERSION", "v1.0.0"),
         decoder_model_id=os.getenv("DECODER_MODEL_ID", "team/decoder-explainer"),
         decoder_model_version=os.getenv("DECODER_MODEL_VERSION", "v1.0.0"),
-        request_timeout_seconds=int(os.getenv("REQUEST_TIMEOUT_SECONDS", "60")),
+        request_timeout_seconds=timeout_seconds,
     )
+
+
+def parse_positive_int(value: str | None, default: int) -> int:
+    if value is None or value.strip() == "":
+        return default
+    try:
+        parsed = int(value)
+    except ValueError:
+        return default
+    return parsed if parsed > 0 else default
+
+
+def normalize_label(raw_label: str) -> str:
+    label = raw_label.strip()
+    return LABEL_ALIASES.get(label.upper(), label.lower())
 
 
 def base_response(settings: Settings) -> dict[str, str]:
@@ -97,8 +141,8 @@ def mock_analyze(text: str, settings: Settings) -> AnalyzeResponse:
             "label": "phishing",
             "confidence": 0.91,
             "reason": (
-                "해당 메시지는 계정 정지, 인증 요구, 링크 클릭 유도와 같은 "
-                "피싱 의심 표현을 포함할 가능성이 있어 위험도가 높게 분류되었습니다."
+                "계정 정지, 인증 요구, 링크 클릭 유도와 같은 "
+                "피싱 의심 표현으로 위험도가 높게 분류되었습니다."
             ),
         }
     else:
@@ -107,7 +151,7 @@ def mock_analyze(text: str, settings: Settings) -> AnalyzeResponse:
             "label": "normal",
             "confidence": 0.82,
             "reason": (
-                "해당 메시지는 피싱으로 의심되는 강한 표현이나 링크 클릭 유도 "
+                "피싱으로 의심되는 강한 표현이나 링크 클릭 유도 "
                 "패턴이 뚜렷하지 않습니다."
             ),
         }
@@ -116,18 +160,26 @@ def mock_analyze(text: str, settings: Settings) -> AnalyzeResponse:
     return AnalyzeResponse(**payload)
 
 
-def post_hf_endpoint(url: str, token: str, payload: dict[str, Any], timeout: int) -> Any:
+def post_hf_endpoint(
+    url: str,
+    token: str,
+    payload: dict[str, Any],
+    timeout: int,
+) -> Any:
     headers = {"Content-Type": "application/json"}
     if token:
         headers["Authorization"] = f"Bearer {token}"
 
-    encoded_payload = json.dumps(payload).encode("utf-8")
-    req = request.Request(url, data=encoded_payload, headers=headers, method="POST")
-
     try:
-        with request.urlopen(req, timeout=timeout) as response:
-            return json.loads(response.read().decode("utf-8"))
-    except (error.HTTPError, error.URLError, TimeoutError, json.JSONDecodeError) as exc:
+        response = requests.post(
+            url,
+            headers=headers,
+            json=payload,
+            timeout=timeout,
+        )
+        response.raise_for_status()
+        return response.json()
+    except (requests.RequestException, ValueError) as exc:
         raise RuntimeError("Hugging Face endpoint request failed") from exc
 
 
@@ -136,9 +188,11 @@ def normalize_encoder_response(response_payload: Any) -> tuple[str, float]:
         first_item = response_payload[0]
         if isinstance(first_item, list) and first_item:
             best = max(first_item, key=lambda item: item.get("score", 0.0))
-            return str(best.get("label", "unknown")), float(best.get("score", 0.0))
+            return normalize_label(str(best.get("label", "unknown"))), float(
+                best.get("score", 0.0)
+            )
         if isinstance(first_item, dict):
-            return str(first_item.get("label", "unknown")), float(
+            return normalize_label(str(first_item.get("label", "unknown"))), float(
                 first_item.get("score", first_item.get("confidence", 0.0))
             )
 
@@ -146,7 +200,7 @@ def normalize_encoder_response(response_payload: Any) -> tuple[str, float]:
         label = response_payload.get("label", response_payload.get("predicted_label"))
         confidence = response_payload.get("confidence", response_payload.get("score"))
         if label is not None and confidence is not None:
-            return str(label), float(confidence)
+            return normalize_label(str(label)), float(confidence)
 
     raise RuntimeError("Unsupported encoder endpoint response")
 
@@ -222,7 +276,11 @@ def health() -> dict[str, str]:
 @app.post(
     "/analyze",
     response_model=AnalyzeResponse,
-    responses={400: {"model": ErrorResponse}, 500: {"model": ErrorResponse}},
+    responses={
+        400: {"model": ErrorResponse},
+        422: {"model": ErrorResponse},
+        500: {"model": ErrorResponse},
+    },
 )
 def analyze(payload: AnalyzeRequest) -> AnalyzeResponse | JSONResponse:
     settings = load_settings()
