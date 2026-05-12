@@ -48,6 +48,12 @@ logs/
 wandb/
 mlruns/
 
+# terraform
+*.tfvars
+.terraform/
+terraform.tfstate
+terraform.tfstate.backup
+
 # custom folders
 raw_data
 my_local_model/
