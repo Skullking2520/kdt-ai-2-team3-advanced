@@ -17,10 +17,9 @@ fastapi
 uvicorn
 httpx
 pydantic
-python-dotenv
 ```
 
-예시 dependency는 `deploy/requirements.example.txt`에 둔다. Docker image는 `deploy/Dockerfile`을 사용해 wrapper app을 실행한다.
+Docker dependency는 `deploy/requirements.txt`에 둔다. Docker image는 `deploy/Dockerfile`을 사용해 wrapper app을 실행한다.
 
 ## Docker Files
 

@@ -2,7 +2,7 @@
 
 이 문서는 backend 담당자가 deploy wrapper를 호출할 때 참고할 API contract다. Deploy wrapper async FastAPI app은 `deploy/app/` 아래에 두며, `ai_service/` 폴더는 모델링 담당자 영역으로 유지한다.
 
-내부 구현은 `httpx.AsyncClient`를 사용해 Hugging Face Encoder/Decoder Endpoint를 호출한다. Decoder는 encoder의 `label`과 `confidence`가 필요하므로 두 endpoint 호출은 병렬이 아니라 순차 `await` 구조로 처리한다. API contract는 기존과 동일하게 유지한다.
+내부 구현은 FastAPI lifespan에서 관리되는 공유 `httpx.AsyncClient`를 사용해 Hugging Face Encoder/Decoder Endpoint를 호출한다. Decoder는 encoder의 `label`과 `confidence`가 필요하므로 두 endpoint 호출은 병렬이 아니라 순차 `await` 구조로 처리한다. API contract는 기존과 동일하게 유지한다.
 
 Base URL 예시:
 
@@ -65,6 +65,8 @@ Deploy wrapper는 문자 내용만 분석한다. `phone_number`는 선택 입력
   "message": "Deploy wrapper inference failed"
 }
 ```
+
+HF endpoint 관련 오류는 같은 error response shape를 유지하면서 `error_code`로 원인을 구분한다. 예를 들어 endpoint URL 설정 누락은 `CONFIGURATION_ERROR`, upstream 호출 실패는 `UPSTREAM_INFERENCE_FAILED`, 예상하지 못한 endpoint 응답 형식은 `INFERENCE_RESPONSE_INVALID`로 반환될 수 있다. 실제 token이나 secret 값은 response에 포함하지 않는다.
 
 잘못된 요청 body는 같은 error shape로 반환한다.
 

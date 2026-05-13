@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
+import logging
 import os
+from contextlib import asynccontextmanager
 from typing import Any
 
 import httpx
@@ -34,6 +36,33 @@ LABEL_ALIASES = {
     "0": "normal",
     "1": "phishing",
 }
+
+
+logger = logging.getLogger("deploy_wrapper")
+
+
+class InferenceError(Exception):
+    error_code = "INFERENCE_FAILED"
+    status_code = 500
+    public_message = "Deploy wrapper inference failed"
+
+
+class ConfigurationError(InferenceError):
+    error_code = "CONFIGURATION_ERROR"
+    status_code = 500
+    public_message = "Deploy wrapper configuration is invalid"
+
+
+class UpstreamInferenceError(InferenceError):
+    error_code = "UPSTREAM_INFERENCE_FAILED"
+    status_code = 502
+    public_message = "HF endpoint request failed"
+
+
+class ResponseNormalizationError(InferenceError):
+    error_code = "INFERENCE_RESPONSE_INVALID"
+    status_code = 502
+    public_message = "HF endpoint response could not be normalized"
 
 
 class Settings(BaseModel):
@@ -72,7 +101,14 @@ class ErrorResponse(BaseModel):
     message: str
 
 
-app = FastAPI(title="Deploy Wrapper API", version="0.1.0")
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    async with httpx.AsyncClient() as client:
+        app.state.http_client = client
+        yield
+
+
+app = FastAPI(title="Deploy Wrapper API", version="0.1.0", lifespan=lifespan)
 
 
 @app.exception_handler(RequestValidationError)
@@ -163,6 +199,7 @@ async def mock_analyze(text: str, settings: Settings) -> AnalyzeResponse:
 
 
 async def post_hf_endpoint(
+    client: httpx.AsyncClient,
     url: str,
     token: str,
     payload: dict[str, Any],
@@ -173,12 +210,16 @@ async def post_hf_endpoint(
         headers["Authorization"] = f"Bearer {token}"
 
     try:
-        async with httpx.AsyncClient(timeout=timeout) as client:
-            response = await client.post(url, headers=headers, json=payload)
+        response = await client.post(
+            url,
+            headers=headers,
+            json=payload,
+            timeout=timeout,
+        )
         response.raise_for_status()
         return response.json()
     except (httpx.HTTPError, ValueError) as exc:
-        raise RuntimeError("Hugging Face endpoint request failed") from exc
+        raise UpstreamInferenceError("HF endpoint request failed") from exc
 
 
 def normalize_encoder_response(response_payload: Any) -> tuple[str, float]:
@@ -200,7 +241,7 @@ def normalize_encoder_response(response_payload: Any) -> tuple[str, float]:
         if label is not None and confidence is not None:
             return normalize_label(str(label)), float(confidence)
 
-    raise RuntimeError("Unsupported encoder endpoint response")
+    raise ResponseNormalizationError("Unsupported encoder endpoint response")
 
 
 def normalize_decoder_response(response_payload: Any) -> str:
@@ -225,11 +266,16 @@ def normalize_decoder_response(response_payload: Any) -> str:
     return "판단 근거를 생성하지 못했습니다."
 
 
-async def hf_endpoint_analyze(text: str, settings: Settings) -> AnalyzeResponse:
+async def hf_endpoint_analyze(
+    text: str,
+    settings: Settings,
+    client: httpx.AsyncClient,
+) -> AnalyzeResponse:
     if not settings.encoder_endpoint_url or not settings.decoder_endpoint_url:
-        raise RuntimeError("HF endpoint URLs are not configured")
+        raise ConfigurationError("HF endpoint URLs are not configured")
 
     encoder_payload = await post_hf_endpoint(
+        client,
         settings.encoder_endpoint_url,
         settings.hf_token,
         {"inputs": text},
@@ -238,6 +284,7 @@ async def hf_endpoint_analyze(text: str, settings: Settings) -> AnalyzeResponse:
     label, confidence = normalize_encoder_response(encoder_payload)
 
     decoder_payload = await post_hf_endpoint(
+        client,
         settings.decoder_endpoint_url,
         settings.hf_token,
         {
@@ -278,6 +325,7 @@ async def health() -> dict[str, str]:
         400: {"model": ErrorResponse},
         422: {"model": ErrorResponse},
         500: {"model": ErrorResponse},
+        502: {"model": ErrorResponse},
     },
 )
 async def analyze(payload: AnalyzeRequest) -> AnalyzeResponse | JSONResponse:
@@ -288,8 +336,23 @@ async def analyze(payload: AnalyzeRequest) -> AnalyzeResponse | JSONResponse:
             case "mock":
                 return await mock_analyze(payload.text, settings)
             case "hf_endpoint":
-                return await hf_endpoint_analyze(payload.text, settings)
-    except RuntimeError:
+                return await hf_endpoint_analyze(
+                    payload.text,
+                    settings,
+                    app.state.http_client,
+                )
+    except InferenceError as exc:
+        logger.warning("%s: %s", exc.error_code, exc, exc_info=True)
+        return JSONResponse(
+            status_code=exc.status_code,
+            content={
+                "success": False,
+                "error_code": exc.error_code,
+                "message": exc.public_message,
+            },
+        )
+    except Exception:
+        logger.exception("Unexpected deploy wrapper inference failure")
         return JSONResponse(
             status_code=500,
             content={
