@@ -4,16 +4,16 @@
 
 현재 `frontend_python`, `backend`, `ai_service`, 모델 학습이 모두 진행 중이므로 이 단계에서는 실제 백엔드나 실제 모델에 직접 연결하지 않는다. 대신 mock-first 방식으로 API 형태와 배포 구조를 먼저 고정한다.
 
-`ai_service/` 폴더는 모델링 담당자가 학습, 평가, inference 실험 코드를 관리하는 영역이므로 이 작업에서는 수정하지 않는다. Hugging Face Endpoint 기반 FastAPI wrapper가 필요하면 `deploy/app/` 아래에 작성한다.
+`ai_service/` 폴더는 모델링 담당자가 학습, 평가, inference 실험 코드를 관리하는 영역이므로 이 작업에서는 수정하지 않는다. Hugging Face Endpoint 기반 async FastAPI wrapper는 `deploy/app/` 아래에 작성한다.
 
-최종 목표는 `deploy` wrapper가 Hugging Face Inference Endpoint를 직접 감싸는 FastAPI wrapper 역할을 하는 구조다. 백엔드는 deploy wrapper의 `/analyze` API만 호출하고, deploy wrapper는 Encoder Endpoint와 Decoder Endpoint 호출 결과를 `label`, `confidence`, `reason` 형식으로 정규화한다.
+최종 목표는 `deploy` wrapper가 Hugging Face Inference Endpoint를 직접 감싸는 async FastAPI wrapper 역할을 하는 구조다. 백엔드는 deploy wrapper의 `/analyze` API만 호출하고, deploy wrapper는 `httpx.AsyncClient`로 Encoder Endpoint와 Decoder Endpoint를 순차 호출한 뒤 `label`, `confidence`, `reason` 형식으로 정규화한다.
 
 사용자가 입력하는 전화번호는 deploy wrapper의 분석 대상이 아니다. 전화번호 선택 입력, 신고 버튼, 신고 안내 페이지, 신고된 전화번호 저장, 신고 횟수 증가는 frontend/backend/DB 책임으로 둔다. Deploy wrapper는 문자 내용 `text`만 받아 분석 결과를 반환한다.
 
 ## Scope
 
 - `deploy/` 내부 문서 및 예시 파일 작성
-- `deploy/app/` 내부 mock-first FastAPI wrapper 작성
+- `deploy/app/` 내부 mock-first async FastAPI wrapper 작성
 - mock mode 기준 API contract 정리
 - Hugging Face Endpoint 전환을 위한 환경변수와 체크리스트 정리
 - Docker/docker-compose 적용 방향 초안 정리
@@ -39,6 +39,8 @@
 ## Local Verification
 
 Deploy wrapper는 로컬 Python 환경에서 mock mode 기준으로 정상 실행을 확인했다.
+
+내부 구현은 async FastAPI endpoint와 `httpx.AsyncClient` 기반 HF Endpoint 호출 구조를 사용한다. API request/response contract는 기존과 동일하다.
 
 `deploy/` 디렉터리에서 실행할 때:
 

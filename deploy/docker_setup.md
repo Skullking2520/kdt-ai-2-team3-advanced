@@ -2,7 +2,9 @@
 
 이 문서는 deploy wrapper의 Docker 실행 절차를 정리한다. Docker 검증은 추후 선택 사항이 아니라, Docker CLI가 설치된 환경에서 반드시 완료해야 하는 검증 항목이다.
 
-Deploy wrapper가 FastAPI app이라면 Docker image는 비교적 가볍게 구성할 수 있다. Hugging Face Inference Endpoint를 사용하면 wrapper image 안에 PyTorch나 Transformers 전체 runtime을 포함하지 않아도 될 수 있다.
+Deploy wrapper가 async FastAPI app이라면 Docker image는 비교적 가볍게 구성할 수 있다. Hugging Face Inference Endpoint를 사용하면 wrapper image 안에 PyTorch나 Transformers 전체 runtime을 포함하지 않아도 될 수 있다.
+
+HF Endpoint 호출은 `httpx.AsyncClient` 기반으로 처리한다. API contract와 Docker/로컬 실행 명령은 기존과 동일하게 유지한다.
 
 Wrapper app은 `deploy/app/` 아래에 둔다. `ai_service/`는 모델링 담당자가 모델 학습, 평가, inference 실험 코드를 관리하는 영역이므로 Docker wrapper 구현에서 수정하지 않는다.
 
@@ -13,7 +15,7 @@ FastAPI wrapper에 필요한 최소 패키지 예시는 다음과 같다.
 ```text
 fastapi
 uvicorn
-requests
+httpx
 pydantic
 python-dotenv
 ```

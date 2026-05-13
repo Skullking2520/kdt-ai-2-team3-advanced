@@ -5,7 +5,7 @@ from __future__ import annotations
 import os
 from typing import Any
 
-import requests
+import httpx
 from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
@@ -76,7 +76,7 @@ app = FastAPI(title="Deploy Wrapper API", version="0.1.0")
 
 
 @app.exception_handler(RequestValidationError)
-def validation_exception_handler(
+async def validation_exception_handler(
     _request: Request,
     _exc: RequestValidationError,
 ) -> JSONResponse:
@@ -135,7 +135,7 @@ def base_response(settings: Settings) -> dict[str, str]:
     }
 
 
-def mock_analyze(text: str, settings: Settings) -> AnalyzeResponse:
+async def mock_analyze(text: str, settings: Settings) -> AnalyzeResponse:
     is_phishing = any(keyword in text for keyword in MOCK_KEYWORDS)
     if is_phishing:
         payload: dict[str, Any] = {
@@ -162,7 +162,7 @@ def mock_analyze(text: str, settings: Settings) -> AnalyzeResponse:
     return AnalyzeResponse(**payload)
 
 
-def post_hf_endpoint(
+async def post_hf_endpoint(
     url: str,
     token: str,
     payload: dict[str, Any],
@@ -173,15 +173,11 @@ def post_hf_endpoint(
         headers["Authorization"] = f"Bearer {token}"
 
     try:
-        response = requests.post(
-            url,
-            headers=headers,
-            json=payload,
-            timeout=timeout,
-        )
+        async with httpx.AsyncClient(timeout=timeout) as client:
+            response = await client.post(url, headers=headers, json=payload)
         response.raise_for_status()
         return response.json()
-    except (requests.RequestException, ValueError) as exc:
+    except (httpx.HTTPError, ValueError) as exc:
         raise RuntimeError("Hugging Face endpoint request failed") from exc
 
 
@@ -229,11 +225,11 @@ def normalize_decoder_response(response_payload: Any) -> str:
     return "판단 근거를 생성하지 못했습니다."
 
 
-def hf_endpoint_analyze(text: str, settings: Settings) -> AnalyzeResponse:
+async def hf_endpoint_analyze(text: str, settings: Settings) -> AnalyzeResponse:
     if not settings.encoder_endpoint_url or not settings.decoder_endpoint_url:
         raise RuntimeError("HF endpoint URLs are not configured")
 
-    encoder_payload = post_hf_endpoint(
+    encoder_payload = await post_hf_endpoint(
         settings.encoder_endpoint_url,
         settings.hf_token,
         {"inputs": text},
@@ -241,7 +237,7 @@ def hf_endpoint_analyze(text: str, settings: Settings) -> AnalyzeResponse:
     )
     label, confidence = normalize_encoder_response(encoder_payload)
 
-    decoder_payload = post_hf_endpoint(
+    decoder_payload = await post_hf_endpoint(
         settings.decoder_endpoint_url,
         settings.hf_token,
         {
@@ -266,7 +262,7 @@ def hf_endpoint_analyze(text: str, settings: Settings) -> AnalyzeResponse:
 
 
 @app.get("/health")
-def health() -> dict[str, str]:
+async def health() -> dict[str, str]:
     settings = load_settings()
     return {
         "status": "ok",
@@ -284,15 +280,15 @@ def health() -> dict[str, str]:
         500: {"model": ErrorResponse},
     },
 )
-def analyze(payload: AnalyzeRequest) -> AnalyzeResponse | JSONResponse:
+async def analyze(payload: AnalyzeRequest) -> AnalyzeResponse | JSONResponse:
     settings = load_settings()
 
     try:
         match settings.serving_mode:
             case "mock":
-                return mock_analyze(payload.text, settings)
+                return await mock_analyze(payload.text, settings)
             case "hf_endpoint":
-                return hf_endpoint_analyze(payload.text, settings)
+                return await hf_endpoint_analyze(payload.text, settings)
     except RuntimeError:
         return JSONResponse(
             status_code=500,
