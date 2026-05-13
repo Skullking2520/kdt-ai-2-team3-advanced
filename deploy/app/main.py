@@ -9,7 +9,7 @@ import requests
 from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 
 MOCK_KEYWORDS = (
@@ -49,10 +49,9 @@ class Settings(BaseModel):
 
 
 class AnalyzeRequest(BaseModel):
-    text: str = Field(min_length=1)
+    model_config = ConfigDict(extra="forbid")
 
-    class Config:
-        extra = "forbid"
+    text: str = Field(min_length=1)
 
 
 class AnalyzeResponse(BaseModel):
@@ -289,10 +288,11 @@ def analyze(payload: AnalyzeRequest) -> AnalyzeResponse | JSONResponse:
     settings = load_settings()
 
     try:
-        if settings.serving_mode == "mock":
-            return mock_analyze(payload.text, settings)
-        if settings.serving_mode == "hf_endpoint":
-            return hf_endpoint_analyze(payload.text, settings)
+        match settings.serving_mode:
+            case "mock":
+                return mock_analyze(payload.text, settings)
+            case "hf_endpoint":
+                return hf_endpoint_analyze(payload.text, settings)
     except RuntimeError:
         return JSONResponse(
             status_code=500,
