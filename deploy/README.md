@@ -119,9 +119,9 @@ Response:
 
 ### Docker Verification
 
-Docker compose validation is pending because Docker CLI is not available in the current local environment.
+Docker compose validation has been completed for the deploy wrapper. Docker 검증은 추후 선택 사항이 아니라, Docker 기반 실행 전 반드시 확인해야 하는 검증 항목이다.
 
-Docker가 설치된 환경에서는 다음 명령으로 검증한다.
+`deploy/` 디렉터리 기준으로 다음 명령을 실행한다.
 
 ```bash
 cd deploy
@@ -129,8 +129,26 @@ docker compose -f docker-compose.example.yml config
 docker compose -f docker-compose.example.yml up --build
 ```
 
-실행 후 확인:
+다른 터미널에서 실행 후 확인:
 
 ```bash
 curl http://localhost:8001/health
+curl -X POST http://localhost:8001/analyze \
+  -H "Content-Type: application/json" \
+  -d '{"text":"고객님의 계정이 정지되었습니다. 아래 링크에서 인증하세요."}'
 ```
+
+검증 후 종료:
+
+```bash
+cd deploy
+docker compose -f docker-compose.example.yml down
+```
+
+Verified:
+
+- `docker compose -f docker-compose.example.yml config`
+- `docker compose -f docker-compose.example.yml up --build`
+- `curl http://localhost:8001/health`
+- `curl -X POST http://localhost:8001/analyze ...`
+- `docker compose -f docker-compose.example.yml down`

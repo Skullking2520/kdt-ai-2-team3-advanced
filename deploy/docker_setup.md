@@ -1,6 +1,6 @@
 # Docker Setup
 
-현재 단계에서는 실제 Docker image를 완성하지 않고, `deploy/` 폴더에서 적용 방향과 예시 파일만 정리한다.
+이 문서는 deploy wrapper의 Docker 실행 절차를 정리한다. Docker 검증은 추후 선택 사항이 아니라, Docker CLI가 설치된 환경에서 반드시 완료해야 하는 검증 항목이다.
 
 Deploy wrapper가 FastAPI app이라면 Docker image는 비교적 가볍게 구성할 수 있다. Hugging Face Inference Endpoint를 사용하면 wrapper image 안에 PyTorch나 Transformers 전체 runtime을 포함하지 않아도 될 수 있다.
 
@@ -18,19 +18,17 @@ pydantic
 python-dotenv
 ```
 
-예시 dependency는 `deploy/requirements.example.txt`에 둔다. 실제 운영 dependency는 배포 방식이 확정될 때 별도 잠금 파일이나 프로젝트 설정으로 관리한다.
+예시 dependency는 `deploy/requirements.example.txt`에 둔다. Docker image는 `deploy/Dockerfile`을 사용해 wrapper app을 실행한다.
 
-## Example Command
+## Docker Files
 
-repo root에서 실행할 때:
+- `deploy/Dockerfile`: deploy wrapper runtime image
+- `deploy/docker-compose.example.yml`: local Docker compose execution example
+- `deploy/.env.example`: local compose env file. 실제 secret을 작성하지 않는다.
 
-```bash
-docker compose -f deploy/docker-compose.example.yml up --build
-```
+## Required Verification Commands
 
-`docker-compose.example.yml`의 `env_file` 경로는 compose 파일 위치인 `deploy/`를 기준으로 한다. 따라서 예시 실행 명령은 repo root에서 실행하고, compose 파일 안에서는 `.env.example`로 참조한다.
-
-`deploy/` 디렉터리에서 실행할 때:
+`deploy/` 디렉터리에서 실행한다.
 
 ```bash
 cd deploy
@@ -38,14 +36,38 @@ docker compose -f docker-compose.example.yml config
 docker compose -f docker-compose.example.yml up --build
 ```
 
+다른 터미널에서 health check와 mock analyze를 확인한다.
+
+```bash
+curl http://localhost:8001/health
+curl -X POST http://localhost:8001/analyze \
+  -H "Content-Type: application/json" \
+  -d '{"text":"고객님의 계정이 정지되었습니다. 아래 링크에서 인증하세요."}'
+```
+
+검증 후 컨테이너를 종료한다.
+
+```bash
+cd deploy
+docker compose -f docker-compose.example.yml down
+```
+
+`docker-compose.example.yml`의 `env_file` 경로는 compose 파일 위치인 `deploy/`를 기준으로 한다. 따라서 compose 파일 안에서는 `.env.example`로 참조한다.
+
 ## Verification Status
 
-Docker compose validation is pending because Docker CLI is not available in the current local environment.
+Docker compose validation has been completed for the deploy wrapper.
+
+Verified commands:
+
+- `docker compose -f docker-compose.example.yml config`
+- `docker compose -f docker-compose.example.yml up --build`
+- `curl http://localhost:8001/health`
+- `curl -X POST http://localhost:8001/analyze ...`
+- `docker compose -f docker-compose.example.yml down`
 
 ## Notes
 
-- `docker-compose.example.yml`은 예시 파일이다.
-- 실제 운영용으로 사용하기 전에 build context, Dockerfile 위치, port, env file 경로를 확인해야 한다.
 - `AI_SERVICE_MODE` 기본값은 `deploy/.env.example`에서 관리한다. compose `environment`로 하드코딩하면 `hf_endpoint` 전환 시 env file 값을 덮어쓸 수 있으므로 피한다.
 - 실제 secret은 `.env.example`에 작성하지 않는다.
 - 운영 환경에서는 GitHub Secrets, cloud secret manager, server environment variables 중 하나로 secret을 주입한다.

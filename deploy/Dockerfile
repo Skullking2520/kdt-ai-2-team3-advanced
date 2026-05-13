@@ -1,4 +1,4 @@
-# Example only. Review before using this for a real deployment.
+# Deploy wrapper runtime image.
 
 FROM python:3.12-slim
 
