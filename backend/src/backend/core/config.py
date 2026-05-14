@@ -1,10 +1,17 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from slowapi import Limiter, _rate_limit_exceeded_handler
+from slowapi.errors import RateLimitExceeded
+from slowapi.middleware import SlowAPIMiddleware
+from slowapi.util import get_remote_address
 from starlette_csrf.middleware import CSRFMiddleware
 
 from ..api import predict, root
 from ..db import is_dev
-from .pydantic_settings import settings  # 환경변수 로드
+from .pydantic_settings import settings  # 환경 변수 로드
+
+limiter = Limiter(key_func=get_remote_address)
+# get_remote_address: Returns the ip address for the current request
 
 
 def configure_app(app: FastAPI):
@@ -23,6 +30,14 @@ def configure_app(app: FastAPI):
         secret=str(settings.CSRF_SECRET),
         cookie_secure=not is_dev,  # http 개발환경 비암호화
         cookie_samesite="lax",  # cross-origin 전송용
+    )
+
+    # rate limiting 설정 추가
+    app.add_middleware(SlowAPIMiddleware)
+    app.state.limiter = limiter
+    app.add_exception_handler(
+        RateLimitExceeded,
+        _rate_limit_exceeded_handler,  # type: ignore
     )
 
     # 라우터 일괄등록
