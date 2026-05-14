@@ -59,13 +59,6 @@ resource "ncloud_access_control_group_rule" "server_acg_rule" {
 
   inbound {
     protocol    = "TCP"
-    ip_block    = "10.0.1.0/24" # 서버만 허용
-    port_range  = "3306"        # mysql 포트
-    description = "mysql subnet Port"
-  }
-
-  inbound {
-    protocol    = "TCP"
     ip_block    = "0.0.0.0/0"
     port_range  = "80" # nginx 포트
     description = "http Port"
@@ -77,7 +70,17 @@ resource "ncloud_access_control_group_rule" "server_acg_rule" {
     port_range  = "443" # nginx 포트
     description = "https Port"
   }
-  # outbound는 기본 허용.
+  # outbound는 기본적으로 "0.0.0.0/0" 1-65535 허용.
+}
+
+# 참고: ncloud_mysql 리소스는 기본적으로 VPC의 기본 ACG를 쓰거나
+# 아래 설정을 통해 직접 제어할 수 있도록 규칙을 분리하는 것이 좋습니다.
+
+# server nic 정의
+resource "ncloud_network_interface" "server-nic" {
+  name                  = "server-nic"
+  subnet_no             = ncloud_subnet.server_subnet.id
+  access_control_groups = [ncloud_access_control_group_rule.server_acg_rule.id]
 }
 
 # 서버 os 이미지 정의
@@ -98,16 +101,45 @@ data "ncloud_server_specs" "kvm-spec" {
   }
 }
 
+# server ncloud key.pem 정의
+resource "ncloud_login_key" "loginkey" {
+  key_name = "smishing-inference-server-key"
+}
+
+# private key 다운로드
+resource "local_file" "ssh_key" {
+  filename = "${ncloud_login_key.loginkey.key_name}.pem"
+  content  = ncloud_login_key.loginkey.private_key
+}
+
+# 초기비밀번호도 출력해서 가지고 있기
+data "ncloud_root_password" "root_pwd" {
+  server_instance_no = ncloud_server.ai_server.instance_no
+  private_key        = ncloud_login_key.loginkey.private_key
+}
+
 # 5. 서버 인스턴스 (FastAPI 추론용)
 resource "ncloud_server" "ai_server" {
   name                = "smishing-inference-server"
   server_image_number = data.ncloud_server_image_numbers.kvm-image.image_number_list.0.server_image_number
   server_spec_code    = data.ncloud_server_specs.kvm-spec.server_spec_list.0.server_spec_code
   subnet_no           = ncloud_subnet.server_subnet.id
-  #login_key_name      = var.inference_server_login_keyname
+  # 중요: 로그인 키의 이름을 연결하기
+  login_key_name = ncloud_login_key.loginkey.key_name
+
+  # ncloud_server 리소스 내부에서는 아래와 같이 인터페이스 ID를 매핑합니다.
+  network_interface {
+    network_interface_no = ncloud_network_interface.server-nic.id
+    order                = 0
+  }
 }
 
 # 6. 공인 IP 할당
 resource "ncloud_public_ip" "server_pip" {
   server_instance_no = ncloud_server.ai_server.instance_no
+  lifecycle {
+    # 서버가 재생성되더라도 공인 IP가 먼저 파괴되는 것을 방지하거나
+    # 의도치 않은 공인 IP 변경(재생성) 계획이 잡히면 테라폼 에러를 발생시킵니다.
+    prevent_destroy = true
+  }
 }

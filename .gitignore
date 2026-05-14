@@ -57,6 +57,8 @@ mlruns/
 .terraform.tfstate.lock.info
 terraform.tfstate
 terraform.tfstate.backup
+smishing-inference-server-key.pem
+smishing-inference-server-pwd.txt
 
 # custom folders
 raw_data
