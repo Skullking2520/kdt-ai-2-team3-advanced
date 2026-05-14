@@ -12,6 +12,11 @@ def read_root():  # await할게 없으면 async하지 않는다.
     return {"message": "Hello!"}
 
 
+@router.get("/health")
+def health_check():
+    return {"status": "ok"}
+
+
 # 테스트 API 엔드포인트
 @router.get("/db_test")
 async def db_test(db: AsyncSession = Depends(get_db)):

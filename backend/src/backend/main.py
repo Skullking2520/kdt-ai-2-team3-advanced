@@ -1,9 +1,9 @@
 # src/backend/main.py
 from contextlib import asynccontextmanager
 
-from fastapi import Depends, FastAPI
+from fastapi import FastAPI
 
-from .core.config import configure_app, limiter
+from .core.config import configure_app
 from .core.exceptions import exception_handlers
 from .db.create_tables import create_db_tables
 
@@ -18,11 +18,6 @@ async def lifespan(app: FastAPI):
     # 서버가 종료될 때 실행할 코드가 있다면 여기에 작성
 
 
-app = FastAPI(
-    lifespan=lifespan,
-    exception_handlers=exception_handlers,
-    dependencies=[Depends(limiter.limit("15/minute"))],
-    # 전역 api 리밋 제한, 예: 분당 15회 제한
-)
+app = FastAPI(lifespan=lifespan, exception_handlers=exception_handlers)
 
 configure_app(app)  # 일괄적인 설정값 주입

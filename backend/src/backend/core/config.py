@@ -10,7 +10,7 @@ from ..api import predict, root
 from ..db import is_dev
 from .pydantic_settings import settings  # 환경 변수 로드
 
-limiter = Limiter(key_func=get_remote_address)
+limiter = Limiter(key_func=get_remote_address, default_limits=["15/minutes"])
 # get_remote_address: Returns the ip address for the current request
 
 
@@ -33,12 +33,12 @@ def configure_app(app: FastAPI):
     )
 
     # rate limiting 설정 추가
-    app.add_middleware(SlowAPIMiddleware)
     app.state.limiter = limiter
     app.add_exception_handler(
         RateLimitExceeded,
         _rate_limit_exceeded_handler,  # type: ignore
     )
+    app.add_middleware(SlowAPIMiddleware)
 
     # 라우터 일괄등록
     app.include_router(root.router)
