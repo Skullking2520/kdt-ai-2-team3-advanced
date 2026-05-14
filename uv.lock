@@ -233,7 +233,7 @@ wheels = [
 [[package]]
 name = "frontend-python"
 version = "0.1.0"
-source = { editable = "frontend_python" }
+source = { editable = "frontend" }
 
 [[package]]
 name = "h11"
