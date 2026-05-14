@@ -1,6 +1,6 @@
 # 문자안심 체크 웹 MVP
 
-의심 문자를 입력하면 스미싱 위험도, 사칭 유형, 의심 근거, AI 상세 설명을 보여주는 React 기반 웹 MVP입니다. 이 폴더는 팀 저장소의 `frontend_python/` 아래에 있지만, 실제 구현은 Python이 아니라 `React + Vite + Tailwind CSS` 프론트엔드입니다.
+의심 문자를 입력하면 스미싱 위험도, 사칭 유형, 의심 근거, AI 상세 설명을 보여주는 React 기반 웹 MVP입니다. 이 폴더는 팀 저장소의 `frontend/` 아래에 있지만, 실제 구현은 Python이 아니라 `React + Vite + Tailwind CSS` 프론트엔드입니다.
 
 ## 빠른 실행
 
