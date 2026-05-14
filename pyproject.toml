@@ -32,7 +32,7 @@ addopts = "-v --durations=10"   # 기본 옵션 (상세 출력, 느린 테스트
 
 [tool.uv.workspace]
 members = [
-    "frontend_python",
+    "frontend",
     "backend",
     "ai_service"
 ]
