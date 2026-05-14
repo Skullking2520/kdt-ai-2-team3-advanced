@@ -87,7 +87,7 @@ src/
 
 ## 백엔드 API 연결
 
-기본 요청 주소는 `/predict`입니다. Vite 개발 서버에서 별도 백엔드를 직접 지정하려면 `frontend_python/web_mvp/.env.local`을 만들고 아래처럼 설정합니다.
+기본 요청 주소는 `/predict`입니다. Vite 개발 서버에서 별도 백엔드를 직접 지정하려면 `frontend/web_mvp/.env.local`을 만들고 아래처럼 설정합니다.
 
 ```bash
 VITE_SMISHING_API_URL=http://localhost:8000/predict
