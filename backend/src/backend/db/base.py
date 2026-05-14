@@ -3,7 +3,7 @@ from sqlalchemy.ext.asyncio import create_async_engine
 # models 폴더에 모은 모든 모델에 대해 테이블을 생성한다.
 from sqlalchemy.ext.declarative import declarative_base
 
-from ..core.config import settings  # 환경변수 로드
+from ..core.pydantic_settings import settings  # 환경변수 로드
 from . import is_dev
 
 # 1. DB 연결 설정 (asyncmy 드라이버 사용)

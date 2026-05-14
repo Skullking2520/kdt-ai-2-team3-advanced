@@ -1,4 +1,4 @@
-from ..core.config import settings  # 환경변수 로드
+from ..core.pydantic_settings import settings  # 환경변수 로드
 
 APP_ENV = str(settings.APP_ENV)
 

@@ -4,7 +4,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from ..db.session import get_db
 from ..models.inference_log import InferenceLog
 
-router = APIRouter(prefix="/endpoints")  # tags=[]는 swagger 기능으로 묶임
+router = APIRouter()  # tags=[]는 swagger 기능으로 묶임
+
+
+@router.get("/")
+def read_root():  # await할게 없으면 async하지 않는다.
+    return {"message": "Hello!"}
 
 
 # 테스트 API 엔드포인트
