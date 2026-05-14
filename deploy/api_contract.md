@@ -12,6 +12,8 @@ http://localhost:8001
 
 Backend가 deploy wrapper를 호출할 때는 backend 환경에서 `AI_SERVICE_URL` 같은 변수로 이 base URL을 관리하는 것을 권장한다. Deploy wrapper 자체는 이 값을 사용하지 않는다.
 
+Backend는 frontend가 호출하는 `/predict` API와 deploy wrapper가 제공하는 `/analyze` API 사이의 adapter 역할을 한다. URL filtering, static pattern matching, DB 저장, frontend 응답 변환은 backend에서 처리한다.
+
 ## GET `/health`
 
 Deploy wrapper 상태 확인용 endpoint다.
@@ -31,6 +33,8 @@ Deploy wrapper 상태 확인용 endpoint다.
 입력 문장을 분석해 피싱 여부, confidence, 설명을 반환한다.
 
 Deploy wrapper는 문자 내용만 분석한다. `phone_number`는 선택 입력값이지만 deploy wrapper request에 포함하지 않는다. 전화번호 저장, 신고 횟수 증가, 신고 안내 페이지 이동은 backend/frontend 책임이다.
+
+Backend가 `static_patterns` table에서 URL, 전화번호, keyword를 pre-filtering해 이미 알려진 위험 패턴을 찾은 경우, deploy wrapper 호출을 생략하고 backend가 직접 frontend 응답을 만들 수 있다. Static miss인 경우에만 `/analyze`를 호출하는 흐름을 권장한다.
 
 ### Request
 
@@ -136,10 +140,30 @@ curl -X POST http://localhost:8001/analyze \
 
 ## Recommended Backend Handling
 
-- Backend는 `/analyze` 응답을 받은 뒤 DB에 prediction log를 저장한다.
+- Backend는 frontend의 `/predict` request를 받은 뒤 static pattern pre-filtering을 먼저 수행할 수 있다.
+- Static hit이면 `detection_source=STATIC`으로 smishing log를 저장하고, deploy wrapper 호출 없이 frontend 응답을 생성할 수 있다.
+- Static miss이면 deploy wrapper의 `/analyze`를 호출한다.
+- Backend는 `/analyze` 응답을 받은 뒤 `detection_source=AI`로 prediction/smishing log를 저장한다.
 - `success=false`이면 frontend에 일반화된 오류 메시지를 전달하고 내부 로그에 상세 내용을 남긴다.
 - `model_id`, `model_version`, `serving_mode`는 추후 모델 변경과 rollback 추적을 위해 함께 저장한다.
+- `label=phishing`이고 URL 또는 전화번호가 포함되어 있으면 backend 정책에 따라 `static_patterns` 후보로 저장하거나 count를 갱신할 수 있다.
 - 사용자가 신고를 누르고 전화번호가 입력된 경우, backend가 전화번호와 신고 횟수를 별도 DB 테이블 또는 필드로 관리한다.
+
+## Backend to Frontend Mapping
+
+Frontend MVP는 backend `/predict` 응답에서 다음과 같은 field를 기대한다.
+
+| Frontend field | Source from deploy `/analyze` | Notes |
+| --- | --- | --- |
+| `inputText` | original backend request message | Backend가 보존 |
+| `riskScore` | `score` | 0부터 100 사이 점수 |
+| `riskLevel` | `risk_level` | 필요하면 backend가 UI 문구로 변환 |
+| `suspiciousEvidence` | `features` | UI의 의심 근거 리스트로 사용 가능 |
+| `explanation` | `reason` | Decoder 설명 한 줄 |
+| `highlightedTerms` | `features` 또는 backend pre-filter result | Backend 변환 정책에 따름 |
+| `factorScores` | backend rule/static result 또는 fallback | Deploy wrapper는 제공하지 않음 |
+
+Deploy wrapper는 frontend contract를 직접 맞추지 않는다. Backend가 `/analyze` 응답을 받아 frontend `/predict` response로 변환한다.
 
 ## Label Normalization
 
