@@ -4,7 +4,7 @@
 
 전체 공유용 쉬운 설명은 [team_overview.md](team_overview.md)를 먼저 참고한다.
 
-현재 `frontend_python`, `backend`, `ai_service`, 모델 학습이 모두 진행 중이므로 이 단계에서는 실제 백엔드나 실제 모델에 직접 연결하지 않는다. 대신 mock-first 방식으로 API 형태와 배포 구조를 먼저 고정한다.
+현재 `frontend`, `backend`, `ai_service`, 모델 학습이 모두 진행 중이므로 이 단계에서는 실제 백엔드나 실제 모델에 직접 연결하지 않는다. 대신 mock-first 방식으로 API 형태와 배포 구조를 먼저 고정한다.
 
 `ai_service/` 폴더는 모델링 담당자가 학습, 평가, inference 실험 코드를 관리하는 영역이므로 이 작업에서는 수정하지 않는다. Hugging Face Endpoint 기반 async FastAPI wrapper는 `deploy/app/` 아래에 작성한다.
 
@@ -38,7 +38,7 @@ Frontend /predict request
 
 ## Out of Scope
 
-- 기존 `frontend_python/`, `backend/`, `ai_service/` 코드 수정
+- 기존 `frontend/`, `backend/`, `ai_service/` 코드 수정
 - 실제 모델 학습 코드 작성
 - 실제 Hugging Face Endpoint 생성
 - 실제 DB 연결
@@ -60,6 +60,12 @@ Frontend /predict request
 Deploy wrapper는 로컬 Python 환경에서 mock mode 기준으로 정상 실행을 확인했다.
 
 내부 구현은 async FastAPI endpoint와 공유 `httpx.AsyncClient` 기반 HF API 호출 구조를 사용한다. API request/response contract는 기존과 동일하다.
+
+Deploy wrapper dependency는 루트 `uv` workspace가 아니라 `deploy/requirements.txt`로 별도 관리한다. 로컬 Python 환경에서 처음 실행할 때는 다음처럼 deploy 전용 dependency를 먼저 설치한다.
+
+```bash
+python -m pip install -r deploy/requirements.txt
+```
 
 `deploy/` 디렉터리에서 실행할 때:
 

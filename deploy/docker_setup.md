@@ -19,7 +19,7 @@ httpx
 pydantic
 ```
 
-Docker dependency는 `deploy/requirements.txt`에 둔다. Docker image는 `deploy/Dockerfile`을 사용해 wrapper app을 실행한다.
+Docker dependency는 `deploy/requirements.txt`에 둔다. Docker image는 이 파일을 직접 설치하고 `deploy/Dockerfile`을 사용해 wrapper app을 실행한다. 루트 `uv` workspace dependency와는 별도로 관리되는 deploy wrapper 전용 runtime dependency다.
 
 ## Docker Files
 

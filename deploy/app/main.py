@@ -16,7 +16,6 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, ConfigDict, Field
 
-
 MOCK_KEYWORDS = (
     "계정 정지",
     "계정",
@@ -47,7 +46,8 @@ MOCK_KEYWORDS = (
 
 URL_PATTERN = re.compile(
     r"(?:https?://\S+|www\.\S+|(?:[a-zA-Z0-9-]+\.)+"
-    r"(?:com|net|org|kr|co\.kr|go\.kr|or\.kr|ne\.kr|io|ai|ly|me|cc|xyz|top|site|shop|info|biz)(?:/\S*)?)",
+    r"(?:com|net|org|kr|co\.kr|go\.kr|or\.kr|ne\.kr|io|ai|ly|me|"
+    r"cc|xyz|top|site|shop|info|biz)(?:/\S*)?)",
     re.IGNORECASE,
 )
 PHONE_PATTERN = re.compile(r"(?:\d{2,3}-\d{3,4}-\d{4}|\d{10,11})")
@@ -240,6 +240,30 @@ def parse_positive_float(value: str | None, default: float) -> float:
 def normalize_label(raw_label: str) -> str:
     label = raw_label.strip()
     return LABEL_ALIASES.get(label.upper(), label.lower())
+
+
+def first_present(payload: dict[str, Any], *keys: str) -> Any:
+    for key in keys:
+        if key in payload and payload[key] is not None:
+            return payload[key]
+    return None
+
+
+def parse_normalized_float(value: Any, field_name: str) -> float:
+    try:
+        parsed = float(value)
+    except (TypeError, ValueError) as exc:
+        raise ResponseNormalizationError(
+            f"Encoder endpoint response has invalid {field_name}"
+        ) from exc
+
+    if parsed > 1:
+        parsed = parsed / 100
+    if parsed < 0 or parsed > 1:
+        raise ResponseNormalizationError(
+            f"Encoder endpoint response has invalid {field_name}"
+        )
+    return parsed
 
 
 def base_response(settings: Settings) -> dict[str, str]:
@@ -469,8 +493,17 @@ def normalize_encoder_response(
     if isinstance(response_payload, list) and response_payload:
         first_item = response_payload[0]
         if isinstance(first_item, list) and first_item:
-            best = max(first_item, key=lambda item: item.get("score", 0.0))
-            confidence = float(best.get("score", 0.0))
+            if not all(isinstance(item, dict) for item in first_item):
+                raise ResponseNormalizationError(
+                    "Encoder endpoint response contains invalid classifier item"
+                )
+            best = max(
+                first_item,
+                key=lambda item: parse_normalized_float(
+                    item.get("score", 0.0), "score"
+                ),
+            )
+            confidence = parse_normalized_float(best.get("score", 0.0), "score")
             label = normalize_label(str(best.get("label", "unknown")))
             score = build_risk_score(label, confidence)
             return (
@@ -481,8 +514,14 @@ def normalize_encoder_response(
                 [],
             )
         if isinstance(first_item, dict):
-            confidence = float(
-                first_item.get("score", first_item.get("confidence", 0.0))
+            confidence_value = first_present(first_item, "score", "confidence")
+            if confidence_value is None:
+                raise ResponseNormalizationError(
+                    "Encoder endpoint response is missing confidence"
+                )
+            confidence = parse_normalized_float(
+                confidence_value,
+                "confidence",
             )
             label = normalize_label(str(first_item.get("label", "unknown")))
             score = build_risk_score(label, confidence, first_item.get("risk_score"))
@@ -495,11 +534,12 @@ def normalize_encoder_response(
             )
 
     if isinstance(response_payload, dict):
-        label = (
-            response_payload.get("label")
-            or response_payload.get("predicted_label")
-            or response_payload.get("label_name")
-            or response_payload.get("pred")
+        label = first_present(
+            response_payload,
+            "label",
+            "predicted_label",
+            "label_name",
+            "pred",
         )
         if label is not None:
             normalized_label = normalize_label(str(label))
@@ -515,9 +555,9 @@ def normalize_encoder_response(
                     "Encoder endpoint response is missing confidence"
                 )
 
-            normalized_confidence = float(confidence)
-            if normalized_confidence > 1:
-                normalized_confidence = normalized_confidence / 100
+            normalized_confidence = parse_normalized_float(
+                confidence, "confidence"
+            )
             score = build_risk_score(
                 normalized_label,
                 normalized_confidence,
@@ -568,7 +608,8 @@ def build_decoder_prompt(
 
     return (
         "당신은 스미싱(SMS 피싱) 탐지 전문가입니다. "
-        "주어진 문자 내용, 판별 결과, 감지된 특징을 근거로 한 문장으로 설명하세요. "
+        "주어진 문자 내용, 판별 결과, 감지된 특징을 근거로 "
+        "한 문장으로 설명하세요. "
         "인사말이나 추가 질문 없이 판단 이유만 작성하세요.\n\n"
         f"문자 내용: {text[:500]}\n"
         f"판별 결과: {label}\n"
