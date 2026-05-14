@@ -37,7 +37,7 @@ export function CheckForm({
               >
                 붙여넣기
               </button>
-              <button
+            <button
                 className="min-h-11 rounded-full bg-sky-500 px-6 text-sm font-black text-white disabled:bg-slate-200"
                 disabled={!message.trim() || isAnalyzing}
                 onClick={onAnalyze}

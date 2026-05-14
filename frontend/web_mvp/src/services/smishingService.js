@@ -2,7 +2,7 @@ import { analyzeSmishing, exampleMessages } from "../utils/analyzeSmishing";
 
 export { exampleMessages };
 
-const API_URL = import.meta.env.VITE_SMISHING_API_URL ?? "/predict";
+const API_URL = import.meta.env.VITE_SMISHING_API_URL ?? "http://localhost:8000/predict";
 
 function normalizeApiResult(result, message) {
   const fallback = analyzeSmishing(message);

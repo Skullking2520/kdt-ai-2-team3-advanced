@@ -5,7 +5,7 @@
 ## 빠른 실행
 
 ```bash
-cd frontend_python/web_mvp
+cd frontend/web_mvp
 npm install
 npm run dev
 ```
@@ -110,7 +110,10 @@ VITE_SMISHING_API_URL=http://localhost:8000/predict
   "riskLevel": "위험",
   "impersonationType": "가족 사칭형",
   "suspiciousEvidence": ["긴급 송금 요구", "확인되지 않은 링크 포함"],
-  "recommendedActions": ["링크를 누르지 마세요", "기존 연락처로 가족에게 확인하세요"],
+  "recommendedActions": [
+    "링크를 누르지 마세요",
+    "기존 연락처로 가족에게 확인하세요"
+  ],
   "familyCheckMessage": "이 문자 진짜인지 확인해줄래?",
   "explanation": "이 문자는 가족을 사칭해 긴급한 상황을 만들고 송금을 유도하는 전형적인 스미싱 패턴과 유사합니다."
 }

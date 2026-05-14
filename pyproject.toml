@@ -29,7 +29,9 @@ target-version = "py312"
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "N", "W"]
-ignore = []
+# N815: 클래스 스코프에서 mixedCase 변수 사용 허용
+# N816: 글로벌 스코프에서 mixedCase 변수 사용 허용
+ignore = ["N815", "N816"]
 
 [tool.ruff.format]
 quote-style = "double"
