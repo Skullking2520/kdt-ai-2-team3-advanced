@@ -10,6 +10,20 @@
 
 사용자가 입력하는 전화번호는 deploy wrapper의 분석 대상이 아니다. 전화번호 선택 입력, 신고 버튼, 신고 안내 페이지, 신고된 전화번호 저장, 신고 횟수 증가는 frontend/backend/DB 책임으로 둔다. Deploy wrapper는 문자 내용 `text`만 받아 분석 결과를 반환한다.
 
+URL filtering과 정적 패턴 매칭은 backend 책임으로 둔다. Backend는 `static_patterns` 같은 DB table을 사용해 알려진 URL, 전화번호, keyword를 모델 호출 전에 pre-filtering할 수 있다. Deploy wrapper의 mock mode가 URL 형태를 감지하는 것은 실제 URL 차단 정책이 아니라 model endpoint 연결 전 `features` 응답 형태를 흉내 내기 위한 contract test 용도다.
+
+예상 운영 흐름:
+
+```text
+Frontend /predict request
+-> Backend static pattern pre-filtering
+-> Static hit이면 backend가 DB log 저장 후 frontend 응답 생성
+-> Static miss이면 backend가 deploy wrapper POST /analyze 호출
+-> Deploy wrapper가 Encoder/Decoder Endpoint 결과를 정규화
+-> Backend가 smishing log, model metadata, static pattern 후보를 저장
+-> Backend가 frontend 응답 형식으로 변환
+```
+
 ## Scope
 
 - `deploy/` 내부 문서 및 예시 파일 작성
@@ -25,6 +39,7 @@
 - 실제 Hugging Face Endpoint 생성
 - 실제 DB 연결
 - 전화번호 저장 또는 신고 횟수 업데이트
+- URL filtering 또는 static pattern matching 정책
 - 실제 토큰, 비밀번호, secret 작성
 
 ## Security Rule

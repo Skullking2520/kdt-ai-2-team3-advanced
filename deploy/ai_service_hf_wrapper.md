@@ -20,9 +20,17 @@ Deploy wrapper의 책임은 Hugging Face Inference Endpoint를 호출하고, 결
 - 모델 학습
 - 원본 학습 데이터 관리
 - DB 저장
+- URL filtering 정책
+- static pattern table 조회 또는 갱신
 - frontend 렌더링
 - 실제 secret 관리
 - `ai_service/` 내부 모델링 코드 수정
+
+## Backend Static Pre-Filtering
+
+Backend는 deploy wrapper 호출 전에 `static_patterns` table을 사용해 URL, 전화번호, keyword 같은 알려진 위험 패턴을 먼저 검사할 수 있다. 이 경우 static hit은 backend가 `detection_source=STATIC`으로 처리하고, deploy wrapper 호출을 생략할 수 있다.
+
+Deploy wrapper는 static miss 이후 AI inference가 필요한 요청을 받아 Encoder/Decoder Endpoint를 호출하고, backend가 저장하고 변환하기 쉬운 형태로 응답을 정규화한다.
 
 ## Serving Modes
 
