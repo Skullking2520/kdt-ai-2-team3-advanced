@@ -3,8 +3,11 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from starlette_csrf.middleware import CSRFMiddleware
 
 from .api import endpoints, predict
+from .core.config import settings  # 환경변수 로드
+from .db import is_dev
 from .db.create_tables import create_db_tables
 
 
@@ -21,12 +24,21 @@ app = FastAPI(lifespan=lifespan)
 app.include_router(endpoints.router)
 app.include_router(predict.router)
 
+# cors 설정 추가
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["http://localhost:5173"],  # TODO: 우리 도메인 추가
-    allow_credentials=True,
+    allow_credentials=True,  # 쿠키 공유 허용
     allow_methods=["*"],
     allow_headers=["*"],
+)
+
+# csrf 설정 추가
+app.add_middleware(
+    CSRFMiddleware,
+    secret=str(settings.CSRF_SECRET),
+    cookie_secure=not is_dev,  # http 개발환경 비암호화
+    cookie_samesite="lax",  # cross-origin 전송용
 )
 
 

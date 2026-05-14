@@ -20,6 +20,9 @@ class Settings(BaseSettings):
     # 만약 .env에 필수값으로 두지 않고 기본값을 주려면 아래처럼 선언합니다.
     # SQLALCHEMY_DATABASE_URL: str = "sqlite:///./test.db"
 
+    # csrf 비밀키 설정
+    CSRF_SECRET: str = Field(default="your_csrf_key")
+
     # .env 파일 로드 설정
     model_config = SettingsConfigDict(
         env_file=find_dotenv(),  # 루트 .env까지 찾아 올라감

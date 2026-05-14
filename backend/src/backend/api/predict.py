@@ -10,6 +10,7 @@ async def predict_sms_message(request: PredictRequest):
     """
     프론트엔드의 predictSmishing() 함수와 호환되는 테스트용 API.
     normalizeApiResult()에서 그대로 병합할 수 있는 형식으로 반환한다.
+    TODO: 이제 모델에서 가져와서 결과를 꾸민 후 반환하게 수정
     """
 
     return {

@@ -2,7 +2,7 @@
 name = "team-ai-project-monorepo"
 version = "0.1.0"
 description = "Team newbiz AI Project for smishing detection"
-requires-python = ">=3.12"
+requires-python = ">=3.12,<3.13"
 dependencies = [
     "backend", # 워크스페이스 내의 backend 패키지를 등록
     "ai_service",
