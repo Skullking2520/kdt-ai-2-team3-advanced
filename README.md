@@ -30,9 +30,13 @@
 ### 개발 언어
 
 - Python
+- JavaScript
 
 ### 주요 라이브러리
 
+- React
+- Vite
+- Tailwind CSS
 - pandas
 - numpy
 - scikit-learn
@@ -49,6 +53,11 @@
 
 ## 5. 프로젝트 구조
 
+- `ai_service/`: 모델 학습 및 추론 서비스
+- `backend/`: 백엔드 API 서비스
+- `frontend_python/`: Python 기반 프론트엔드 실험 코드
+- `frontend_python/web_mvp/`: React/Vite/Tailwind 기반 스미싱 문자 판별 웹 MVP
+
 ---
 
 ## 6. 데이터셋
@@ -63,6 +72,17 @@
 | 오늘 오후 3시에 회의가 있습니다.                          | normal   |
 
 ## 7. 실행 방법
+
+### 웹 MVP
+
+```bash
+cd frontend_python/web_mvp
+npm install
+npm run dev
+```
+
+기본 API 엔드포인트는 `/predict`이며, 다른 백엔드 주소를 사용할 경우 `frontend_python/web_mvp/.env.local`에 `VITE_SMISHING_API_URL`을 지정합니다.
+
 
 ## 8. 예상 결과물
 
