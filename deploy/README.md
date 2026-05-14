@@ -2,6 +2,8 @@
 
 이 폴더는 AI 모델 배포, 모델 서빙, backend 연동 구조를 정리하기 위한 설계 문서와 deployment wrapper 예시 코드를 담는다.
 
+전체 공유용 쉬운 설명은 [team_overview.md](team_overview.md)를 먼저 참고한다.
+
 현재 `frontend_python`, `backend`, `ai_service`, 모델 학습이 모두 진행 중이므로 이 단계에서는 실제 백엔드나 실제 모델에 직접 연결하지 않는다. 대신 mock-first 방식으로 API 형태와 배포 구조를 먼저 고정한다.
 
 `ai_service/` 폴더는 모델링 담당자가 학습, 평가, inference 실험 코드를 관리하는 영역이므로 이 작업에서는 수정하지 않는다. Hugging Face Endpoint 기반 async FastAPI wrapper는 `deploy/app/` 아래에 작성한다.
@@ -110,9 +112,7 @@ Response:
   "label": "phishing",
   "confidence": 0.91,
   "reason": "위험 키워드 감지: 계정, 정지, 인증, 링크 같은 피싱 의심 요소가 포함되어 위험도가 높게 분류되었습니다.",
-  "features": [
-    "위험 키워드 감지: 계정, 정지, 인증, 링크"
-  ],
+  "features": ["위험 키워드 감지: 계정, 정지, 인증, 링크"],
   "risk_level": "위험 높음",
   "score": 91,
   "encoder_model_id": "team/kcelectra-smishing-classifier",
