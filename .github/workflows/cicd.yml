@@ -45,10 +45,13 @@ jobs:
       - name: Build and Push Backend Image
         uses: docker/build-push-action@v5
         with:
-          context: ./backend
+          context: . # 루트 경로
+          file: ./backend/Dockerfile
           platforms: linux/amd64 # ncp ubuntu
           push: true
           tags: ${{ secrets.NCP_REGISTRY }}/smishing-backend:latest
+      # docker buildx build --platform linux/amd64 -t <registry_url>
+      # -f backend/Dockerfile --push . (cli원문)
 
       # [수정] 3. Frontend 빌드 결과물(dist)을 NCP 서버로 전송
       - name: Copy Frontend Build to NCP
