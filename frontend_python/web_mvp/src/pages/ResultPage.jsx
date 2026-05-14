@@ -45,6 +45,12 @@ export function ResultPage({ copyState, hasResult, message, onBack, onCopy, onRe
             </div>
           </div>
 
+          {result.backendError && (
+            <div className="border-b border-amber-200 bg-amber-50 px-6 py-4 text-sm font-bold leading-6 text-amber-900 sm:px-8">
+              백엔드 분석 응답을 받지 못해 임시 규칙 기반 분석 결과를 표시합니다. 실제 모델 결과와 다를 수 있습니다.
+            </div>
+          )}
+
           <div className="grid gap-0 lg:grid-cols-[1fr_22rem]">
             <div className="p-6 sm:p-8">
               <div className="rounded-3xl border border-slate-200 bg-white p-5">
@@ -105,6 +111,7 @@ export function ResultPage({ copyState, hasResult, message, onBack, onCopy, onRe
                   <div className={`h-full ${visual.bar}`} style={{ width: `${result.riskScore}%` }} />
                 </div>
                 <p className={`mt-4 text-base font-black ${visual.text}`}>{visual.headline}</p>
+                {result.backendError && <p className="mt-3 text-xs font-bold leading-5 text-amber-700">임시 분석 결과</p>}
               </div>
 
               <div className="mt-4 rounded-3xl bg-white p-5 shadow-sm">
@@ -146,6 +153,11 @@ export function ResultPage({ copyState, hasResult, message, onBack, onCopy, onRe
           ))}
         </div>
       </section>
+      {result.backendError && (
+        <p className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-base font-bold leading-7 text-amber-900">
+          백엔드 분석 응답을 받지 못해 임시 규칙 기반 분석 결과를 표시합니다. 실제 모델 결과와 다를 수 있습니다.
+        </p>
+      )}
       <div className="grid gap-3 sm:grid-cols-3">
         <button className="min-h-14 rounded-2xl bg-red-600 px-4 text-lg font-black text-white" onClick={onReport} type="button">신고하기</button>
         <button className="min-h-14 rounded-2xl bg-slate-950 px-4 text-lg font-black text-white" onClick={onCopy} type="button">{copyState === "copied" ? "복사 완료" : "공유하기"}</button>

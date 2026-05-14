@@ -118,6 +118,10 @@ VITE_SMISHING_API_URL=http://localhost:8000/predict
 
 응답 필드가 빠진 경우 `src/services/smishingService.js`에서 더미 분석 결과를 fallback으로 채워 화면 깨짐을 줄입니다.
 
+### 백엔드 장애와 fallback 표시
+
+`/predict`가 500 오류를 반환하거나, 네트워크 오류가 발생하거나, 유효하지 않은 JSON을 반환하면 프론트는 임시 규칙 기반 분석 결과를 표시합니다. 이때 결과 화면에는 `백엔드 분석 응답을 받지 못해 임시 규칙 기반 분석 결과를 표시합니다` 안내가 함께 노출됩니다. 백엔드 장애를 정상 모델 결과처럼 숨기지 않기 위한 처리입니다.
+
 ## 화면 경로
 
 이 MVP는 React Router 대신 URL hash를 사용합니다.

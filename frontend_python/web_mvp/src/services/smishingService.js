@@ -10,6 +10,8 @@ function normalizeApiResult(result, message) {
   return {
     ...fallback,
     ...result,
+    analysisSource: "backend",
+    backendError: null,
     suspiciousEvidence: result?.suspiciousEvidence?.length ? result.suspiciousEvidence : fallback.suspiciousEvidence,
     recommendedActions: result?.recommendedActions?.length ? result.recommendedActions : fallback.recommendedActions,
     explanation: result?.explanation || fallback.explanation,
@@ -29,7 +31,11 @@ export async function predictSmishing({ message, allowTrainingUse }) {
 
     const result = await response.json();
     return normalizeApiResult(result, message);
-  } catch {
-    return analyzeSmishing(message);
+  } catch (error) {
+    return {
+      ...analyzeSmishing(message),
+      analysisSource: "fallback",
+      backendError: error instanceof Error ? error.message : "Smishing API request failed",
+    };
   }
 }

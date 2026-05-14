@@ -1,6 +1,6 @@
 import { exampleMessages } from "../services/smishingService";
 import { pasteMessage } from "../data/staticContent";
-import { activeClass, panelClass } from "../components/mvp/ui.jsx";
+import { panelClass } from "../components/mvp/ui.jsx";
 
 export function CheckForm({
   allowTrainingUse,
@@ -27,18 +27,28 @@ export function CheckForm({
             onChange={(event) => onMessageChange(event.target.value)}
             placeholder={"문자 내용을 입력하거나 붙여넣어주세요.\n개인정보가 포함된 경우 삭제 후 입력해주세요."}
           />
-          <div className="flex min-h-16 items-center justify-between border-t border-slate-100 bg-slate-50 px-5 py-3 rounded-b-[1.6rem]">
+          <div className="flex min-h-16 flex-wrap items-center justify-between gap-3 border-t border-slate-100 bg-slate-50 px-5 py-3 rounded-b-[1.6rem]">
             <span className="text-sm font-black text-slate-400">{message.length}/2000</span>
-            <button
-              className="min-h-11 rounded-full bg-sky-500 px-6 text-sm font-black text-white disabled:bg-slate-200"
-              disabled={!message.trim() || isAnalyzing}
-              onClick={onAnalyze}
-              type="button"
-            >
-              {isAnalyzing ? "분석중" : "검사"}
-            </button>
+            <div className="flex items-center gap-2">
+              <button
+                className="min-h-11 rounded-full border border-slate-200 bg-white px-5 text-sm font-black text-slate-500"
+                onClick={onPaste}
+                type="button"
+              >
+                붙여넣기
+              </button>
+              <button
+                className="min-h-11 rounded-full bg-sky-500 px-6 text-sm font-black text-white disabled:bg-slate-200"
+                disabled={!message.trim() || isAnalyzing}
+                onClick={onAnalyze}
+                type="button"
+              >
+                {isAnalyzing ? "분석중" : "검사"}
+              </button>
+            </div>
           </div>
         </div>
+        {pasteState !== "idle" && <p className="mt-3 text-center text-sm font-bold text-slate-500">{pasteMessage[pasteState]}</p>}
 
         <div className="mt-12 grid gap-5 text-center sm:grid-cols-[0.8fr_1fr] sm:text-left">
           <p className="pt-2 text-base font-black text-slate-400">예시 문자를 눌러보세요</p>
