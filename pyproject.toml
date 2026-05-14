@@ -5,7 +5,6 @@ description = "Team newbiz AI Project for smishing detection"
 requires-python = ">=3.12"
 dependencies = [
     "backend", # 워크스페이스 내의 backend 패키지를 등록
-    "frontend_python",
     "ai_service",
     "python-dotenv>=1.2.2",
 ] # backend를 로컬 편집 가능(editable) 패키지로 등록
@@ -42,7 +41,6 @@ addopts = "-v --durations=10"   # 기본 옵션 (상세 출력, 느린 테스트
 
 [tool.uv.workspace]
 members = [
-    "frontend_python",
     "backend",
     "ai_service"
 ]
