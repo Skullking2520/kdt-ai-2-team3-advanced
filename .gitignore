@@ -47,3 +47,8 @@ mlruns/
 
 # custom folders
 raw_data
+node_modules/
+frontend_python/web_mvp/node_modules/
+frontend_python/web_mvp/dist/
+!frontend_python/web_mvp/src/data/
+!frontend_python/web_mvp/src/data/**
