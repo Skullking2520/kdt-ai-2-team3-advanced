@@ -57,6 +57,7 @@ jobs:
           host: ${{ secrets.NCP_SERVER_IP }}
           username: ${{ secrets.NCP_SERVER_USER }}
           key: ${{ secrets.NCP_SERVER_SSH_KEY }}
+          port: ${{ fromJson(secrets.NCP_SERVER_SSH_PORT) }}
           source: "frontend/web_mvp/dist/*"
           target: "/home/${{ secrets.NCP_SERVER_USER }}/app/frontend/web_mvp/dist"
           strip_components: 3 # 앞의 고정 경로 제거 후 dist 안의 내용만 복사
@@ -68,6 +69,7 @@ jobs:
           host: ${{ secrets.NCP_SERVER_IP }}
           username: ${{ secrets.NCP_SERVER_USER }}
           key: ${{ secrets.NCP_SERVER_SSH_KEY }} # 개인키
+          port: ${{ fromJson(secrets.NCP_SERVER_SSH_PORT) }} # fromJSON으로 숫자로 변환
           script: |
             cd /home/${{ secrets.NCP_SERVER_USER }}/app
             echo "NCP_REGISTRY=${{ secrets.NCP_REGISTRY }}" >> .env
