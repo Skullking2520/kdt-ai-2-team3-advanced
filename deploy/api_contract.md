@@ -2,7 +2,9 @@
 
 이 문서는 backend 담당자가 deploy wrapper를 호출할 때 참고할 API contract다. Deploy wrapper async FastAPI app은 `deploy/app/` 아래에 두며, `ai_service/` 폴더는 모델링 담당자 영역으로 유지한다.
 
-내부 구현은 FastAPI lifespan에서 관리되는 공유 `httpx.AsyncClient`를 사용해 Hugging Face Encoder/Decoder Endpoint를 호출한다. Decoder는 encoder의 `label`과 `confidence`가 필요하므로 두 endpoint 호출은 병렬이 아니라 순차 `await` 구조로 처리한다. API contract는 기존과 동일하게 유지한다.
+내부 구현은 FastAPI lifespan에서 관리되는 공유 `httpx.AsyncClient`를 사용해 Hugging Face Encoder/Decoder inference API를 호출한다. Decoder는 encoder의 `label`, `confidence`, `features`가 필요하므로 두 호출은 병렬이 아니라 순차 `await` 구조로 처리한다. API contract는 기존과 동일하게 유지한다.
+
+`HF_SERVING_TYPE=serverless`이면 model ID 기반 Hugging Face serverless API를 호출한다. `HF_SERVING_TYPE=endpoint`이면 dedicated Inference Endpoint URL을 호출한다.
 
 Base URL 예시:
 
@@ -75,7 +77,7 @@ Backend가 `static_patterns` table에서 URL, 전화번호, keyword를 pre-filte
 }
 ```
 
-HF endpoint 관련 오류는 같은 error response shape를 유지하면서 `error_code`로 원인을 구분한다. 예를 들어 endpoint URL 설정 누락은 `CONFIGURATION_ERROR`, upstream 호출 실패는 `UPSTREAM_INFERENCE_FAILED`, 예상하지 못한 endpoint 응답 형식은 `INFERENCE_RESPONSE_INVALID`로 반환될 수 있다. 실제 token이나 secret 값은 response에 포함하지 않는다.
+HF API 관련 오류는 같은 error response shape를 유지하면서 `error_code`로 원인을 구분한다. 예를 들어 serverless token/model ID 또는 endpoint URL 설정 누락은 `CONFIGURATION_ERROR`, upstream 호출 실패는 `UPSTREAM_INFERENCE_FAILED`, 예상하지 못한 응답 형식은 `INFERENCE_RESPONSE_INVALID`로 반환될 수 있다. 실제 token이나 secret 값은 response에 포함하지 않는다.
 
 잘못된 요청 body는 같은 error shape로 반환한다.
 
@@ -206,4 +208,4 @@ Deploy wrapper는 이 값을 backend contract에 맞춰 정규화한다.
 - `features` 문자열 -> `features: string[]`
 - `risk_level`, `score`는 가능한 경우 그대로 전달
 
-Decoder Endpoint는 Encoder의 `text`, `label`, `confidence`, `features`를 바탕으로 생성한 설명 한 줄을 반환한다고 가정한다. Deploy wrapper는 decoder output을 `reason`으로 정규화한다.
+Decoder는 text-generation 모델이라고 가정한다. Deploy wrapper는 Encoder의 `text`, `label`, `confidence`, `features`를 prompt 문자열로 구성해 decoder에 전달하고, decoder output을 `reason`으로 정규화한다.

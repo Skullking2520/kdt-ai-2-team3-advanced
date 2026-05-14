@@ -1,4 +1,4 @@
-"""Mock-first deployment wrapper for future Hugging Face Endpoints."""
+"""Mock-first deployment wrapper for Hugging Face inference APIs."""
 
 from __future__ import annotations
 
@@ -8,6 +8,7 @@ import re
 from contextlib import asynccontextmanager
 from dataclasses import dataclass
 from typing import Any
+from urllib.parse import quote
 
 import httpx
 from fastapi import FastAPI, Request
@@ -117,7 +118,11 @@ class ResponseNormalizationError(InferenceError):
 
 class Settings(BaseModel):
     serving_mode: str = Field(default="mock")
+    hf_serving_type: str = Field(default="serverless")
     hf_token: str = Field(default="")
+    hf_serverless_base_url: str = Field(
+        default="https://router.huggingface.co/hf-inference/models"
+    )
     encoder_endpoint_url: str = Field(default="")
     decoder_endpoint_url: str = Field(default="")
     encoder_model_id: str = Field(default="team/kcelectra-smishing-classifier")
@@ -125,6 +130,8 @@ class Settings(BaseModel):
     decoder_model_id: str = Field(default="team/decoder-explainer")
     decoder_model_version: str = Field(default="v1.0.0")
     request_timeout_seconds: int = Field(default=60)
+    decoder_max_new_tokens: int = Field(default=120)
+    decoder_temperature: float = Field(default=0.3)
 
 
 class AnalyzeRequest(BaseModel):
@@ -186,7 +193,12 @@ def load_settings() -> Settings:
 
     return Settings(
         serving_mode=os.getenv("AI_SERVICE_MODE", "mock"),
+        hf_serving_type=os.getenv("HF_SERVING_TYPE", "serverless"),
         hf_token=os.getenv("HF_TOKEN", ""),
+        hf_serverless_base_url=os.getenv(
+            "HF_SERVERLESS_BASE_URL",
+            "https://router.huggingface.co/hf-inference/models",
+        ),
         encoder_endpoint_url=os.getenv("ENCODER_ENDPOINT_URL", ""),
         decoder_endpoint_url=os.getenv("DECODER_ENDPOINT_URL", ""),
         encoder_model_id=os.getenv(
@@ -196,6 +208,12 @@ def load_settings() -> Settings:
         decoder_model_id=os.getenv("DECODER_MODEL_ID", "team/decoder-explainer"),
         decoder_model_version=os.getenv("DECODER_MODEL_VERSION", "v1.0.0"),
         request_timeout_seconds=timeout_seconds,
+        decoder_max_new_tokens=parse_positive_int(
+            os.getenv("DECODER_MAX_NEW_TOKENS"), default=120
+        ),
+        decoder_temperature=parse_positive_float(
+            os.getenv("DECODER_TEMPERATURE"), default=0.3
+        ),
     )
 
 
@@ -204,6 +222,16 @@ def parse_positive_int(value: str | None, default: int) -> int:
         return default
     try:
         parsed = int(value)
+    except ValueError:
+        return default
+    return parsed if parsed > 0 else default
+
+
+def parse_positive_float(value: str | None, default: float) -> float:
+    if value is None or value.strip() == "":
+        return default
+    try:
+        parsed = float(value)
     except ValueError:
         return default
     return parsed if parsed > 0 else default
@@ -391,6 +419,30 @@ async def post_hf_endpoint(
         raise UpstreamInferenceError("HF endpoint request failed") from exc
 
 
+def build_serverless_model_url(settings: Settings, model_id: str) -> str:
+    model_path = quote(model_id.strip(), safe="/")
+    return f"{settings.hf_serverless_base_url.rstrip('/')}/{model_path}"
+
+
+def resolve_hf_urls(settings: Settings) -> tuple[str, str]:
+    match settings.hf_serving_type:
+        case "serverless":
+            if not settings.hf_token:
+                raise ConfigurationError("HF_TOKEN is required for serverless mode")
+            if not settings.encoder_model_id or not settings.decoder_model_id:
+                raise ConfigurationError("HF model IDs are not configured")
+            return (
+                build_serverless_model_url(settings, settings.encoder_model_id),
+                build_serverless_model_url(settings, settings.decoder_model_id),
+            )
+        case "endpoint":
+            if not settings.encoder_endpoint_url or not settings.decoder_endpoint_url:
+                raise ConfigurationError("HF endpoint URLs are not configured")
+            return settings.encoder_endpoint_url, settings.decoder_endpoint_url
+
+    raise ConfigurationError("HF_SERVING_TYPE must be serverless or endpoint")
+
+
 def normalize_feature_lines(raw_features: Any) -> list[str]:
     if raw_features is None:
         return []
@@ -504,17 +556,38 @@ def normalize_decoder_response(response_payload: Any) -> str:
     return "판단 근거를 생성하지 못했습니다."
 
 
+def build_decoder_prompt(
+    text: str,
+    label: str,
+    confidence: float,
+    features: list[str],
+) -> str:
+    feature_text = "\n".join(f"- {feature}" for feature in features)
+    if not feature_text:
+        feature_text = "- 특이 사항 없음"
+
+    return (
+        "당신은 스미싱(SMS 피싱) 탐지 전문가입니다. "
+        "주어진 문자 내용, 판별 결과, 감지된 특징을 근거로 한 문장으로 설명하세요. "
+        "인사말이나 추가 질문 없이 판단 이유만 작성하세요.\n\n"
+        f"문자 내용: {text[:500]}\n"
+        f"판별 결과: {label}\n"
+        f"신뢰도: {confidence:.2f}\n"
+        f"감지된 특징:\n{feature_text}\n"
+        "이유:"
+    )
+
+
 async def hf_endpoint_analyze(
     text: str,
     settings: Settings,
     client: httpx.AsyncClient,
 ) -> AnalyzeResponse:
-    if not settings.encoder_endpoint_url or not settings.decoder_endpoint_url:
-        raise ConfigurationError("HF endpoint URLs are not configured")
+    encoder_url, decoder_url = resolve_hf_urls(settings)
 
     encoder_payload = await post_hf_endpoint(
         client,
-        settings.encoder_endpoint_url,
+        encoder_url,
         settings.hf_token,
         {"inputs": text},
         settings.request_timeout_seconds,
@@ -525,15 +598,15 @@ async def hf_endpoint_analyze(
 
     decoder_payload = await post_hf_endpoint(
         client,
-        settings.decoder_endpoint_url,
+        decoder_url,
         settings.hf_token,
         {
-            "inputs": {
-                "text": text,
-                "label": label,
-                "confidence": confidence,
-                "features": features,
-            }
+            "inputs": build_decoder_prompt(text, label, confidence, features),
+            "parameters": {
+                "max_new_tokens": settings.decoder_max_new_tokens,
+                "temperature": settings.decoder_temperature,
+                "return_full_text": False,
+            },
         },
         settings.request_timeout_seconds,
     )

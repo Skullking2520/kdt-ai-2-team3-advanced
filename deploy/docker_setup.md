@@ -2,9 +2,9 @@
 
 이 문서는 deploy wrapper의 Docker 실행 절차를 정리한다. Docker 검증은 추후 선택 사항이 아니라, Docker CLI가 설치된 환경에서 반드시 완료해야 하는 검증 항목이다.
 
-Deploy wrapper가 async FastAPI app이라면 Docker image는 비교적 가볍게 구성할 수 있다. Hugging Face Inference Endpoint를 사용하면 wrapper image 안에 PyTorch나 Transformers 전체 runtime을 포함하지 않아도 될 수 있다.
+Deploy wrapper가 async FastAPI app이라면 Docker image는 비교적 가볍게 구성할 수 있다. Hugging Face serverless API 또는 dedicated Inference Endpoint를 사용하면 wrapper image 안에 PyTorch나 Transformers 전체 runtime을 포함하지 않아도 될 수 있다.
 
-HF Endpoint 호출은 `httpx.AsyncClient` 기반으로 처리한다. API contract와 Docker/로컬 실행 명령은 기존과 동일하게 유지한다.
+HF API 호출은 `httpx.AsyncClient` 기반으로 처리한다. API contract와 Docker/로컬 실행 명령은 기존과 동일하게 유지한다.
 
 Wrapper app은 `deploy/app/` 아래에 둔다. `ai_service/`는 모델링 담당자가 모델 학습, 평가, inference 실험 코드를 관리하는 영역이므로 Docker wrapper 구현에서 수정하지 않는다.
 
@@ -70,5 +70,7 @@ Verified commands:
 ## Notes
 
 - `AI_SERVICE_MODE` 기본값은 `deploy/.env.example`에서 관리한다. compose `environment`로 하드코딩하면 `hf_endpoint` 전환 시 env file 값을 덮어쓸 수 있으므로 피한다.
+- `HF_SERVING_TYPE=serverless`이면 model ID 기반 HF serverless API를 호출한다.
+- `HF_SERVING_TYPE=endpoint`이면 dedicated endpoint URL을 호출한다.
 - 실제 secret은 `.env.example`에 작성하지 않는다.
 - 운영 환경에서는 GitHub Secrets, cloud secret manager, server environment variables 중 하나로 secret을 주입한다.

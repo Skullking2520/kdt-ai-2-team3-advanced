@@ -110,15 +110,16 @@ URL과 suspicious keyword가 함께 있거나, 금전 표현과 전화번호가 
 }
 ```
 
-## Future Switch to HF Endpoint
+## Future Switch to HF Inference API
 
-Hugging Face Endpoint가 준비되면 다음 환경변수를 설정하고 mode를 변경한다.
+Hugging Face serverless API를 우선 사용한다면 다음 환경변수를 설정하고 mode를 변경한다.
 
 ```text
 AI_SERVICE_MODE=hf_endpoint
-ENCODER_ENDPOINT_URL=
-DECODER_ENDPOINT_URL=
+HF_SERVING_TYPE=serverless
 HF_TOKEN=
+ENCODER_MODEL_ID=
+DECODER_MODEL_ID=
 ```
 
 Backend는 `/analyze` contract가 유지되는 한 별도 변경 없이 동일 API를 호출한다.
@@ -126,5 +127,7 @@ Backend는 `/analyze` contract가 유지되는 한 별도 변경 없이 동일 A
 실제 endpoint 전환 전에는 Encoder가 반환하는 원시 label mapping을 확인해야 한다. 예를 들어 `LABEL_0`이 정상인지 피싱인지 모델 학습 설정에 따라 달라질 수 있다.
 
 Encoder prototype output의 `features`가 문자열이면 mock/API response에서는 UI 리스트 렌더링을 위해 `features: string[]` 형태로 정규화한다.
+
+Decoder는 text-generation 모델이라고 가정한다. Deploy wrapper는 문자 내용, encoder label, confidence, features를 prompt로 구성하고 decoder output을 `reason`으로 정규화한다.
 
 Backend가 static pattern pre-filtering에서 hit을 찾은 경우에는 deploy wrapper mock mode도 호출하지 않을 수 있다. 이 경우 frontend 응답은 backend가 직접 구성한다.
