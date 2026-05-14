@@ -1,4 +1,5 @@
-#version: '3.8'
+# backend에서 개발하기 위해 필요한 docker-compose 파일
+# backend폴더에서 docker-compose up -d으로 시작
 services:
   db:
     image: mysql:8.4
