@@ -92,7 +92,12 @@ Response:
   "success": true,
   "label": "phishing",
   "confidence": 0.91,
-  "reason": "계정 정지, 인증 요구, 링크 클릭 유도와 같은 피싱 의심 표현으로 위험도가 높게 분류되었습니다.",
+  "reason": "위험 키워드 감지: 계정, 정지, 인증, 링크 같은 피싱 의심 요소가 포함되어 위험도가 높게 분류되었습니다.",
+  "features": [
+    "위험 키워드 감지: 계정, 정지, 인증, 링크"
+  ],
+  "risk_level": "위험 높음",
+  "score": 91,
   "encoder_model_id": "team/kcelectra-smishing-classifier",
   "encoder_model_version": "v1.0.0",
   "decoder_model_id": "team/decoder-explainer",

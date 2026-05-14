@@ -4,7 +4,9 @@ from __future__ import annotations
 
 import logging
 import os
+import re
 from contextlib import asynccontextmanager
+from dataclasses import dataclass
 from typing import Any
 
 import httpx
@@ -16,6 +18,8 @@ from pydantic import BaseModel, ConfigDict, Field
 
 MOCK_KEYWORDS = (
     "계정 정지",
+    "계정",
+    "정지",
     "인증",
     "링크",
     "비밀번호",
@@ -25,6 +29,39 @@ MOCK_KEYWORDS = (
     "본인확인",
     "즉시",
     "차단",
+    "환급",
+    "상품권",
+    "급하게",
+    "폰 고장",
+    "번호 바뀜",
+    "저금리",
+    "무직자대출",
+    "당일입금",
+    "급전",
+    "카톡",
+    "텔레그램",
+    "whatsapp",
+    "line",
+)
+
+URL_PATTERN = re.compile(
+    r"(?:https?://\S+|www\.\S+|(?:[a-zA-Z0-9-]+\.)+"
+    r"(?:com|net|org|kr|co\.kr|go\.kr|or\.kr|ne\.kr|io|ai|ly|me|cc|xyz|top|site|shop|info|biz)(?:/\S*)?)",
+    re.IGNORECASE,
+)
+PHONE_PATTERN = re.compile(r"(?:\d{2,3}-\d{3,4}-\d{4}|\d{10,11})")
+MONEY_PATTERN = re.compile(
+    r"\d+[,\d]*\s?(?:만원권|만원|천원|억원|원|KRW|USD|\$)|"
+    r"\$\s?\d+[,\d]*|\d+[,\d]*\s?\$",
+    re.IGNORECASE,
+)
+WEB_PATTERN = re.compile(r"\[?\s*web\s*발신\s*\]?", re.IGNORECASE)
+FOREIGN_PATTERN = re.compile(r"\[?\s*(?:국외|국제)\s*발신\s*\]?")
+EXTERNAL_CONTACT_PATTERN = re.compile(
+    r"(?:카톡|카카오|텔레그램|telegram|whatsapp|라인|line|위챗|wechat|"
+    r"인스타|instagram|페이스북|facebook)"
+    r"\s*(?:ID|id|아이디)?\s*[:：]\s*\S+",
+    re.IGNORECASE,
 )
 
 LABEL_ALIASES = {
@@ -33,12 +70,25 @@ LABEL_ALIASES = {
     "NORMAL": "normal",
     "PHISHING": "phishing",
     "SMISHING": "phishing",
+    "정상": "normal",
+    "스미싱": "phishing",
     "0": "normal",
     "1": "phishing",
 }
 
 
 logger = logging.getLogger("deploy_wrapper")
+
+
+@dataclass(frozen=True)
+class MockFeatures:
+    urls: list[str]
+    phones: list[str]
+    money: list[str]
+    keywords: list[str]
+    from_web: bool
+    from_foreign: bool
+    has_external_contact: bool
 
 
 class InferenceError(Exception):
@@ -88,6 +138,9 @@ class AnalyzeResponse(BaseModel):
     label: str
     confidence: float
     reason: str
+    features: list[str]
+    risk_level: str
+    score: int
     encoder_model_id: str
     encoder_model_version: str
     decoder_model_id: str
@@ -171,27 +224,143 @@ def base_response(settings: Settings) -> dict[str, str]:
     }
 
 
+def extract_mock_features(text: str) -> MockFeatures:
+    keywords = [
+        keyword
+        for keyword in MOCK_KEYWORDS
+        if keyword.lower() in text.lower()
+    ]
+
+    return MockFeatures(
+        urls=URL_PATTERN.findall(text),
+        phones=PHONE_PATTERN.findall(text),
+        money=MONEY_PATTERN.findall(text),
+        keywords=list(dict.fromkeys(keywords)),
+        from_web=WEB_PATTERN.search(text) is not None,
+        from_foreign=FOREIGN_PATTERN.search(text) is not None,
+        has_external_contact=EXTERNAL_CONTACT_PATTERN.search(text) is not None,
+    )
+
+
+def score_mock_features(features: MockFeatures) -> float:
+    score = 0.08
+
+    if features.urls:
+        score += 0.24
+    if features.phones:
+        score += 0.12
+    if features.money:
+        score += 0.18
+    if features.from_web:
+        score += 0.04
+    if features.from_foreign:
+        score += 0.12
+    if features.has_external_contact:
+        score += 0.25
+
+    score += min(len(features.keywords) * 0.08, 0.32)
+    if len(features.keywords) >= 2:
+        score += 0.18
+    if len(features.keywords) >= 3:
+        score += 0.10
+
+    if features.urls and features.keywords:
+        score += 0.12
+    if features.money and features.phones:
+        score += 0.10
+    if features.has_external_contact and features.keywords:
+        score += 0.10
+
+    return min(score, 0.96)
+
+
+def build_mock_evidence(features: MockFeatures) -> list[str]:
+    evidence = []
+    if features.urls:
+        evidence.append(f"외부 링크 포함: {features.urls[0]}")
+    if features.phones:
+        evidence.append(f"전화번호 포함: {features.phones[0]}")
+    if features.money:
+        evidence.append(f"금전 관련 표현 포함: {features.money[0]}")
+    if features.from_web:
+        evidence.append("Web 발신 표현 포함")
+    if features.from_foreign:
+        evidence.append("해외 발신 표현 포함")
+    if features.has_external_contact:
+        evidence.append("외부 메신저 연락처 유도")
+    if features.keywords:
+        evidence.append(f"위험 키워드 감지: {', '.join(features.keywords[:4])}")
+    return evidence
+
+
+def build_mock_reason(label: str, features: MockFeatures) -> str:
+    if label == "normal":
+        return (
+            "피싱으로 의심되는 강한 표현이나 링크 클릭 유도 "
+            "패턴이 뚜렷하지 않습니다."
+        )
+
+    evidence = build_mock_evidence(features)
+    if evidence:
+        return (
+            f"{', '.join(evidence[:3])} 같은 피싱 의심 요소가 포함되어 "
+            "위험도가 높게 분류되었습니다."
+        )
+
+    return (
+        "계정 정지, 인증 요구, 링크 클릭 유도와 같은 "
+        "피싱 의심 표현으로 위험도가 높게 분류되었습니다."
+    )
+
+
+def build_risk_level(score: int) -> str:
+    if score >= 70:
+        return "위험 높음"
+    if score >= 40:
+        return "주의"
+    return "정상 가능성 높음"
+
+
+def build_risk_score(label: str, confidence: float, raw_score: Any = None) -> int:
+    if raw_score is not None:
+        try:
+            parsed_score = float(raw_score)
+        except (TypeError, ValueError):
+            parsed_score = None
+        if parsed_score is not None and parsed_score > 1:
+            return max(0, min(int(round(parsed_score)), 100))
+
+    risk_probability = confidence if label == "phishing" else 1 - confidence
+    return max(0, min(int(round(risk_probability * 100)), 100))
+
+
 async def mock_analyze(text: str, settings: Settings) -> AnalyzeResponse:
-    is_phishing = any(keyword in text for keyword in MOCK_KEYWORDS)
+    features = extract_mock_features(text)
+    mock_score = score_mock_features(features)
+    score = int(round(mock_score * 100))
+    is_phishing = mock_score >= 0.4
+
     if is_phishing:
+        confidence = round(max(mock_score, 0.91), 2)
+        score = int(round(confidence * 100))
         payload: dict[str, Any] = {
             "success": True,
             "label": "phishing",
-            "confidence": 0.91,
-            "reason": (
-                "계정 정지, 인증 요구, 링크 클릭 유도와 같은 "
-                "피싱 의심 표현으로 위험도가 높게 분류되었습니다."
-            ),
+            "confidence": confidence,
+            "reason": build_mock_reason("phishing", features),
+            "features": build_mock_evidence(features),
+            "risk_level": build_risk_level(score),
+            "score": score,
         }
     else:
         payload = {
             "success": True,
             "label": "normal",
-            "confidence": 0.82,
-            "reason": (
-                "피싱으로 의심되는 강한 표현이나 링크 클릭 유도 "
-                "패턴이 뚜렷하지 않습니다."
-            ),
+            "confidence": round(max(1 - mock_score, 0.72), 2),
+            "reason": build_mock_reason("normal", features),
+            "features": build_mock_evidence(features),
+            "risk_level": build_risk_level(score),
+            "score": score,
         }
 
     payload.update(base_response(settings))
@@ -222,24 +391,93 @@ async def post_hf_endpoint(
         raise UpstreamInferenceError("HF endpoint request failed") from exc
 
 
-def normalize_encoder_response(response_payload: Any) -> tuple[str, float]:
+def normalize_feature_lines(raw_features: Any) -> list[str]:
+    if raw_features is None:
+        return []
+    if isinstance(raw_features, list):
+        return [
+            str(item).strip().lstrip("- ").strip()
+            for item in raw_features
+            if str(item).strip()
+        ]
+    if isinstance(raw_features, str):
+        if raw_features.strip() == "- 특이 사항 없음":
+            return []
+        return [
+            line.strip().lstrip("- ").strip()
+            for line in raw_features.splitlines()
+            if line.strip()
+        ]
+    return [str(raw_features)]
+
+
+def normalize_encoder_response(
+    response_payload: Any,
+) -> tuple[str, float, int, str, list[str]]:
     if isinstance(response_payload, list) and response_payload:
         first_item = response_payload[0]
         if isinstance(first_item, list) and first_item:
             best = max(first_item, key=lambda item: item.get("score", 0.0))
-            return normalize_label(str(best.get("label", "unknown"))), float(
-                best.get("score", 0.0)
+            confidence = float(best.get("score", 0.0))
+            label = normalize_label(str(best.get("label", "unknown")))
+            score = build_risk_score(label, confidence)
+            return (
+                label,
+                confidence,
+                score,
+                build_risk_level(score),
+                [],
             )
         if isinstance(first_item, dict):
-            return normalize_label(str(first_item.get("label", "unknown"))), float(
+            confidence = float(
                 first_item.get("score", first_item.get("confidence", 0.0))
+            )
+            label = normalize_label(str(first_item.get("label", "unknown")))
+            score = build_risk_score(label, confidence, first_item.get("risk_score"))
+            return (
+                label,
+                confidence,
+                score,
+                build_risk_level(score),
+                normalize_feature_lines(first_item.get("features")),
             )
 
     if isinstance(response_payload, dict):
-        label = response_payload.get("label", response_payload.get("predicted_label"))
-        confidence = response_payload.get("confidence", response_payload.get("score"))
-        if label is not None and confidence is not None:
-            return normalize_label(str(label)), float(confidence)
+        label = (
+            response_payload.get("label")
+            or response_payload.get("predicted_label")
+            or response_payload.get("label_name")
+            or response_payload.get("pred")
+        )
+        if label is not None:
+            normalized_label = normalize_label(str(label))
+            confidence = response_payload.get("confidence")
+            if confidence is None and normalized_label == "normal":
+                confidence = response_payload.get("prob_0_normal")
+            if confidence is None:
+                confidence = response_payload.get("prob_1_risk")
+            if confidence is None:
+                confidence = response_payload.get("score")
+            if confidence is None:
+                raise ResponseNormalizationError(
+                    "Encoder endpoint response is missing confidence"
+                )
+
+            normalized_confidence = float(confidence)
+            if normalized_confidence > 1:
+                normalized_confidence = normalized_confidence / 100
+            score = build_risk_score(
+                normalized_label,
+                normalized_confidence,
+                response_payload.get("score"),
+            )
+            return (
+                normalized_label,
+                normalized_confidence,
+                score,
+                str(response_payload.get("risk_level") or build_risk_level(score)),
+                normalize_feature_lines(response_payload.get("features")),
+            )
 
     raise ResponseNormalizationError("Unsupported encoder endpoint response")
 
@@ -281,7 +519,9 @@ async def hf_endpoint_analyze(
         {"inputs": text},
         settings.request_timeout_seconds,
     )
-    label, confidence = normalize_encoder_response(encoder_payload)
+    label, confidence, score, risk_level, features = normalize_encoder_response(
+        encoder_payload
+    )
 
     decoder_payload = await post_hf_endpoint(
         client,
@@ -292,6 +532,7 @@ async def hf_endpoint_analyze(
                 "text": text,
                 "label": label,
                 "confidence": confidence,
+                "features": features,
             }
         },
         settings.request_timeout_seconds,
@@ -303,6 +544,9 @@ async def hf_endpoint_analyze(
         "label": label,
         "confidence": confidence,
         "reason": reason,
+        "features": features,
+        "risk_level": risk_level,
+        "score": score,
     }
     payload.update(base_response(settings))
     return AnalyzeResponse(**payload)

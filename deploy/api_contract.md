@@ -47,7 +47,12 @@ Deploy wrapper는 문자 내용만 분석한다. `phone_number`는 선택 입력
   "success": true,
   "label": "phishing",
   "confidence": 0.91,
-  "reason": "계정 정지, 인증 요구, 링크 클릭 유도와 같은 피싱 의심 표현으로 위험도가 높게 분류되었습니다.",
+  "reason": "위험 키워드 감지: 계정, 정지, 인증, 링크 같은 피싱 의심 요소가 포함되어 위험도가 높게 분류되었습니다.",
+  "features": [
+    "위험 키워드 감지: 계정, 정지, 인증, 링크"
+  ],
+  "risk_level": "위험 높음",
+  "score": 91,
   "encoder_model_id": "team/kcelectra-smishing-classifier",
   "encoder_model_version": "v1.0.0",
   "decoder_model_id": "team/decoder-explainer",
@@ -118,6 +123,9 @@ curl -X POST http://localhost:8001/analyze \
 | `label` | string | `phishing` 또는 `normal` |
 | `confidence` | number | 0.0부터 1.0 사이의 예측 신뢰도 |
 | `reason` | string | 사용자에게 보여줄 수 있는 판단 근거 |
+| `features` | array of string | UI에서 판단 근거 하단에 리스트로 표시할 감지 특징 |
+| `risk_level` | string | Encoder 또는 wrapper가 계산한 위험 단계 |
+| `score` | integer | 0부터 100 사이의 위험 점수 |
 | `encoder_model_id` | string | Encoder 모델 식별자 |
 | `encoder_model_version` | string | Encoder 모델 version |
 | `decoder_model_id` | string | Decoder 모델 식별자 |
@@ -148,3 +156,30 @@ Deploy wrapper는 backend에 원시 모델 label을 그대로 넘기지 않고 `
 | `SMISHING` | `phishing` |
 
 실제 Encoder 학습 label mapping이 다르면 Hugging Face Endpoint 연결 전에 wrapper mapping을 수정해야 한다.
+
+## Encoder Output Normalization
+
+모델링팀 Encoder Endpoint가 다음과 같은 prototype output을 반환할 수 있다.
+
+```json
+{
+  "text": "배송 주소 오류로 반송 예정입니다. http://fake.kr/track",
+  "pred": 1,
+  "label_name": "스미싱",
+  "prob_1_risk": 0.91,
+  "prob_0_normal": 0.09,
+  "risk_level": "위험 높음",
+  "score": 91,
+  "features": "- 외부 링크 포함: http://fake.kr/track"
+}
+```
+
+Deploy wrapper는 이 값을 backend contract에 맞춰 정규화한다.
+
+- `label_name: "스미싱"` 또는 `pred: 1` -> `label: "phishing"`
+- `label_name: "정상"` 또는 `pred: 0` -> `label: "normal"`
+- `prob_1_risk` -> `confidence`
+- `features` 문자열 -> `features: string[]`
+- `risk_level`, `score`는 가능한 경우 그대로 전달
+
+Decoder Endpoint는 Encoder의 `text`, `label`, `confidence`, `features`를 바탕으로 생성한 설명 한 줄을 반환한다고 가정한다. Deploy wrapper는 decoder output을 `reason`으로 정규화한다.
