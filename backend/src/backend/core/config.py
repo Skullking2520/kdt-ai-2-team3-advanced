@@ -4,6 +4,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
+    APP_ENV: str = Field(default=...)  # 개발/운영 환경
     # 1. 개별 MySQL 설정 (기본값이 없으므로 .env에 없으면 서버 구동 시 즉시 에러)
     MYSQL_ROOT_PASSWORD: str = Field(default=...)
     MYSQL_DATABASE: str = Field(default=...)
