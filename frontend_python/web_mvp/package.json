@@ -4,9 +4,7 @@
     "dev": "vite",
     "test": "node --test",
     "build": "vite build",
-    "preview": "vite preview",
-    "storybook": "storybook dev -p 6006",
-    "build-storybook": "storybook build"
+    "preview": "vite preview"
   },
   "dependencies": {
     "@vitejs/plugin-react": "^5.0.0",
@@ -17,10 +15,8 @@
     "lucide-react": "^0.468.0"
   },
   "devDependencies": {
-    "@storybook/react-vite": "^10.0.0",
     "autoprefixer": "^10.4.20",
     "postcss": "^8.4.49",
-    "storybook": "^10.0.0",
     "tailwindcss": "^3.4.17"
   },
   "name": "smishing-check-web",
