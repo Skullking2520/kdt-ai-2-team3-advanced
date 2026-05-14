@@ -8,7 +8,10 @@ const PATTERNS = {
   privacy: ["인증번호", "비밀번호", "주민등록번호", "카드번호"],
 };
 
-const includesAny = (text, terms) => terms.filter((term) => text.includes(term));
+const includesAny = (text, terms) => {
+  const normalizedText = text.toLowerCase();
+  return terms.filter((term) => normalizedText.includes(term.toLowerCase()));
+};
 
 const clampScore = (score) => Math.max(0, Math.min(100, score));
 
@@ -40,7 +43,7 @@ const buildDecoderExplanation = ({ riskLevel, impersonationType, suspiciousEvide
     return `스미싱 가능성을 더 확인해볼 필요가 있어요. 첫번째, 문자 안에 일부 의심 표현이 있습니다. 두번째, ${evidenceSummary} 세번째, 발신자와 요청 내용이 평소와 다르면 피해로 이어질 수 있습니다.`;
   }
 
-  return `스미싱이 아닐 가능성이 높아요. 첫번째, 문자 내용이 일상적인 대화 흐름에 가깝습니다. 두번째, 현재 문자에는 의심스러운 링크나 전화번호 유도 표현이 뚜렷하게 보이지 않습니다. 세번째, 송금이나 개인정보 입력을 급하게 요구하는 표현도 강하게 나타나지 않습니다. 다만`;
+  return `스미싱이 아닐 가능성이 높아요. 첫번째, 문자 내용이 일상적인 대화 흐름에 가깝습니다. 두번째, 현재 문자에는 의심스러운 링크나 전화번호 유도 표현이 뚜렷하게 보이지 않습니다. 세번째, 송금이나 개인정보 입력을 급하게 요구하는 표현도 강하게 나타나지 않습니다. 다만, 출처가 불분명한 링크나 개인정보 요청은 한 번 더 확인하는 것이 안전합니다.`;
 };
 
 export const exampleMessages = [

@@ -20,6 +20,7 @@ export function CheckForm({
       <div className="w-full">
         <div className="rounded-[1.75rem] border-2 border-sky-200 bg-white shadow-sm transition focus-within:border-sky-400 focus-within:shadow-md">
           <textarea
+            aria-label="문자 내용"
             className="min-h-48 w-full resize-y rounded-t-[1.6rem] border-0 bg-transparent px-5 py-5 text-base font-bold leading-7 text-slate-800 outline-none placeholder:text-slate-400"
             maxLength={2000}
             value={message}

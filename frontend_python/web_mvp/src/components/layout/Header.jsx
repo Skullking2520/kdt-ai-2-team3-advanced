@@ -13,8 +13,8 @@ export function Header({ mode, setMode, warm }) {
 
           <div className="flex items-center gap-3">
             <div className="hidden items-center gap-1 rounded-2xl border border-slate-200 bg-slate-50 p-1 sm:flex">
-              <button className={`rounded-xl px-3 py-2 text-sm font-black ${mode === "modern" ? "bg-sky-500 text-white" : "text-slate-600"}`} onClick={() => setMode("modern")} type="button">일반</button>
-              <button className={`rounded-xl px-3 py-2 text-sm font-black ${mode === "warm" ? "bg-amber-500 text-white" : "text-slate-600"}`} onClick={() => setMode("warm")} type="button">쉬운모드</button>
+              <button aria-pressed={mode === "modern"} className={`rounded-xl px-3 py-2 text-sm font-black ${mode === "modern" ? "bg-sky-500 text-white" : "text-slate-600"}`} onClick={() => setMode("modern")} type="button">일반</button>
+              <button aria-pressed={mode === "warm"} className={`rounded-xl px-3 py-2 text-sm font-black ${mode === "warm" ? "bg-amber-500 text-white" : "text-slate-600"}`} onClick={() => setMode("warm")} type="button">쉬운모드</button>
             </div>
             <a className="hidden rounded-2xl bg-slate-50 px-5 py-3 text-sm font-black text-slate-700 md:inline-flex" href="#report">신고하기</a>
           </div>

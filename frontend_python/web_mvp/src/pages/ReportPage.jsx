@@ -28,7 +28,7 @@ export function ReportPage({ reportText, reportType, setReportText, setReportTyp
         />
         <button
           className="mt-5 inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-2xl bg-red-600 font-black text-white disabled:bg-slate-300"
-          disabled={!reportText.trim()}
+          disabled
           type="button"
         >
           <Send className="h-5 w-5" />
