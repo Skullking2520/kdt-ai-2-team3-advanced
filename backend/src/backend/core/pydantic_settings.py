@@ -24,7 +24,7 @@ class Settings(BaseSettings):
     # csrf 비밀키 설정
     CSRF_SECRET: str = Field(default="your_csrf_key")
 
-    # .env 파일 로드 설정
+    # .env 파일 로드 설정 (pydantic v2 방식)
     model_config = SettingsConfigDict(
         env_file=find_dotenv(),  # 루트 .env까지 찾아 올라감
         env_file_encoding="utf-8",
@@ -35,4 +35,4 @@ class Settings(BaseSettings):
 # 전역 설정 객체 생성
 settings = Settings()
 
-print("환경 변수 로드 완료")  # 확인용
+print("환경 변수 로드 완료")  # 확인용, TODO: 로거로 교체
