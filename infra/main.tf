@@ -32,8 +32,8 @@ resource "ncloud_mysql" "smishing_db" {
   service_name        = "smishing-db"
   user_name           = var.db_username
   user_password       = var.db_password
-  host_ip             = "10.0.2.%"
-  is_ha               = false # standby server, 멀티존 해제
+  host_ip             = "10.0.1.%" # mysql user host
+  is_ha               = false      # standby server, 멀티존 해제
   is_backup           = true
   is_automatic_backup = true
   #port = 3306(default)
