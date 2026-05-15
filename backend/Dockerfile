@@ -1,3 +1,4 @@
+# 프로젝트 루트 경로에서 실행 가정
 # 빌드 방법: docker build -f backend/Dockerfile -t smishing-backend .
 # 1단계: 빌드 환경
 FROM python:3.12-slim AS builder

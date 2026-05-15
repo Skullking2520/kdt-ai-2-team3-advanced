@@ -77,10 +77,10 @@ jobs:
             cd /home/${{ secrets.NCP_SERVER_USER }}/app
             echo "NCP_REGISTRY=${{ secrets.NCP_REGISTRY }}" >> .env
             docker login -u ${{ secrets.NCP_ACCESS_KEY }} -p ${{ secrets.NCP_SECRET_KEY }} ${{ secrets.NCP_REGISTRY }}
-            docker compose pull
+            docker compose -f docker-compose.yml pull
             # docker-compose.yml 파일에 정의된 서비스들의 이미지를 도커 허브 등
             # 원격 레지스트리에서 다운로드(pull)하거나 최신 버전으로 업데이트
 
             # 여기서는 단순화를 위해 docker-compose로 재시작
-            docker compose up -d --build # 강제로 다시 빌드, 데몬
+            docker compose -f docker-compose.yml up -d --build # 강제로 다시 빌드, 데몬
             docker image prune -f # 댕글링 이미지(Dangling Image)"를 제거하여 디스크 용량을 확보

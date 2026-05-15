@@ -1,5 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from prometheus_fastapi_instrumentator import Instrumentator
 from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 from slowapi.middleware import SlowAPIMiddleware
@@ -15,6 +16,14 @@ limiter = Limiter(key_func=get_remote_address, default_limits=["15/minutes"])
 
 
 def configure_app(app: FastAPI):
+    # Instrumentation 설정 및 /metrics 자동 등록, 최상단으로 등록해야함
+    Instrumentator(
+        should_group_status_codes=True,  # 2xx, 3xx, 4xx, 5xx 그룹화
+        should_ignore_untemplated=True,  # 템플릿 없는 경로 무시 (/docs 등)
+        excluded_handlers=["/health", "/metrics"],
+    ).instrument(app).expose(app, include_in_schema=False)
+    # expose(): GET /metrics 등록
+
     # cors 설정 추가
     app.add_middleware(
         CORSMiddleware,
