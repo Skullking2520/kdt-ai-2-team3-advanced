@@ -53,6 +53,18 @@ jobs:
       # docker buildx build --platform linux/amd64 -t <registry_url>
       # -f backend/Dockerfile --push . (cli원문)
 
+      # 2.25 기존 앱 디렉토리의 잔재 청소
+      - name: Delete previous app directory
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.NCP_SERVER_IP }}
+          username: ${{ secrets.NCP_SERVER_USER }}
+          key: ${{ secrets.NCP_SERVER_SSH_KEY }} # 개인키
+          port: ${{ fromJson(secrets.NCP_SERVER_SSH_PORT) }} # fromJSON으로 숫자로 변환
+          script: |
+            rm -rf /home/${{ secrets.NCP_SERVER_USER }}/app
+            mkdir -p /home/${{ secrets.NCP_SERVER_USER }}/app
+
       # 2.5 체크아웃된 소스 코드를 서버로 복사
       - name: Copy files via SCP
         uses: appleboy/scp-action@master
