@@ -2,16 +2,18 @@
 
 from __future__ import annotations
 
+import asyncio
 import logging
 import os
 import re
+import uuid
 from contextlib import asynccontextmanager
 from dataclasses import dataclass
-from typing import Any
+from typing import Annotated, Any
 from urllib.parse import quote
 
 import httpx
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, Header, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, ConfigDict, Field
@@ -130,8 +132,11 @@ class Settings(BaseModel):
     decoder_model_id: str = Field(default="team/decoder-explainer")
     decoder_model_version: str = Field(default="v1.0.0")
     request_timeout_seconds: int = Field(default=60)
+    hf_max_retries: int = Field(default=2)
+    hf_retry_backoff_seconds: float = Field(default=0.5)
     decoder_max_new_tokens: int = Field(default=120)
     decoder_temperature: float = Field(default=0.3)
+    decoder_on_normal: bool = Field(default=False)
 
 
 class AnalyzeRequest(BaseModel):
@@ -208,12 +213,19 @@ def load_settings() -> Settings:
         decoder_model_id=os.getenv("DECODER_MODEL_ID", "team/decoder-explainer"),
         decoder_model_version=os.getenv("DECODER_MODEL_VERSION", "v1.0.0"),
         request_timeout_seconds=timeout_seconds,
+        hf_max_retries=parse_non_negative_int(
+            os.getenv("HF_MAX_RETRIES"), default=2
+        ),
+        hf_retry_backoff_seconds=parse_non_negative_float(
+            os.getenv("HF_RETRY_BACKOFF_SECONDS"), default=0.5
+        ),
         decoder_max_new_tokens=parse_positive_int(
             os.getenv("DECODER_MAX_NEW_TOKENS"), default=120
         ),
         decoder_temperature=parse_positive_float(
             os.getenv("DECODER_TEMPERATURE"), default=0.3
         ),
+        decoder_on_normal=parse_bool(os.getenv("DECODER_ON_NORMAL"), default=False),
     )
 
 
@@ -227,6 +239,16 @@ def parse_positive_int(value: str | None, default: int) -> int:
     return parsed if parsed > 0 else default
 
 
+def parse_non_negative_int(value: str | None, default: int) -> int:
+    if value is None or value.strip() == "":
+        return default
+    try:
+        parsed = int(value)
+    except ValueError:
+        return default
+    return parsed if parsed >= 0 else default
+
+
 def parse_positive_float(value: str | None, default: float) -> float:
     if value is None or value.strip() == "":
         return default
@@ -235,6 +257,28 @@ def parse_positive_float(value: str | None, default: float) -> float:
     except ValueError:
         return default
     return parsed if parsed > 0 else default
+
+
+def parse_non_negative_float(value: str | None, default: float) -> float:
+    if value is None or value.strip() == "":
+        return default
+    try:
+        parsed = float(value)
+    except ValueError:
+        return default
+    return parsed if parsed >= 0 else default
+
+
+def parse_bool(value: str | None, default: bool) -> bool:
+    if value is None or value.strip() == "":
+        return default
+    return value.strip().lower() in {"1", "true", "yes", "y", "on"}
+
+
+def build_request_id(incoming_request_id: str | None) -> str:
+    if incoming_request_id and incoming_request_id.strip():
+        return incoming_request_id.strip()
+    return str(uuid.uuid4())
 
 
 def normalize_label(raw_label: str) -> str:
@@ -274,6 +318,41 @@ def base_response(settings: Settings) -> dict[str, str]:
         "decoder_model_version": settings.decoder_model_version,
         "serving_mode": settings.serving_mode,
     }
+
+
+def collect_settings_errors(settings: Settings) -> list[str]:
+    errors = []
+
+    if settings.serving_mode not in {"mock", "hf_endpoint"}:
+        errors.append("AI_SERVICE_MODE must be mock or hf_endpoint")
+
+    if settings.serving_mode != "hf_endpoint":
+        return errors
+
+    if settings.hf_serving_type not in {"serverless", "endpoint"}:
+        errors.append("HF_SERVING_TYPE must be serverless or endpoint")
+
+    if settings.hf_serving_type == "serverless":
+        if not settings.hf_token:
+            errors.append("HF_TOKEN is required")
+        if not settings.encoder_model_id:
+            errors.append("ENCODER_MODEL_ID is required")
+        if not settings.decoder_model_id:
+            errors.append("DECODER_MODEL_ID is required")
+
+    if settings.hf_serving_type == "endpoint":
+        if not settings.encoder_endpoint_url:
+            errors.append("ENCODER_ENDPOINT_URL is required")
+        if not settings.decoder_endpoint_url:
+            errors.append("DECODER_ENDPOINT_URL is required")
+
+    return errors
+
+
+def validate_runtime_settings(settings: Settings) -> None:
+    errors = collect_settings_errors(settings)
+    if errors:
+        raise ConfigurationError("; ".join(errors))
 
 
 def extract_mock_features(text: str) -> MockFeatures:
@@ -425,22 +504,48 @@ async def post_hf_endpoint(
     token: str,
     payload: dict[str, Any],
     timeout: int,
+    max_retries: int,
+    retry_backoff_seconds: float,
+    request_id: str,
 ) -> Any:
     headers = {"Content-Type": "application/json"}
     if token:
         headers["Authorization"] = f"Bearer {token}"
+    headers["X-Request-ID"] = request_id
 
-    try:
-        response = await client.post(
-            url,
-            headers=headers,
-            json=payload,
-            timeout=timeout,
+    attempts = max_retries + 1
+    last_error: Exception | None = None
+
+    for attempt in range(1, attempts + 1):
+        try:
+            response = await client.post(
+                url,
+                headers=headers,
+                json=payload,
+                timeout=timeout,
+            )
+            response.raise_for_status()
+            return response.json()
+        except ValueError as exc:
+            raise UpstreamInferenceError("HF response JSON decode failed") from exc
+        except httpx.HTTPStatusError as exc:
+            if exc.response.status_code < 500 or attempt == attempts:
+                raise UpstreamInferenceError("HF endpoint request failed") from exc
+            last_error = exc
+        except httpx.HTTPError as exc:
+            if attempt == attempts:
+                raise UpstreamInferenceError("HF endpoint request failed") from exc
+            last_error = exc
+
+        logger.warning(
+            "HF request retry %s/%s request_id=%s",
+            attempt,
+            attempts,
+            request_id,
         )
-        response.raise_for_status()
-        return response.json()
-    except (httpx.HTTPError, ValueError) as exc:
-        raise UpstreamInferenceError("HF endpoint request failed") from exc
+        await asyncio.sleep(retry_backoff_seconds * attempt)
+
+    raise UpstreamInferenceError("HF endpoint request failed") from last_error
 
 
 def build_serverless_model_url(settings: Settings, model_id: str) -> str:
@@ -487,6 +592,33 @@ def normalize_feature_lines(raw_features: Any) -> list[str]:
     return [str(raw_features)]
 
 
+def normalize_classifier_items(
+    items: list[dict[str, Any]],
+) -> tuple[str, float, int, str, list[str]]:
+    if not items:
+        raise ResponseNormalizationError("Encoder endpoint response is empty")
+
+    best = max(
+        items,
+        key=lambda item: parse_normalized_float(item.get("score", 0.0), "score"),
+    )
+    confidence = parse_normalized_float(best.get("score", 0.0), "score")
+    raw_label = first_present(best, "label", "label_name", "pred")
+    if raw_label is None:
+        raise ResponseNormalizationError(
+            "Encoder endpoint response is missing label"
+        )
+    label = normalize_label(str(raw_label))
+    score = build_risk_score(label, confidence, best.get("risk_score"))
+    return (
+        label,
+        confidence,
+        score,
+        str(best.get("risk_level") or build_risk_level(score)),
+        normalize_feature_lines(best.get("features")),
+    )
+
+
 def normalize_encoder_response(
     response_payload: Any,
 ) -> tuple[str, float, int, str, list[str]]:
@@ -497,22 +629,11 @@ def normalize_encoder_response(
                 raise ResponseNormalizationError(
                     "Encoder endpoint response contains invalid classifier item"
                 )
-            best = max(
-                first_item,
-                key=lambda item: parse_normalized_float(
-                    item.get("score", 0.0), "score"
-                ),
-            )
-            confidence = parse_normalized_float(best.get("score", 0.0), "score")
-            label = normalize_label(str(best.get("label", "unknown")))
-            score = build_risk_score(label, confidence)
-            return (
-                label,
-                confidence,
-                score,
-                build_risk_level(score),
-                [],
-            )
+            return normalize_classifier_items(first_item)
+        if all(isinstance(item, dict) for item in response_payload) and all(
+            "score" in item for item in response_payload
+        ):
+            return normalize_classifier_items(response_payload)
         if isinstance(first_item, dict):
             confidence_value = first_present(first_item, "score", "confidence")
             if confidence_value is None:
@@ -619,11 +740,25 @@ def build_decoder_prompt(
     )
 
 
+def build_normal_fallback_reason(features: list[str]) -> str:
+    if features:
+        return (
+            "일부 특징은 감지되었지만 스미싱으로 분류될 만큼의 "
+            "위험 신호는 뚜렷하지 않습니다."
+        )
+    return (
+        "피싱으로 의심되는 강한 표현이나 링크 클릭 유도 "
+        "패턴이 뚜렷하지 않습니다."
+    )
+
+
 async def hf_endpoint_analyze(
     text: str,
     settings: Settings,
     client: httpx.AsyncClient,
+    request_id: str,
 ) -> AnalyzeResponse:
+    validate_runtime_settings(settings)
     encoder_url, decoder_url = resolve_hf_urls(settings)
 
     encoder_payload = await post_hf_endpoint(
@@ -632,26 +767,35 @@ async def hf_endpoint_analyze(
         settings.hf_token,
         {"inputs": text},
         settings.request_timeout_seconds,
+        settings.hf_max_retries,
+        settings.hf_retry_backoff_seconds,
+        request_id,
     )
     label, confidence, score, risk_level, features = normalize_encoder_response(
         encoder_payload
     )
 
-    decoder_payload = await post_hf_endpoint(
-        client,
-        decoder_url,
-        settings.hf_token,
-        {
-            "inputs": build_decoder_prompt(text, label, confidence, features),
-            "parameters": {
-                "max_new_tokens": settings.decoder_max_new_tokens,
-                "temperature": settings.decoder_temperature,
-                "return_full_text": False,
+    if label == "normal" and not settings.decoder_on_normal:
+        reason = build_normal_fallback_reason(features)
+    else:
+        decoder_payload = await post_hf_endpoint(
+            client,
+            decoder_url,
+            settings.hf_token,
+            {
+                "inputs": build_decoder_prompt(text, label, confidence, features),
+                "parameters": {
+                    "max_new_tokens": settings.decoder_max_new_tokens,
+                    "temperature": settings.decoder_temperature,
+                    "return_full_text": False,
+                },
             },
-        },
-        settings.request_timeout_seconds,
-    )
-    reason = normalize_decoder_response(decoder_payload)
+            settings.request_timeout_seconds,
+            settings.hf_max_retries,
+            settings.hf_retry_backoff_seconds,
+            request_id,
+        )
+        reason = normalize_decoder_response(decoder_payload)
 
     payload: dict[str, Any] = {
         "success": True,
@@ -676,6 +820,24 @@ async def health() -> dict[str, str]:
     }
 
 
+@app.get("/ready")
+async def ready() -> JSONResponse:
+    settings = load_settings()
+    errors = collect_settings_errors(settings)
+    status_code = 200 if not errors else 503
+    return JSONResponse(
+        status_code=status_code,
+        content={
+            "ready": not errors,
+            "service": "deploy_wrapper",
+            "serving_mode": settings.serving_mode,
+            "hf_serving_type": settings.hf_serving_type,
+            "decoder_on_normal": settings.decoder_on_normal,
+            "errors": errors,
+        },
+    )
+
+
 @app.post(
     "/analyze",
     response_model=AnalyzeResponse,
@@ -686,10 +848,19 @@ async def health() -> dict[str, str]:
         502: {"model": ErrorResponse},
     },
 )
-async def analyze(payload: AnalyzeRequest) -> AnalyzeResponse | JSONResponse:
+async def analyze(
+    payload: AnalyzeRequest,
+    x_request_id: Annotated[str | None, Header()] = None,
+) -> AnalyzeResponse | JSONResponse:
     settings = load_settings()
+    request_id = build_request_id(x_request_id)
 
     try:
+        logger.info(
+            "Analyze request received request_id=%s serving_mode=%s",
+            request_id,
+            settings.serving_mode,
+        )
         match settings.serving_mode:
             case "mock":
                 return await mock_analyze(payload.text, settings)
@@ -698,9 +869,16 @@ async def analyze(payload: AnalyzeRequest) -> AnalyzeResponse | JSONResponse:
                     payload.text,
                     settings,
                     app.state.http_client,
+                    request_id,
                 )
     except InferenceError as exc:
-        logger.warning("%s: %s", exc.error_code, exc, exc_info=True)
+        logger.warning(
+            "%s request_id=%s: %s",
+            exc.error_code,
+            request_id,
+            exc,
+            exc_info=True,
+        )
         return JSONResponse(
             status_code=exc.status_code,
             content={
@@ -710,7 +888,10 @@ async def analyze(payload: AnalyzeRequest) -> AnalyzeResponse | JSONResponse:
             },
         )
     except Exception:
-        logger.exception("Unexpected deploy wrapper inference failure")
+        logger.exception(
+            "Unexpected deploy wrapper inference failure request_id=%s",
+            request_id,
+        )
         return JSONResponse(
             status_code=500,
             content={

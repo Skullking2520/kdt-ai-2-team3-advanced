@@ -13,13 +13,19 @@ Wrapper app은 `deploy/app/` 아래에 둔다. `ai_service/`는 모델링 담당
 FastAPI wrapper에 필요한 최소 패키지 예시는 다음과 같다.
 
 ```text
-fastapi
-uvicorn
-httpx
-pydantic
+fastapi==0.136.1
+uvicorn==0.47.0
+httpx==0.28.1
+pydantic==2.12.4
 ```
 
 Docker dependency는 `deploy/requirements.txt`에 둔다. Docker image는 이 파일을 직접 설치하고 `deploy/Dockerfile`을 사용해 wrapper app을 실행한다. 루트 `uv` workspace dependency와는 별도로 관리되는 deploy wrapper 전용 runtime dependency다.
+
+Docker image는 운영 기본값에 가깝게 다음 설정을 포함한다.
+
+- non-root user 실행
+- Python bytecode 생성 비활성화
+- `/health` 기반 container healthcheck
 
 ## Docker Files
 
@@ -63,6 +69,7 @@ Verified commands:
 
 - `docker compose -f docker-compose.example.yml config`
 - `docker compose -f docker-compose.example.yml up --build`
+- `curl http://localhost:8001/ready`
 - `curl http://localhost:8001/health`
 - `curl -X POST http://localhost:8001/analyze ...`
 - `docker compose -f docker-compose.example.yml down`

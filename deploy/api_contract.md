@@ -30,6 +30,40 @@ Deploy wrapper 상태 확인용 endpoint다.
 }
 ```
 
+## GET `/ready`
+
+현재 설정으로 deploy wrapper가 요청을 처리할 준비가 되었는지 확인한다.
+
+`mock` mode에서는 별도 HF 설정 없이 ready 상태가 된다. `hf_endpoint` mode에서는 `HF_TOKEN`, model ID, endpoint URL 같은 필수 설정이 있는지 확인한다. 실제 HF inference 호출은 하지 않는다.
+
+### Ready Response
+
+```json
+{
+  "ready": true,
+  "service": "deploy_wrapper",
+  "serving_mode": "mock",
+  "hf_serving_type": "serverless",
+  "decoder_on_normal": false,
+  "errors": []
+}
+```
+
+### Not Ready Response
+
+```json
+{
+  "ready": false,
+  "service": "deploy_wrapper",
+  "serving_mode": "hf_endpoint",
+  "hf_serving_type": "serverless",
+  "decoder_on_normal": false,
+  "errors": [
+    "HF_TOKEN is required"
+  ]
+}
+```
+
 ## POST `/analyze`
 
 입력 문장을 분석해 피싱 여부, confidence, 설명을 반환한다.
@@ -113,6 +147,12 @@ curl -X POST http://localhost:8001/analyze \
   -d '{}'
 ```
 
+Readiness check:
+
+```bash
+curl http://localhost:8001/ready
+```
+
 ## Request Fields
 
 | Field | Type | Required | Description |
@@ -147,6 +187,7 @@ curl -X POST http://localhost:8001/analyze \
 - Static miss이면 deploy wrapper의 `/analyze`를 호출한다.
 - Backend는 `/analyze` 응답을 받은 뒤 `detection_source=AI`로 prediction/smishing log를 저장한다.
 - `success=false`이면 frontend에 일반화된 오류 메시지를 전달하고 내부 로그에 상세 내용을 남긴다.
+- Backend가 `X-Request-ID` header를 전달하면 deploy wrapper가 같은 ID를 로그와 HF 요청 header에 사용한다.
 - `model_id`, `model_version`, `serving_mode`는 추후 모델 변경과 rollback 추적을 위해 함께 저장한다.
 - `label=phishing`이고 URL 또는 전화번호가 포함되어 있으면 backend 정책에 따라 `static_patterns` 후보로 저장하거나 count를 갱신할 수 있다.
 - 사용자가 신고를 누르고 전화번호가 입력된 경우, backend가 전화번호와 신고 횟수를 별도 DB 테이블 또는 필드로 관리한다.
@@ -209,3 +250,41 @@ Deploy wrapper는 이 값을 backend contract에 맞춰 정규화한다.
 - `risk_level`, `score`는 가능한 경우 그대로 전달
 
 Decoder는 text-generation 모델이라고 가정한다. Deploy wrapper는 Encoder의 `text`, `label`, `confidence`, `features`를 prompt 문자열로 구성해 decoder에 전달하고, decoder output을 `reason`으로 정규화한다.
+
+기본값은 `DECODER_ON_NORMAL=false`다. 이 경우 Encoder가 `normal`을 반환하면 decoder를 호출하지 않고 정적 안전 설명을 반환한다. Encoder가 `phishing`을 반환하면 decoder text-generation API를 호출해 설명을 생성한다.
+
+## HF Serverless Text-Classification Response
+
+HF serverless text-classification API는 prototype response가 아니라 다음처럼 classifier label list를 반환할 수 있다.
+
+```json
+[
+  [
+    {
+      "label": "LABEL_0",
+      "score": 0.09
+    },
+    {
+      "label": "LABEL_1",
+      "score": 0.91
+    }
+  ]
+]
+```
+
+또는 다음처럼 list of objects로 반환될 수 있다.
+
+```json
+[
+  {
+    "label": "LABEL_0",
+    "score": 0.09
+  },
+  {
+    "label": "LABEL_1",
+    "score": 0.91
+  }
+]
+```
+
+Deploy wrapper는 가장 높은 `score`의 label을 선택하고 `LABEL_0 -> normal`, `LABEL_1 -> phishing` 기본 mapping을 적용한다. 실제 모델 학습 label mapping이 다르면 이 mapping을 먼저 수정해야 한다.

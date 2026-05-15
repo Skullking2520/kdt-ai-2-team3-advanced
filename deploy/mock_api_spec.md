@@ -120,6 +120,7 @@ HF_SERVING_TYPE=serverless
 HF_TOKEN=
 ENCODER_MODEL_ID=
 DECODER_MODEL_ID=
+DECODER_ON_NORMAL=false
 ```
 
 Backend는 `/analyze` contract가 유지되는 한 별도 변경 없이 동일 API를 호출한다.

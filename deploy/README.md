@@ -3,14 +3,18 @@
 이 폴더는 AI 모델 배포, 모델 서빙, backend 연동 구조를 정리하기 위한 설계 문서와 deployment wrapper 예시 코드를 담는다.
 
 전체 공유용 쉬운 설명은 [team_overview.md](team_overview.md)를 먼저 참고한다.
+실제 Hugging Face serverless API 연결 전 확인할 항목은
+[hf_serverless_checklist.md](hf_serverless_checklist.md)를 참고한다.
 
 현재 `frontend`, `backend`, `ai_service`, 모델 학습이 모두 진행 중이므로 이 단계에서는 실제 백엔드나 실제 모델에 직접 연결하지 않는다. 대신 mock-first 방식으로 API 형태와 배포 구조를 먼저 고정한다.
 
 `ai_service/` 폴더는 모델링 담당자가 학습, 평가, inference 실험 코드를 관리하는 영역이므로 이 작업에서는 수정하지 않는다. Hugging Face Endpoint 기반 async FastAPI wrapper는 `deploy/app/` 아래에 작성한다.
 
-최종 목표는 `deploy` wrapper가 Hugging Face inference API를 직접 감싸는 async FastAPI wrapper 역할을 하는 구조다. 백엔드는 deploy wrapper의 `/analyze` API만 호출하고, deploy wrapper는 FastAPI lifespan에서 관리되는 공유 `httpx.AsyncClient`로 Encoder와 Decoder를 순차 호출한 뒤 `label`, `confidence`, `reason` 형식으로 정규화한다.
+최종 목표는 `deploy` wrapper가 Hugging Face inference API를 직접 감싸는 async FastAPI wrapper 역할을 하는 구조다. 백엔드는 deploy wrapper의 `/analyze` API만 호출하고, deploy wrapper는 FastAPI lifespan에서 관리되는 공유 `httpx.AsyncClient`로 Encoder와 Decoder를 순차 호출한 뒤 `label`, `confidence`, `reason` 형식으로 정규화한다. 기본값에서는 Encoder가 `normal`을 반환하면 decoder 호출을 생략하고 정적 안전 설명을 반환한다.
 
 현재 실제 연결 우선순위는 Hugging Face serverless API다. `HF_SERVING_TYPE=serverless`이면 endpoint URL 대신 `ENCODER_MODEL_ID`, `DECODER_MODEL_ID`를 사용해 HF serverless model API를 호출한다. 운영 안정성이나 성능 제어가 필요하면 `HF_SERVING_TYPE=endpoint`로 dedicated Inference Endpoint URL을 사용할 수 있게 열어둔다.
+
+운영 확인용 endpoint는 두 단계로 나눈다. `/health`는 앱 프로세스가 살아 있는지만 확인하고, `/ready`는 현재 mode에서 필요한 환경변수가 준비되었는지 확인한다.
 
 사용자가 입력하는 전화번호는 deploy wrapper의 분석 대상이 아니다. 전화번호 선택 입력, 신고 버튼, 신고 안내 페이지, 신고된 전화번호 저장, 신고 횟수 증가는 frontend/backend/DB 책임으로 둔다. Deploy wrapper는 문자 내용 `text`만 받아 분석 결과를 반환한다.
 
@@ -86,6 +90,18 @@ FastAPI docs page:
 http://localhost:8001/docs
 ```
 
+Readiness check:
+
+```bash
+curl http://localhost:8001/ready
+```
+
+Normalization test:
+
+```bash
+python -m unittest deploy.tests.test_normalization
+```
+
 ### Health Check
 
 ```bash
@@ -149,7 +165,14 @@ Response:
 
 ### Docker Verification
 
-Docker compose validation has been completed for the deploy wrapper. Docker 검증은 추후 선택 사항이 아니라, Docker 기반 실행 전 반드시 확인해야 하는 검증 항목이다.
+Docker 검증은 추후 선택 사항이 아니라, Docker 기반 실행 전 반드시 확인해야 하는 검증 항목이다.
+
+현재 확인된 항목:
+
+- `docker compose -f docker-compose.example.yml config`
+- `docker compose -f docker-compose.example.yml up --build`
+- container 실행 후 `/health`, `/ready`, `/analyze` 확인
+- `docker compose -f docker-compose.example.yml down`
 
 `deploy/` 디렉터리 기준으로 다음 명령을 실행한다.
 
@@ -163,8 +186,10 @@ docker compose -f docker-compose.example.yml up --build
 
 ```bash
 curl http://localhost:8001/health
+curl http://localhost:8001/ready
 curl -X POST http://localhost:8001/analyze \
   -H "Content-Type: application/json" \
+  -H "X-Request-ID: docker-smoke-test" \
   -d '{"text":"고객님의 계정이 정지되었습니다. 아래 링크에서 인증하세요."}'
 ```
 
@@ -175,10 +200,11 @@ cd deploy
 docker compose -f docker-compose.example.yml down
 ```
 
-Verified:
+Required verification:
 
 - `docker compose -f docker-compose.example.yml config`
 - `docker compose -f docker-compose.example.yml up --build`
+- `curl http://localhost:8001/ready`
 - `curl http://localhost:8001/health`
 - `curl -X POST http://localhost:8001/analyze ...`
 - `docker compose -f docker-compose.example.yml down`
