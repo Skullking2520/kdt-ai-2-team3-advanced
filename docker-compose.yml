@@ -23,3 +23,5 @@ services:
       - /etc/letsencrypt:/etc/letsencrypt # SSL 인증서 공유
     depends_on:
       - fastapi
+
+# 도커 컴포즈가 프로젝트명_default라는 기본 브릿지 네트워크를 생성
