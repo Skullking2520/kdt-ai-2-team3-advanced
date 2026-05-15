@@ -24,4 +24,46 @@ services:
     depends_on:
       - fastapi
 
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+      - "--storage.tsdb.retention.time=7d" # 7일치 데이터 보관
+    restart: unless-stopped
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: grafana
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin123 # 초기비밀번호
+    volumes:
+      - grafana_data:/var/lib/grafana
+    restart: unless-stopped
+
+  node-exporter: # 리눅스 유닉스 계열 서버 os metric 수집해줌
+    image: prom/node-exporter:latest
+    container_name: node-exporter
+    ports:
+      - "9100:9100"
+    volumes:
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /:/rootfs:ro
+    command:
+      - "--path.procfs=/host/proc"
+      - "--path.sysfs=/host/sys"
+    restart: unless-stopped
+
+volumes:
+  prometheus_data:
+  grafana_data:
+
 # 도커 컴포즈가 프로젝트명_default라는 기본 브릿지 네트워크를 생성
