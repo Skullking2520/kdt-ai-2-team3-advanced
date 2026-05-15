@@ -53,6 +53,19 @@ jobs:
       # docker buildx build --platform linux/amd64 -t <registry_url>
       # -f backend/Dockerfile --push . (cli원문)
 
+      # 2.5 체크아웃된 소스 코드를 서버로 복사
+      - name: Copy files via SCP
+        uses: appleboy/scp-action@master
+        with:
+          host: ${{ secrets.NCP_SERVER_IP }}
+          username: ${{ secrets.NCP_SERVER_USER }}
+          key: ${{ secrets.NCP_SERVER_SSH_KEY }}
+          port: ${{ fromJson(secrets.NCP_SERVER_SSH_PORT) }}
+          source: "." # 체크아웃한 현재 디렉토리 전체
+          target: "/home/${{ secrets.NCP_SERVER_USER }}/app"
+          strip_components: 0 # 0이면 전체 구조 포함, 1이면 상위 폴더 제외
+          overwrite: true # 파일 덮어쓰기
+
       # [수정] 3. Frontend 빌드 결과물(dist)을 NCP 서버로 전송
       - name: Copy Frontend Build to NCP
         uses: appleboy/scp-action@master
@@ -75,7 +88,6 @@ jobs:
           port: ${{ fromJson(secrets.NCP_SERVER_SSH_PORT) }} # fromJSON으로 숫자로 변환
           script: |
             cd /home/${{ secrets.NCP_SERVER_USER }}/app
-            echo "NCP_REGISTRY=${{ secrets.NCP_REGISTRY }}" >> .env
             docker login -u ${{ secrets.NCP_ACCESS_KEY }} -p ${{ secrets.NCP_SECRET_KEY }} ${{ secrets.NCP_REGISTRY }}
             docker compose -f docker-compose.yml pull
             # docker-compose.yml 파일에 정의된 서비스들의 이미지를 도커 허브 등
