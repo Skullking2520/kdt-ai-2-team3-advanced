@@ -18,7 +18,7 @@ def configure_app(app: FastAPI):
     # cors 설정 추가
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=["http://localhost:5173"],  # TODO: 우리 도메인 추가
+        allow_origins=["http://localhost:5173", "https://smishing-detect-kdt2.cloud"],
         allow_credentials=True,  # 쿠키 공유 허용
         allow_methods=["*"],
         allow_headers=["*"],
