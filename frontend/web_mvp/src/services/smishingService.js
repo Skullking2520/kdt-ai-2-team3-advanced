@@ -1,8 +1,10 @@
 import { analyzeSmishing, exampleMessages } from "../utils/analyzeSmishing";
-
+import { PREDICT_API_URL } from "../utils/API_URL"
+import getCookie from "../utils/getCookie"
 export { exampleMessages };
 
-const API_URL = import.meta.env.VITE_SMISHING_API_URL ?? "/predict";
+const crsfToken = getCookie("csrftoken");
+
 
 function normalizeApiResult(result, message) {
   const fallback = analyzeSmishing(message);
@@ -21,9 +23,13 @@ function normalizeApiResult(result, message) {
 
 export async function predictSmishing({ message, allowTrainingUse }) {
   try {
-    const response = await fetch(API_URL, {
+    const response = await fetch(PREDICT_API_URL, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        "Content-Type": "application/json",
+        "X-CSRFToken": crsfToken // 이 헤더 이름으로 토큰을 담아 보냅니다.
+      },
+      credentials: "include",
       body: JSON.stringify({ message, allowTrainingUse }),
     });
 

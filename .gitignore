@@ -8,6 +8,12 @@ __pycache__/
 dist/
 build/
 
+# vscode
+.vscode
+
+# pytest
+.pytest_cache/
+
 # 환경
 .env
 .env.*
@@ -45,8 +51,18 @@ logs/
 wandb/
 mlruns/
 
+# terraform
+*.tfvars
+.terraform/
+.terraform.tfstate.lock.info
+terraform.tfstate
+terraform.tfstate.backup
+smishing-inference-server-key.pem
+smishing-inference-server-pwd.txt
+
 # custom folders
 raw_data
+my_local_model/
 node_modules/
 frontend_python/web_mvp/node_modules/
 frontend_python/web_mvp/dist/
