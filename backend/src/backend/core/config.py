@@ -7,7 +7,7 @@ from slowapi.middleware import SlowAPIMiddleware
 from slowapi.util import get_remote_address
 from starlette_csrf.middleware import CSRFMiddleware
 
-from ..api import predict, root
+from ..api import predict, report, root
 from ..db import is_dev
 from .pydantic_settings import settings  # 환경 변수 로드
 
@@ -52,3 +52,4 @@ def configure_app(app: FastAPI):
     # 라우터 일괄등록
     app.include_router(root.router)
     app.include_router(predict.router)
+    app.include_router(report.router)

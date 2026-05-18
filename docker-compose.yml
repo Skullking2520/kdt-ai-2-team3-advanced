@@ -35,6 +35,8 @@ services:
     command:
       - "--config.file=/etc/prometheus/prometheus.yml"
       - "--storage.tsdb.retention.time=7d" # 7일치 데이터 보관
+      - "--web.external-url=https://smishing-detect-kdt2.cloud/prometheus/"
+      - "--web.route-prefix=/"
     restart: unless-stopped
 
   grafana:
@@ -42,12 +44,17 @@ services:
     container_name: grafana
     ports:
       - "3000:3000"
+    env_file:
+      - .env
     environment:
-      - GF_SECURITY_ADMIN_PASSWORD=admin123 # 초기비밀번호
+      - GF_SECURITY_ADMIN_PASSWORD=${GF_SECURITY_ADMIN_PASSWORD} # 초기비밀번호
+      - GF_SERVER_ROOT_URL=https://smishing-detect-kdt2.cloud/grafana/
+      - GF_SERVER_SERVE_FROM_SUB_PATH=true
     volumes:
       - grafana_data:/var/lib/grafana
     restart: unless-stopped
-
+  # Grafana는 요청 URI 자체가 /grafana/... 형태로 들어오기를 기대
+  # 경로가 안 맞으면 그라파나는 canonical redirect 발생시킴
   node-exporter: # 리눅스 유닉스 계열 서버 os metric 수집해줌
     image: prom/node-exporter:latest
     container_name: node-exporter
