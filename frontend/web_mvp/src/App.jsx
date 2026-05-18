@@ -8,6 +8,7 @@ import { ResultPage } from "./pages/ResultPage";
 import { CasesPage } from "./pages/CasesPage";
 import { ReportPage } from "./pages/ReportPage";
 import { GuidePage } from "./pages/GuidePage";
+import { HOME_URL } from "./utils/API_URL"
 
 function App() {
   const tabIds = useMemo(() => MVP_TABS.map((tab) => tab.id), []);
@@ -30,6 +31,25 @@ function App() {
   const result = analysisResult ?? fallbackResult;
   const hasResult = submittedMessage.trim().length > 0;
   const warm = mode === "warm";
+
+  useEffect(() => {
+    const initCSRF = async () => {
+      try {
+        const response = await fetch(HOME_URL, {
+          method: "GET",
+          credentials: "include" // backend가 보내는 쿠키 수용
+        })
+
+        if (response.ok) {
+          console.log("CSRF cookie accepted");
+        }
+      } catch (error) {
+        console.error("csrf initialization failed");
+      }
+    }
+
+    initCSRF();
+  }, []) // 컴포넌트가 처음 켜질 때 한번만 실행
 
   useEffect(() => {
     const syncTabFromHash = () => {

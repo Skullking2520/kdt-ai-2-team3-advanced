@@ -1,6 +1,6 @@
 # 문자안심 체크 웹 MVP
 
-의심 문자를 입력하면 스미싱 위험도, 사칭 유형, 의심 근거, AI 상세 설명을 보여주는 React 기반 웹 MVP입니다. 이 폴더는 팀 저장소의 `frontend/` 아래에 있으며, 실제 구현은 `React + Vite + Tailwind CSS` 프론트엔드입니다.
+의심 문자를 입력하면 스미싱 위험도, 사칭 유형, 의심 근거, AI 상세 설명을 보여주는 React 기반 웹 MVP입니다. 이 폴더는 팀 저장소의 `frontend/` 아래에 있지만, 실제 구현은 Python이 아니라 `React + Vite + Tailwind CSS` 프론트엔드입니다.
 
 ## 빠른 실행
 
@@ -110,7 +110,10 @@ VITE_SMISHING_API_URL=http://localhost:8000/predict
   "riskLevel": "위험",
   "impersonationType": "가족 사칭형",
   "suspiciousEvidence": ["긴급 송금 요구", "확인되지 않은 링크 포함"],
-  "recommendedActions": ["링크를 누르지 마세요", "기존 연락처로 가족에게 확인하세요"],
+  "recommendedActions": [
+    "링크를 누르지 마세요",
+    "기존 연락처로 가족에게 확인하세요"
+  ],
   "familyCheckMessage": "이 문자 진짜인지 확인해줄래?",
   "explanation": "이 문자는 가족을 사칭해 긴급한 상황을 만들고 송금을 유도하는 전형적인 스미싱 패턴과 유사합니다."
 }

@@ -5,30 +5,30 @@
 ```python
 1. 프론트엔드 (Streamlit)
 
-mkdir -p apps/frontend
-cd apps/frontend
-uv init --lib
+mkdir -p frontend
+cd frontend
+uv init --package
 
 2. 백엔드 (FastAPI)
 
-cd ../..
-mkdir -p apps/backend
-cd apps/backend
-uv init --lib
+cd ..
+mkdir -p backend
+cd backend
+uv init --package
 
 3. AI 모델 (PyTorch)
 
-cd ../..
-mkdir -p libs/ai-core
-cd libs/ai-core
-uv init --lib
+cd ..
+mkdir -p ai_service
+cd ai_service
+uv init --package
 ```
 
 이제 특정 경로에서 의존성 추가 (uv add)이제 각 폴더로 들어가서 필요한 라이브러리를 추가합니다. uv는 현재 디렉토리에서 가장 가까운 pyproject.toml을 찾아 업데이트합니다.
 
 ```python
 # Frontend에 Streamlit 추가
-cd apps/frontend
+cd frontend
 uv add streamlit
 
 # Backend에 FastAPI 추가
@@ -36,7 +36,7 @@ cd ../backend
 uv add fastapi
 
 # AI Core에 PyTorch 추가
-cd ../../libs/ai-core
+cd ../ai_service
 uv add torch --extra-index-url https://pytorch.org # GPU 버전 예시
 ```
 
@@ -50,7 +50,7 @@ uv add torch --extra-index-url https://pytorch.org # GPU 버전 예시
 # 루트 위치에서 실행
 uv add streamlit -p frontend
 uv add fastapi -p backend
-uv add torch -p ai-core
+uv add torch -p ai_service
 # 이 방식을 쓰려면 루트 pyproject.toml에 [tool.uv.workspace] members = [...] 설정이 미리 되어 있어야 합니다.
 ```
 
