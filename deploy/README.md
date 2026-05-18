@@ -8,19 +8,22 @@
 선택된 Encoder 모델을 Hugging Face Dedicated Inference Endpoint에 배포하는
 절차는 [encoder_endpoint_deploy.md](encoder_endpoint_deploy.md)를 참고한다.
 
-현재 `frontend`, `backend`, `ai_service`, 모델 학습이 모두 진행 중이므로 이 단계에서는 실제 백엔드나 실제 모델에 직접 연결하지 않는다. 대신 mock-first 방식으로 API 형태와 배포 구조를 먼저 고정한다.
+현재 deploy wrapper는 frontend/backend 병렬 개발을 위한 mock mode와 실제 Hugging Face 모델을 호출하는 `hf_endpoint` mode를 함께 지원한다. 실제 운영 또는 통합 테스트에서는 환경변수로 `AI_SERVICE_MODE=hf_endpoint`를 주입해 Encoder Endpoint와 Qwen decoder API를 사용한다.
 
 `ai_service/` 폴더는 모델링 담당자가 학습, 평가, inference 실험 코드를 관리하는 영역이므로 이 작업에서는 수정하지 않는다. Hugging Face Endpoint 기반 async FastAPI wrapper는 `deploy/app/` 아래에 작성한다.
 
 최종 목표는 `deploy` wrapper가 Hugging Face inference API를 직접 감싸는 async FastAPI wrapper 역할을 하는 구조다. 백엔드는 deploy wrapper의 `/analyze` API만 호출하고, deploy wrapper는 FastAPI lifespan에서 관리되는 공유 `httpx.AsyncClient`로 Encoder와 Decoder를 순차 호출한 뒤 `label`, `confidence`, `reason` 형식으로 정규화한다. 기본값에서는 Encoder가 `normal`을 반환하면 decoder 호출을 생략하고 정적 안전 설명을 반환한다.
 
 현재 모델팀은 Encoder를 Hugging Face Inference Endpoint 또는 Spaces의 가벼운
-API로 배포하고, Decoder는 Qwen 계열 모델을 Hugging Face Inference Providers로
-few-shot 호출하는 방향을 검토 중이다. 따라서 실제 연결 기본값은
+API로 배포하고, Decoder는 `Qwen/Qwen3-1.7B`를 Hugging Face Inference
+Providers chat completion API로 few-shot 호출한다. 따라서 실제 연결 기본값은
 `HF_SERVING_TYPE=endpoint`로 두고, Encoder는 `ENCODER_ENDPOINT_URL`에 연결한다.
-Decoder가 Inference Providers chat completion을 쓰면 `DECODER_API_TYPE=chat_completion`
-과 `DECODER_MODEL_ID`를 사용하고, dedicated/custom URL을 쓰면
-`DECODER_ENDPOINT_URL`을 설정한다.
+Decoder는 기본적으로 `DECODER_API_TYPE=chat_completion`,
+`DECODER_MODEL_ID=Qwen/Qwen3-1.7B`를 사용한다. dedicated/custom decoder URL을
+쓰는 경우에만 `DECODER_ENDPOINT_URL`을 설정한다.
+모델링 prototype과 같은 provider인 `DECODER_PROVIDER=featherless-ai`를 사용한다.
+`chat_completion` decoder는 모델링 prototype과 같은
+`huggingface_hub.InferenceClient` 경로로 호출한다.
 
 운영 확인용 endpoint는 두 단계로 나눈다. `/health`는 앱 프로세스가 살아 있는지만 확인하고, `/ready`는 현재 mode에서 필요한 환경변수가 준비되었는지 확인한다.
 
@@ -35,7 +38,7 @@ Frontend /predict request
 -> Backend static pattern pre-filtering
 -> Static hit이면 backend가 DB log 저장 후 frontend 응답 생성
 -> Static miss이면 backend가 deploy wrapper POST /analyze 호출
--> Deploy wrapper가 Encoder/Decoder Endpoint 결과를 정규화
+-> Deploy wrapper가 Encoder Endpoint와 Decoder Provider API 결과를 정규화
 -> Backend가 smishing log, model metadata, static pattern 후보를 저장
 -> Backend가 frontend 응답 형식으로 변환
 ```
@@ -43,7 +46,7 @@ Frontend /predict request
 ## Scope
 
 - `deploy/` 내부 문서 및 예시 파일 작성
-- `deploy/app/` 내부 mock-first async FastAPI wrapper 작성
+- `deploy/app/` 내부 mock-first 및 HF endpoint async FastAPI wrapper 작성
 - mock mode 기준 API contract 정리
 - Hugging Face Inference Endpoint 전환을 위한 환경변수와 체크리스트 정리
 - Docker/docker-compose 적용 방향 초안 정리
@@ -145,9 +148,9 @@ Response:
   "features": ["위험 키워드 감지: 계정, 정지, 인증, 링크"],
   "risk_level": "위험 높음",
   "score": 91,
-  "encoder_model_id": "team/kcelectra-smishing-classifier",
+  "encoder_model_id": "Skullking1123/kcelectra-smishing-classifier",
   "encoder_model_version": "v1.0.0",
-  "decoder_model_id": "team/decoder-explainer",
+  "decoder_model_id": "Qwen/Qwen3-1.7B",
   "decoder_model_version": "v1.0.0",
   "serving_mode": "mock"
 }

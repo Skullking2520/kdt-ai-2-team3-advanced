@@ -6,8 +6,8 @@
 
 Hugging Face Hub를 Model Registry로 사용한다.
 
-- Encoder model ID: `team/kcelectra-smishing-classifier`
-- Decoder model ID: `team/decoder-explainer`
+- Encoder model ID: `Skullking1123/kcelectra-smishing-classifier`
+- Decoder model ID: `Qwen/Qwen3-1.7B`
 - 모델 version은 `v1.0.0` 같은 명시적 문자열로 관리한다.
 - 모델팀이 Hugging Face 웹 GUI에서 생성한 Inference Endpoint URL은 코드에 하드코딩하지 않고 환경변수로 관리한다.
 - model ID와 version은 endpoint 호출 대상이 아니라 prediction metadata와 rollback 추적용으로 관리한다.
@@ -20,10 +20,11 @@ HF serving 방식과 모델 metadata는 다음 환경변수로 분리한다.
 AI_SERVICE_MODE=hf_endpoint
 HF_SERVING_TYPE=endpoint
 HF_TOKEN=
-ENCODER_MODEL_ID=team/kcelectra-smishing-classifier
+ENCODER_MODEL_ID=Skullking1123/kcelectra-smishing-classifier
 ENCODER_MODEL_VERSION=v1.0.0
-DECODER_MODEL_ID=team/decoder-explainer
+DECODER_MODEL_ID=Qwen/Qwen3-1.7B
 DECODER_MODEL_VERSION=v1.0.0
+DECODER_PROVIDER=featherless-ai
 ENCODER_ENDPOINT_URL=
 DECODER_ENDPOINT_URL=
 ```

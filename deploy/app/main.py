@@ -72,6 +72,7 @@ EXTERNAL_CONTACT_PATTERN = re.compile(
     r"\s*(?:ID|id|아이디)?\s*[:：]\s*\S+",
     re.IGNORECASE,
 )
+THINK_PATTERN = re.compile(r"<think>.*?</think>", re.DOTALL)
 
 LABEL_ALIASES = {
     "LABEL_0": "normal",
@@ -136,13 +137,16 @@ class Settings(BaseModel):
     )
     encoder_preprocess_enabled: bool = Field(default=True)
     encoder_request_format: str = Field(default="hf_inputs")
-    decoder_api_type: str = Field(default="text_generation")
+    decoder_api_type: str = Field(default="chat_completion")
+    decoder_provider: str = Field(default="featherless-ai")
     decoder_required: bool = Field(default=False)
     encoder_endpoint_url: str = Field(default="")
     decoder_endpoint_url: str = Field(default="")
-    encoder_model_id: str = Field(default="team/kcelectra-smishing-classifier")
+    encoder_model_id: str = Field(
+        default="Skullking1123/kcelectra-smishing-classifier"
+    )
     encoder_model_version: str = Field(default="v1.0.0")
-    decoder_model_id: str = Field(default="team/decoder-explainer")
+    decoder_model_id: str = Field(default="Qwen/Qwen3-1.7B")
     decoder_model_version: str = Field(default="v1.0.0")
     request_timeout_seconds: int = Field(default=60)
     hf_max_retries: int = Field(default=2)
@@ -225,15 +229,21 @@ def load_settings() -> Settings:
             os.getenv("ENCODER_PREPROCESS_ENABLED"), default=True
         ),
         encoder_request_format=os.getenv("ENCODER_REQUEST_FORMAT", "hf_inputs"),
-        decoder_api_type=os.getenv("DECODER_API_TYPE", "text_generation"),
+        decoder_api_type=os.getenv("DECODER_API_TYPE", "chat_completion"),
+        decoder_provider=os.getenv(
+            "DECODER_PROVIDER", os.getenv("EXPLAINER_PROVIDER", "featherless-ai")
+        ),
         decoder_required=parse_bool(os.getenv("DECODER_REQUIRED"), default=False),
         encoder_endpoint_url=os.getenv("ENCODER_ENDPOINT_URL", ""),
         decoder_endpoint_url=os.getenv("DECODER_ENDPOINT_URL", ""),
         encoder_model_id=os.getenv(
-            "ENCODER_MODEL_ID", "team/kcelectra-smishing-classifier"
+            "ENCODER_MODEL_ID", "Skullking1123/kcelectra-smishing-classifier"
         ),
         encoder_model_version=os.getenv("ENCODER_MODEL_VERSION", "v1.0.0"),
-        decoder_model_id=os.getenv("DECODER_MODEL_ID", "team/decoder-explainer"),
+        decoder_model_id=os.getenv(
+            "DECODER_MODEL_ID",
+            os.getenv("EXPLAINER_MODEL", "Qwen/Qwen3-1.7B"),
+        ),
         decoder_model_version=os.getenv("DECODER_MODEL_VERSION", "v1.0.0"),
         request_timeout_seconds=timeout_seconds,
         hf_max_retries=parse_non_negative_int(
@@ -637,9 +647,14 @@ def resolve_hf_urls(settings: Settings) -> tuple[str, str]:
                 raise ConfigurationError("HF_TOKEN is required for serverless mode")
             if not settings.encoder_model_id or not settings.decoder_model_id:
                 raise ConfigurationError("HF model IDs are not configured")
+            decoder_url = (
+                settings.hf_provider_chat_url
+                if settings.decoder_api_type == "chat_completion"
+                else build_serverless_model_url(settings, settings.decoder_model_id)
+            )
             return (
                 build_serverless_model_url(settings, settings.encoder_model_id),
-                build_serverless_model_url(settings, settings.decoder_model_id),
+                decoder_url,
             )
         case "endpoint":
             if not settings.encoder_endpoint_url:
@@ -833,12 +848,13 @@ def normalize_decoder_response(response_payload: Any) -> str:
     if isinstance(response_payload, list) and response_payload:
         first_item = response_payload[0]
         if isinstance(first_item, dict):
-            return str(
+            reason = str(
                 first_item.get("generated_text")
                 or first_item.get("summary_text")
                 or first_item.get("reason")
                 or "판단 근거를 생성하지 못했습니다."
             )
+            return THINK_PATTERN.sub("", reason).strip()
 
     if isinstance(response_payload, dict):
         choices = response_payload.get("choices")
@@ -847,18 +863,48 @@ def normalize_decoder_response(response_payload: Any) -> str:
             if isinstance(first_choice, dict):
                 message = first_choice.get("message")
                 if isinstance(message, dict) and message.get("content"):
-                    return str(message["content"]).strip()
+                    reason = str(message["content"])
+                    return THINK_PATTERN.sub("", reason).strip()
                 if first_choice.get("text"):
-                    return str(first_choice["text"]).strip()
+                    reason = str(first_choice["text"])
+                    return THINK_PATTERN.sub("", reason).strip()
 
-        return str(
+        reason = str(
             response_payload.get("generated_text")
             or response_payload.get("reason")
             or response_payload.get("text")
             or "판단 근거를 생성하지 못했습니다."
         )
+        return THINK_PATTERN.sub("", reason).strip()
 
     return "판단 근거를 생성하지 못했습니다."
+
+
+def call_hf_inference_client_chat(
+    settings: Settings,
+    messages: list[dict[str, str]],
+) -> str:
+    from huggingface_hub import InferenceClient
+
+    try:
+        kwargs: dict[str, str | int] = {
+            "api_key": settings.hf_token,
+            "timeout": settings.request_timeout_seconds,
+        }
+        if settings.decoder_provider:
+            kwargs["provider"] = settings.decoder_provider
+
+        client = InferenceClient(**kwargs)
+        response = client.chat.completions.create(
+            model=settings.decoder_model_id,
+            messages=messages,
+            max_tokens=settings.decoder_max_new_tokens,
+            temperature=settings.decoder_temperature,
+        )
+        content = response.choices[0].message.content or ""
+        return THINK_PATTERN.sub("", str(content)).strip()
+    except Exception as exc:
+        raise UpstreamInferenceError("HF decoder provider request failed") from exc
 
 
 def build_decoder_prompt(
@@ -882,6 +928,22 @@ def build_decoder_prompt(
         f"감지된 특징:\n{feature_text}\n"
         "이유:"
     )
+
+
+def build_decoder_messages(prompt: str) -> list[dict[str, str]]:
+    return [
+        {
+            "role": "system",
+            "content": (
+                "/no_think\n"
+                "당신은 스미싱(SMS 피싱) 탐지 전문가입니다. "
+                "주어진 문자 내용과 감지된 특징을 근거로, "
+                "해당 문자가 스미싱으로 의심되는 이유를 "
+                "두 문장 이내로 설명하세요."
+            ),
+        },
+        {"role": "user", "content": prompt},
+    ]
 
 
 def build_normal_fallback_reason(features: list[str]) -> str:
@@ -955,20 +1017,27 @@ async def hf_endpoint_analyze(
     elif label == "normal" and not settings.decoder_on_normal:
         reason = build_normal_fallback_reason(features)
     else:
-        decoder_payload = await post_hf_endpoint(
-            client,
-            decoder_url,
-            settings.hf_token,
-            build_decoder_payload(
+        prompt = build_decoder_prompt(text, label, confidence, features)
+        if settings.decoder_api_type == "chat_completion" and not (
+            settings.decoder_endpoint_url
+        ):
+            reason = await asyncio.to_thread(
+                call_hf_inference_client_chat,
                 settings,
-                build_decoder_prompt(text, label, confidence, features),
-            ),
-            settings.request_timeout_seconds,
-            settings.hf_max_retries,
-            settings.hf_retry_backoff_seconds,
-            request_id,
-        )
-        reason = normalize_decoder_response(decoder_payload)
+                build_decoder_messages(prompt),
+            )
+        else:
+            decoder_payload = await post_hf_endpoint(
+                client,
+                decoder_url,
+                settings.hf_token,
+                build_decoder_payload(settings, prompt),
+                settings.request_timeout_seconds,
+                settings.hf_max_retries,
+                settings.hf_retry_backoff_seconds,
+                request_id,
+            )
+            reason = normalize_decoder_response(decoder_payload)
 
     payload: dict[str, Any] = {
         "success": True,
@@ -1006,6 +1075,7 @@ async def ready() -> JSONResponse:
             "serving_mode": settings.serving_mode,
             "hf_serving_type": settings.hf_serving_type,
             "decoder_on_normal": settings.decoder_on_normal,
+            "decoder_provider": settings.decoder_provider or None,
             "errors": errors,
         },
     )

@@ -9,6 +9,7 @@ from deploy.app.main import (
     collect_settings_errors,
     normalize_decoder_response,
     normalize_encoder_response,
+    resolve_hf_urls,
 )
 
 
@@ -128,6 +129,7 @@ class SettingsValidationTest(unittest.TestCase):
             hf_serving_type="endpoint",
             hf_token="",
             decoder_required=True,
+            decoder_api_type="text_generation",
             encoder_endpoint_url="",
             decoder_endpoint_url="",
         )
@@ -148,12 +150,31 @@ class SettingsValidationTest(unittest.TestCase):
             encoder_endpoint_url="https://encoder.example",
             decoder_endpoint_url="",
             decoder_api_type="chat_completion",
-            decoder_model_id="Qwen/Qwen2.5-7B-Instruct",
+            decoder_model_id="Qwen/Qwen3-1.7B",
         )
 
         errors = collect_settings_errors(settings)
 
         self.assertEqual(errors, [])
+
+    def test_serverless_chat_completion_uses_provider_chat_url(self) -> None:
+        settings = Settings(
+            serving_mode="hf_endpoint",
+            hf_serving_type="serverless",
+            hf_token="test-token",
+            encoder_model_id="Skullking1123/kcelectra-smishing-classifier",
+            decoder_api_type="chat_completion",
+            decoder_model_id="Qwen/Qwen3-1.7B",
+            hf_provider_chat_url="https://router.example/v1/chat/completions",
+        )
+
+        encoder_url, decoder_url = resolve_hf_urls(settings)
+
+        self.assertIn("Skullking1123/kcelectra-smishing-classifier", encoder_url)
+        self.assertEqual(
+            decoder_url,
+            "https://router.example/v1/chat/completions",
+        )
 
 
 class RequestPayloadTest(unittest.TestCase):
@@ -204,14 +225,14 @@ class RequestPayloadTest(unittest.TestCase):
     def test_decoder_chat_completion_payload(self) -> None:
         settings = Settings(
             decoder_api_type="chat_completion",
-            decoder_model_id="Qwen/Qwen2.5-7B-Instruct",
+            decoder_model_id="Qwen/Qwen3-1.7B",
             decoder_max_new_tokens=80,
             decoder_temperature=0.2,
         )
 
         payload = build_decoder_payload(settings, "explain")
 
-        self.assertEqual(payload["model"], "Qwen/Qwen2.5-7B-Instruct")
+        self.assertEqual(payload["model"], "Qwen/Qwen3-1.7B")
         self.assertEqual(payload["messages"][0]["content"], "explain")
         self.assertEqual(payload["max_tokens"], 80)
 
@@ -223,6 +244,24 @@ class DecoderNormalizationTest(unittest.TestCase):
                 {
                     "message": {
                         "content": "스미싱으로 의심되는 이유입니다.",
+                    }
+                }
+            ]
+        }
+
+        reason = normalize_decoder_response(response)
+
+        self.assertEqual(reason, "스미싱으로 의심되는 이유입니다.")
+
+    def test_decoder_response_removes_qwen_thinking_tags(self) -> None:
+        response = {
+            "choices": [
+                {
+                    "message": {
+                        "content": (
+                            "<think>내부 추론입니다.</think>"
+                            "스미싱으로 의심되는 이유입니다."
+                        ),
                     }
                 }
             ]
