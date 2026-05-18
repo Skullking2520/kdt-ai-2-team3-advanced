@@ -1,0 +1,86 @@
+name: Smishing Project CICD
+
+on:
+  push:
+    branches: ["deploy", "test_deploy"]
+# main브랜치를 가져와서 수동으로
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      # 1. Frontend Build
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: "npm" # 빌드 속도 향상을 위한 캐시 추가
+          cache-dependency-path: "./frontend/web_mvp/package-lock.json"
+
+      - name: Install dependencies
+        working-directory: ./frontend/web_mvp
+        run: npm ci
+
+      # 하단 env 설정을 통해 빌드 시점에 환경 변수가 주입됩니다.
+      - name: Build project
+        working-directory: ./frontend/web_mvp
+        run: npm run build
+        env:
+          VITE_SMISHING_HOME_URL: ${{ secrets.VITE_SMISHING_HOME_URL }}
+
+      # 2. Docker Build & Push (NCP Container Registry)
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to NCR
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ secrets.NCP_REGISTRY }}
+          username: ${{ secrets.NCP_ACCESS_KEY }}
+          password: ${{ secrets.NCP_SECRET_KEY }}
+
+      - name: Build and Push Backend Image
+        uses: docker/build-push-action@v5
+        with:
+          context: . # 루트 경로
+          file: ./backend/Dockerfile
+          platforms: linux/amd64 # ncp ubuntu
+          push: true
+          tags: ${{ secrets.NCP_REGISTRY }}/smishing-backend:latest
+      # docker buildx build --platform linux/amd64 -t <registry_url>
+      # -f backend/Dockerfile --push . (cli원문)
+
+      # [수정] 3. Frontend 빌드 결과물(dist)을 NCP 서버로 전송
+      - name: Copy Frontend Build to NCP
+        uses: appleboy/scp-action@master
+        with:
+          host: ${{ secrets.NCP_SERVER_IP }}
+          username: ${{ secrets.NCP_SERVER_USER }}
+          key: ${{ secrets.NCP_SERVER_SSH_KEY }}
+          port: ${{ fromJson(secrets.NCP_SERVER_SSH_PORT) }}
+          source: "frontend/web_mvp/dist/*"
+          target: "/home/${{ secrets.NCP_SERVER_USER }}/app/frontend/web_mvp/dist"
+          strip_components: 3 # 앞의 고정 경로 제거 후 dist 안의 내용만 복사
+
+      # 3. Deploy to NCP Server via SSH
+      - name: Deploy to NCP
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.NCP_SERVER_IP }}
+          username: ${{ secrets.NCP_SERVER_USER }}
+          key: ${{ secrets.NCP_SERVER_SSH_KEY }} # 개인키
+          port: ${{ fromJson(secrets.NCP_SERVER_SSH_PORT) }} # fromJSON으로 숫자로 변환
+          script: |
+            cd /home/${{ secrets.NCP_SERVER_USER }}/app
+            echo "NCP_REGISTRY=${{ secrets.NCP_REGISTRY }}" >> .env
+            docker login -u ${{ secrets.NCP_ACCESS_KEY }} -p ${{ secrets.NCP_SECRET_KEY }} ${{ secrets.NCP_REGISTRY }}
+            docker compose pull
+            # docker-compose.yml 파일에 정의된 서비스들의 이미지를 도커 허브 등
+            # 원격 레지스트리에서 다운로드(pull)하거나 최신 버전으로 업데이트
+
+            # 여기서는 단순화를 위해 docker-compose로 재시작
+            docker compose up -d --build # 강제로 다시 빌드, 데몬
+            docker image prune -f # 댕글링 이미지(Dangling Image)"를 제거하여 디스크 용량을 확보
