@@ -1,6 +1,6 @@
 # Deploy Hugging Face Wrapper
 
-`ai_service/` 폴더는 모델링 담당자가 모델 학습, 평가, inference 실험 코드를 관리하는 영역이다. 따라서 deployment wrapper는 `ai_service/`가 아니라 `deploy/app/` 아래에 작성한다.
+`ai_service/` 내부에 전처리·학습·배포 코드를 함께 두는 구조도 가능하지만, 현재 PR 범위에서는 모델링 실험 영역(`ai_service/`)과 배포 wrapper(`deploy/app/`)를 분리해 관리한다.
 
 Deploy wrapper의 책임은 Hugging Face inference API를 호출하고, 결과를 backend가 사용하기 쉬운 공통 응답 형식으로 정규화하는 것이다. 현재 1차 실제 연결은 Hugging Face serverless API를 우선 가정한다.
 
