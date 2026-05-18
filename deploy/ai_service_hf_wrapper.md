@@ -59,7 +59,6 @@ Decoder가 Hugging Face Inference Providers의 OpenAI-compatible chat completion
 ```text
 DECODER_API_TYPE=chat_completion
 DECODER_PROVIDER=featherless-ai
-HF_PROVIDER_CHAT_URL=https://router.huggingface.co/v1/chat/completions
 DECODER_MODEL_ID=Qwen/Qwen3-1.7B
 ```
 

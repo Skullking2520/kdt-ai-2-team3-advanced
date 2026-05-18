@@ -48,7 +48,6 @@ ENCODER_MODEL_ID=Skullking1123/kcelectra-smishing-classifier
 ENCODER_MODEL_VERSION=v1.0.0
 
 DECODER_API_TYPE=chat_completion
-HF_PROVIDER_CHAT_URL=https://router.huggingface.co/v1/chat/completions
 DECODER_ENDPOINT_URL=
 DECODER_PROVIDER=featherless-ai
 DECODER_MODEL_ID=Qwen/Qwen3-1.7B

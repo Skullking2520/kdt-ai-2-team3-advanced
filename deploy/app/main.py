@@ -132,9 +132,6 @@ class Settings(BaseModel):
     hf_serverless_base_url: str = Field(
         default="https://router.huggingface.co/hf-inference/models"
     )
-    hf_provider_chat_url: str = Field(
-        default="https://router.huggingface.co/v1/chat/completions"
-    )
     encoder_preprocess_enabled: bool = Field(default=True)
     encoder_request_format: str = Field(default="hf_inputs")
     decoder_api_type: str = Field(default="chat_completion")
@@ -221,10 +218,6 @@ def load_settings() -> Settings:
             "HF_SERVERLESS_BASE_URL",
             "https://router.huggingface.co/hf-inference/models",
         ),
-        hf_provider_chat_url=os.getenv(
-            "HF_PROVIDER_CHAT_URL",
-            "https://router.huggingface.co/v1/chat/completions",
-        ),
         encoder_preprocess_enabled=parse_bool(
             os.getenv("ENCODER_PREPROCESS_ENABLED"), default=True
         ),
@@ -255,7 +248,7 @@ def load_settings() -> Settings:
         decoder_max_new_tokens=parse_positive_int(
             os.getenv("DECODER_MAX_NEW_TOKENS"), default=120
         ),
-        decoder_temperature=parse_positive_float(
+        decoder_temperature=parse_non_negative_float(
             os.getenv("DECODER_TEMPERATURE"), default=0.3
         ),
         decoder_on_normal=parse_bool(os.getenv("DECODER_ON_NORMAL"), default=False),
@@ -407,7 +400,7 @@ def collect_settings_errors(settings: Settings) -> list[str]:
             errors.append("HF_TOKEN is required")
         if not settings.encoder_model_id:
             errors.append("ENCODER_MODEL_ID is required")
-        if not settings.decoder_model_id:
+        if settings.decoder_required and not settings.decoder_model_id:
             errors.append("DECODER_MODEL_ID is required")
 
     if settings.hf_serving_type == "endpoint":
@@ -428,10 +421,6 @@ def collect_settings_errors(settings: Settings) -> list[str]:
         ):
             if not settings.decoder_model_id:
                 errors.append("DECODER_MODEL_ID is required")
-            if not settings.hf_provider_chat_url and not settings.decoder_endpoint_url:
-                errors.append(
-                    "HF_PROVIDER_CHAT_URL or DECODER_ENDPOINT_URL is required"
-                )
 
     return errors
 
@@ -645,10 +634,10 @@ def resolve_hf_urls(settings: Settings) -> tuple[str, str]:
         case "serverless":
             if not settings.hf_token:
                 raise ConfigurationError("HF_TOKEN is required for serverless mode")
-            if not settings.encoder_model_id or not settings.decoder_model_id:
-                raise ConfigurationError("HF model IDs are not configured")
+            if not settings.encoder_model_id:
+                raise ConfigurationError("ENCODER_MODEL_ID is not configured")
             decoder_url = (
-                settings.hf_provider_chat_url
+                ""
                 if settings.decoder_api_type == "chat_completion"
                 else build_serverless_model_url(settings, settings.decoder_model_id)
             )
@@ -666,8 +655,6 @@ def resolve_hf_urls(settings: Settings) -> tuple[str, str]:
             ):
                 raise ConfigurationError("DECODER_ENDPOINT_URL is not configured")
             decoder_url = settings.decoder_endpoint_url
-            if settings.decoder_api_type == "chat_completion" and not decoder_url:
-                decoder_url = settings.hf_provider_chat_url
             return settings.encoder_endpoint_url, decoder_url
 
     raise ConfigurationError("HF_SERVING_TYPE must be serverless or endpoint")
@@ -1004,8 +991,6 @@ async def hf_endpoint_analyze(
         should_call_decoder = False
     if settings.decoder_api_type == "chat_completion":
         if not settings.decoder_model_id:
-            should_call_decoder = False
-        if not settings.hf_provider_chat_url and not settings.decoder_endpoint_url:
             should_call_decoder = False
 
     if not should_call_decoder:

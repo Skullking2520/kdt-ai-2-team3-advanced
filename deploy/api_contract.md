@@ -220,7 +220,6 @@ curl http://localhost:8001/ready
 | `DECODER_API_TYPE` | `text_generation` 또는 `chat_completion` |
 | `DECODER_PROVIDER` | HF Inference Providers provider 이름. 기본값: `featherless-ai` |
 | `DECODER_REQUIRED` | decoder 미설정 시 오류를 낼지 여부 |
-| `HF_PROVIDER_CHAT_URL` | Inference Providers chat completion URL |
 | `DECODER_ENDPOINT_URL` | Decoder dedicated/custom endpoint URL |
 
 ## Recommended Backend Handling

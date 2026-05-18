@@ -9,6 +9,7 @@ from deploy.app.main import (
     collect_settings_errors,
     normalize_decoder_response,
     normalize_encoder_response,
+    parse_non_negative_float,
     resolve_hf_urls,
 )
 
@@ -93,7 +94,7 @@ class SettingsValidationTest(unittest.TestCase):
 
         self.assertEqual(errors, [])
 
-    def test_serverless_mode_requires_token_and_model_ids(self) -> None:
+    def test_serverless_mode_requires_token_and_encoder_model_id(self) -> None:
         settings = Settings(
             serving_mode="hf_endpoint",
             hf_serving_type="serverless",
@@ -106,7 +107,24 @@ class SettingsValidationTest(unittest.TestCase):
 
         self.assertIn("HF_TOKEN is required", errors)
         self.assertIn("ENCODER_MODEL_ID is required", errors)
+        self.assertNotIn("DECODER_MODEL_ID is required", errors)
+
+    def test_serverless_mode_requires_decoder_model_id_when_required(self) -> None:
+        settings = Settings(
+            serving_mode="hf_endpoint",
+            hf_serving_type="serverless",
+            hf_token="test-token",
+            encoder_model_id="encoder/model",
+            decoder_model_id="",
+            decoder_required=True,
+        )
+
+        errors = collect_settings_errors(settings)
+
         self.assertIn("DECODER_MODEL_ID is required", errors)
+
+    def test_temperature_can_be_zero(self) -> None:
+        self.assertEqual(parse_non_negative_float("0", default=0.3), 0.0)
 
     def test_endpoint_mode_allows_encoder_only_by_default(self) -> None:
         settings = Settings(
@@ -157,7 +175,7 @@ class SettingsValidationTest(unittest.TestCase):
 
         self.assertEqual(errors, [])
 
-    def test_serverless_chat_completion_uses_provider_chat_url(self) -> None:
+    def test_serverless_chat_completion_does_not_require_decoder_url(self) -> None:
         settings = Settings(
             serving_mode="hf_endpoint",
             hf_serving_type="serverless",
@@ -165,16 +183,12 @@ class SettingsValidationTest(unittest.TestCase):
             encoder_model_id="Skullking1123/kcelectra-smishing-classifier",
             decoder_api_type="chat_completion",
             decoder_model_id="Qwen/Qwen3-1.7B",
-            hf_provider_chat_url="https://router.example/v1/chat/completions",
         )
 
         encoder_url, decoder_url = resolve_hf_urls(settings)
 
         self.assertIn("Skullking1123/kcelectra-smishing-classifier", encoder_url)
-        self.assertEqual(
-            decoder_url,
-            "https://router.example/v1/chat/completions",
-        )
+        self.assertEqual(decoder_url, "")
 
 
 class RequestPayloadTest(unittest.TestCase):

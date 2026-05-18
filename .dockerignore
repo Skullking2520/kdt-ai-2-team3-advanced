@@ -8,3 +8,17 @@ __pycache__
 .env.*
 !.env.example
 raw_data
+frontend
+backend
+ai_service
+docs
+e2e_tests
+infra
+load_tests
+nginx
+prometheus
+modeling_help_local
+wandb
+*.jsonl
+*.safetensors
+*.bin
