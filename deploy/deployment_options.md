@@ -25,7 +25,7 @@ Hugging Face serverless API 또는 dedicated Inference Endpoint가 모델 추론
 ### Pros
 
 - 모델 serving 운영 부담이 줄어든다.
-- dedicated endpoint mode에서는 Encoder와 Decoder를 독립 endpoint로 관리할 수 있다.
+- dedicated endpoint mode에서는 Encoder endpoint와 Decoder provider API를 분리해 관리할 수 있다.
 - serverless mode에서는 endpoint 생성 없이 model ID 기반으로 호출할 수 있다.
 - 모델 교체 시 model ID, model version, endpoint URL 기준으로 전환하기 쉽다.
 - Backend는 항상 동일한 deploy wrapper API만 호출하면 된다.
@@ -71,5 +71,5 @@ Hugging Face serverless API 또는 dedicated Inference Endpoint가 모델 추론
 - 현재 우선순위는 모델팀이 Hugging Face GUI에서 생성한 endpoint URL을 연결하는 `HF_SERVING_TYPE=endpoint`다.
 - `HF_SERVING_TYPE=serverless`는 endpoint URL 없이 model ID 기반 호출이 필요할 때를 위한 보조 경로로 유지한다.
 - Encoder가 가벼워 Hugging Face Spaces 무료 CPU에서 충분히 동작하면, Space의 API URL을 `ENCODER_ENDPOINT_URL`로 연결할 수 있다. 단, free Space는 sleep/cold start를 고려해야 한다.
-- Decoder가 Qwen 계열 few-shot 모델을 Inference Providers에서 사용할 수 있으면 `DECODER_API_TYPE=chat_completion`으로 OpenAI-compatible router를 호출한다.
+- Decoder는 `Qwen/Qwen3-1.7B`를 Inference Providers에서 few-shot으로 호출하며, `DECODER_API_TYPE=chat_completion`으로 OpenAI-compatible router를 사용한다.
 - `ai_service/`는 모델링 담당자 영역으로 유지하고, wrapper 구현은 `deploy/app/`에 둔다.

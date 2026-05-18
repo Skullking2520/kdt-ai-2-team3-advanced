@@ -83,9 +83,9 @@ URL과 suspicious keyword가 함께 있거나, 금전 표현과 전화번호가 
   ],
   "risk_level": "위험 높음",
   "score": 91,
-  "encoder_model_id": "team/kcelectra-smishing-classifier",
+  "encoder_model_id": "Skullking1123/kcelectra-smishing-classifier",
   "encoder_model_version": "v1.0.0",
-  "decoder_model_id": "team/decoder-explainer",
+  "decoder_model_id": "Qwen/Qwen3-1.7B",
   "decoder_model_version": "v1.0.0",
   "serving_mode": "mock"
 }
@@ -102,9 +102,9 @@ URL과 suspicious keyword가 함께 있거나, 금전 표현과 전화번호가 
   "features": [],
   "risk_level": "정상 가능성 높음",
   "score": 8,
-  "encoder_model_id": "team/kcelectra-smishing-classifier",
+  "encoder_model_id": "Skullking1123/kcelectra-smishing-classifier",
   "encoder_model_version": "v1.0.0",
-  "decoder_model_id": "team/decoder-explainer",
+  "decoder_model_id": "Qwen/Qwen3-1.7B",
   "decoder_model_version": "v1.0.0",
   "serving_mode": "mock"
 }
@@ -121,7 +121,8 @@ HF_TOKEN=
 ENCODER_ENDPOINT_URL=
 ENCODER_REQUEST_FORMAT=hf_inputs
 DECODER_API_TYPE=chat_completion
-DECODER_MODEL_ID=
+DECODER_PROVIDER=featherless-ai
+DECODER_MODEL_ID=Qwen/Qwen3-1.7B
 DECODER_ON_NORMAL=false
 ```
 
@@ -133,6 +134,6 @@ Backend는 `/analyze` contract가 유지되는 한 별도 변경 없이 동일 A
 
 Encoder prototype output의 `features`가 문자열이면 mock/API response에서는 UI 리스트 렌더링을 위해 `features: string[]` 형태로 정규화한다.
 
-Decoder는 text-generation 모델이라고 가정한다. Deploy wrapper는 문자 내용, encoder label, confidence, features를 prompt로 구성하고 decoder output을 `reason`으로 정규화한다.
+Decoder는 `Qwen/Qwen3-1.7B` chat completion 모델을 기본값으로 사용한다. Deploy wrapper는 문자 내용, encoder label, confidence, features를 prompt로 구성하고 decoder output을 `reason`으로 정규화한다.
 
 Backend가 static pattern pre-filtering에서 hit을 찾은 경우에는 deploy wrapper mock mode도 호출하지 않을 수 있다. 이 경우 frontend 응답은 backend가 직접 구성한다.
