@@ -2,8 +2,9 @@
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 
-from .core.config import apply_cors_middleware, configure_app
+from .core.config import CORS_OPTIONS, configure_app
 from .core.exceptions import exception_handlers
 from .db.create_tables import create_db_tables
 
@@ -18,9 +19,9 @@ async def lifespan(app: FastAPI):
     # 서버가 종료될 때 실행할 코드가 있다면 여기에 작성
 
 
-fastapi_app = FastAPI(lifespan=lifespan, exception_handlers=exception_handlers)
+app = FastAPI(lifespan=lifespan, exception_handlers=exception_handlers)
 
-configure_app(fastapi_app)  # 일괄적인 설정값 주입
+configure_app(app)  # 일괄적인 설정값 주입
 
 # CORS를 앱 전체의 가장 바깥에 둬서 검증/CSRF/서버 에러 응답에도 헤더가 붙게 한다.
-app = apply_cors_middleware(fastapi_app)
+app.add_middleware(CORSMiddleware, **CORS_OPTIONS)

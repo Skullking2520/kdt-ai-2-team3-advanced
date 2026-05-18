@@ -8,7 +8,7 @@ import { ResultPage } from "./pages/ResultPage";
 import { CasesPage } from "./pages/CasesPage";
 import { ReportPage } from "./pages/ReportPage";
 import { GuidePage } from "./pages/GuidePage";
-import { HOME_URL } from "./utils/API_URL"
+import { HOME_URL } from "./utils/API_URL";
 
 function App() {
   const tabIds = useMemo(() => MVP_TABS.map((tab) => tab.id), []);
@@ -27,29 +27,13 @@ function App() {
   const [reportText, setReportText] = useState("");
   const [reportType, setReportType] = useState("택배 사칭형");
   const [isAnalyzing, setIsAnalyzing] = useState(false);
-  const fallbackResult = useMemo(() => analyzeSmishing(submittedMessage), [submittedMessage]);
+  const fallbackResult = useMemo(
+    () => analyzeSmishing(submittedMessage),
+    [submittedMessage],
+  );
   const result = analysisResult ?? fallbackResult;
   const hasResult = submittedMessage.trim().length > 0;
   const warm = mode === "warm";
-
-  useEffect(() => {
-    const initCSRF = async () => {
-      try {
-        const response = await fetch(HOME_URL, {
-          method: "GET",
-          credentials: "include" // backend가 보내는 쿠키 수용
-        })
-
-        if (response.ok) {
-          console.log("CSRF cookie accepted");
-        }
-      } catch (error) {
-        console.error("csrf initialization failed");
-      }
-    }
-
-    initCSRF();
-  }, []) // 컴포넌트가 처음 켜질 때 한번만 실행
 
   useEffect(() => {
     const syncTabFromHash = () => {
@@ -110,7 +94,9 @@ function App() {
       `사칭 유형: ${result.impersonationType}`,
       `의심 근거: ${result.suspiciousEvidence.slice(0, 2).join(", ")}`,
       result.familyCheckMessage,
-    ].filter(Boolean).join("\n");
+    ]
+      .filter(Boolean)
+      .join("\n");
 
     try {
       await navigator.clipboard.writeText(shareText);
@@ -132,7 +118,10 @@ function App() {
     setMessage(text);
     setSubmittedMessage(text);
     try {
-      const nextResult = await predictSmishing({ message: text, allowTrainingUse });
+      const nextResult = await predictSmishing({
+        message: text,
+        allowTrainingUse,
+      });
       setAnalysisResult(nextResult);
       changeTab("result");
     } finally {
@@ -157,16 +146,41 @@ function App() {
   );
 
   return (
-    <main className={warm ? "min-h-screen bg-[#fff7ed] text-slate-950" : "min-h-screen bg-slate-50 text-slate-950"}>
+    <main
+      className={
+        warm
+          ? "min-h-screen bg-[#fff7ed] text-slate-950"
+          : "min-h-screen bg-slate-50 text-slate-950"
+      }
+    >
       <Header mode={mode} setMode={setMode} warm={warm} />
       {activeTab === "check" ? (
         <IntroPage checkForm={checkForm} warm={warm} />
       ) : (
         <section className="mx-auto w-full max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
           <div>
-            {activeTab === "result" && <ResultPage copyState={copyState} hasResult={hasResult} onBack={() => changeTab("check")} onCopy={copyShare} onReport={reportResult} message={submittedMessage} result={result} warm={warm} />}
+            {activeTab === "result" && (
+              <ResultPage
+                copyState={copyState}
+                hasResult={hasResult}
+                onBack={() => changeTab("check")}
+                onCopy={copyShare}
+                onReport={reportResult}
+                message={submittedMessage}
+                result={result}
+                warm={warm}
+              />
+            )}
             {activeTab === "cases" && <CasesPage warm={warm} />}
-            {activeTab === "report" && <ReportPage reportText={reportText} reportType={reportType} setReportText={setReportText} setReportType={setReportType} warm={warm} />}
+            {activeTab === "report" && (
+              <ReportPage
+                reportText={reportText}
+                reportType={reportType}
+                setReportText={setReportText}
+                setReportType={setReportType}
+                warm={warm}
+              />
+            )}
             {activeTab === "guide" && <GuidePage warm={warm} />}
           </div>
         </section>

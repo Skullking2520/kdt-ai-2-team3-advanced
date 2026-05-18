@@ -3,8 +3,8 @@ from fastapi import HTTPException, Request
 from fastapi.encoders import jsonable_encoder
 from fastapi.exceptions import RequestValidationError, ResponseValidationError
 from fastapi.responses import JSONResponse
-from starlette.responses import Response
-from starlette_csrf.middleware import CSRFMiddleware
+
+# from starlette.responses import Response
 
 
 def error_response(status_code: int, code: str, message: str, **extra):
@@ -18,15 +18,6 @@ def error_response(status_code: int, code: str, message: str, **extra):
             }
         },
     )
-
-
-class JSONCSRFMiddleware(CSRFMiddleware):
-    def _get_error_response(self, request: Request) -> Response:
-        return error_response(
-            status_code=403,
-            code="CSRF_TOKEN_INVALID",
-            message="CSRF 토큰이 없거나 올바르지 않습니다.",
-        )
 
 
 async def value_error_handler(request: Request, exc: ValueError):

@@ -1,4 +1,5 @@
-import { Flag, Send } from "lucide-react";
+import { useState } from "react"; // useState 추가
+import { Flag, Send, CheckCircle2 } from "lucide-react";
 import { panelClass, SectionTitle } from "../components/mvp/ui.jsx";
 import handleReportSubmit from "../utils/handleReportSubmit.js";
 
@@ -20,13 +21,22 @@ export function ReportPage({
   setReportType,
   warm,
 }) {
+  // 5초 알림을 제어할 로컬 상태 추가
+  const [isSuccess, setIsSuccess] = useState(false);
+
   const visibleReportTypes = reportTypes.includes(reportType)
     ? reportTypes
     : [reportType, ...reportTypes];
 
-  // 폼 제출 핸들러 바인딩
+  // 폼 제출 핸들러 바인딩 (인자에 setIsSuccess 추가)
   const onFormSubmit = (event) => {
-    handleReportSubmit(event, reportText, reportType, setReportText);
+    handleReportSubmit(
+      event,
+      reportText,
+      reportType,
+      setReportText,
+      setIsSuccess,
+    );
   };
 
   return (
@@ -84,6 +94,14 @@ export function ReportPage({
               placeholder="받으신 문자 내용을 있는 그대로 복사해서 입력해주세요."
             />
           </div>
+
+          {/* 5초 전송 완료 안내 알림창 (기존 UI 스타일에 맞춘 녹색 피드백 바) */}
+          {isSuccess && (
+            <div className="flex items-center gap-3 rounded-2xl border-2 border-emerald-200 bg-emerald-50 p-4 text-emerald-800 animate-in fade-in slide-in-from-top-2 duration-200">
+              <CheckCircle2 className="h-5 w-5 text-emerald-600 shrink-0" />
+              <span className="text-sm font-bold">전송이 완료되었습니다!</span>
+            </div>
+          )}
 
           {/* 전송 버튼 */}
           <button
