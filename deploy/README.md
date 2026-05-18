@@ -3,8 +3,10 @@
 이 폴더는 AI 모델 배포, 모델 서빙, backend 연동 구조를 정리하기 위한 설계 문서와 deployment wrapper 예시 코드를 담는다.
 
 전체 공유용 쉬운 설명은 [team_overview.md](team_overview.md)를 먼저 참고한다.
-실제 Hugging Face serverless API 연결 전 확인할 항목은
-[hf_serverless_checklist.md](hf_serverless_checklist.md)를 참고한다.
+실제 Hugging Face Inference Endpoint 연결 전 확인할 항목은
+[hf_endpoint_checklist.md](hf_endpoint_checklist.md)를 참고한다.
+선택된 Encoder 모델을 Hugging Face Dedicated Inference Endpoint에 배포하는
+절차는 [encoder_endpoint_deploy.md](encoder_endpoint_deploy.md)를 참고한다.
 
 현재 `frontend`, `backend`, `ai_service`, 모델 학습이 모두 진행 중이므로 이 단계에서는 실제 백엔드나 실제 모델에 직접 연결하지 않는다. 대신 mock-first 방식으로 API 형태와 배포 구조를 먼저 고정한다.
 
@@ -12,7 +14,13 @@
 
 최종 목표는 `deploy` wrapper가 Hugging Face inference API를 직접 감싸는 async FastAPI wrapper 역할을 하는 구조다. 백엔드는 deploy wrapper의 `/analyze` API만 호출하고, deploy wrapper는 FastAPI lifespan에서 관리되는 공유 `httpx.AsyncClient`로 Encoder와 Decoder를 순차 호출한 뒤 `label`, `confidence`, `reason` 형식으로 정규화한다. 기본값에서는 Encoder가 `normal`을 반환하면 decoder 호출을 생략하고 정적 안전 설명을 반환한다.
 
-현재 실제 연결 우선순위는 Hugging Face serverless API다. `HF_SERVING_TYPE=serverless`이면 endpoint URL 대신 `ENCODER_MODEL_ID`, `DECODER_MODEL_ID`를 사용해 HF serverless model API를 호출한다. 운영 안정성이나 성능 제어가 필요하면 `HF_SERVING_TYPE=endpoint`로 dedicated Inference Endpoint URL을 사용할 수 있게 열어둔다.
+현재 모델팀은 Encoder를 Hugging Face Inference Endpoint 또는 Spaces의 가벼운
+API로 배포하고, Decoder는 Qwen 계열 모델을 Hugging Face Inference Providers로
+few-shot 호출하는 방향을 검토 중이다. 따라서 실제 연결 기본값은
+`HF_SERVING_TYPE=endpoint`로 두고, Encoder는 `ENCODER_ENDPOINT_URL`에 연결한다.
+Decoder가 Inference Providers chat completion을 쓰면 `DECODER_API_TYPE=chat_completion`
+과 `DECODER_MODEL_ID`를 사용하고, dedicated/custom URL을 쓰면
+`DECODER_ENDPOINT_URL`을 설정한다.
 
 운영 확인용 endpoint는 두 단계로 나눈다. `/health`는 앱 프로세스가 살아 있는지만 확인하고, `/ready`는 현재 mode에서 필요한 환경변수가 준비되었는지 확인한다.
 
@@ -37,7 +45,7 @@ Frontend /predict request
 - `deploy/` 내부 문서 및 예시 파일 작성
 - `deploy/app/` 내부 mock-first async FastAPI wrapper 작성
 - mock mode 기준 API contract 정리
-- Hugging Face serverless API 또는 dedicated Endpoint 전환을 위한 환경변수와 체크리스트 정리
+- Hugging Face Inference Endpoint 전환을 위한 환경변수와 체크리스트 정리
 - Docker/docker-compose 적용 방향 초안 정리
 
 ## Out of Scope

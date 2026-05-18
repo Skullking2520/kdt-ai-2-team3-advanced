@@ -2,7 +2,7 @@
 
 `ai_service/` 폴더는 모델링 담당자가 모델 학습, 평가, inference 실험 코드를 관리하는 영역이다. 따라서 deployment wrapper는 `ai_service/`가 아니라 `deploy/app/` 아래에 작성한다.
 
-Deploy wrapper의 책임은 Hugging Face inference API를 호출하고, 결과를 backend가 사용하기 쉬운 공통 응답 형식으로 정규화하는 것이다. 현재 1차 실제 연결은 Hugging Face serverless API를 우선 가정한다.
+Deploy wrapper의 책임은 Hugging Face inference API를 호출하고, 결과를 backend가 사용하기 쉬운 공통 응답 형식으로 정규화하는 것이다. 현재 모델팀은 Encoder를 Hugging Face Inference Endpoint 또는 Spaces API로 배포하고, Decoder는 Qwen 계열 모델을 Hugging Face Inference Providers에서 few-shot 호출하는 방향을 검토 중이다. 따라서 실제 연결은 `HF_SERVING_TYPE=endpoint`를 기본 흐름으로 두되, Decoder는 `DECODER_API_TYPE=chat_completion`도 지원한다.
 
 ## Responsibilities
 
@@ -45,8 +45,22 @@ Deploy wrapper는 static miss 이후 AI inference가 필요한 요청을 받아 
 
 Hugging Face inference API가 준비된 뒤 사용하는 mode다.
 
+- `HF_SERVING_TYPE=endpoint`: `ENCODER_ENDPOINT_URL`, `DECODER_ENDPOINT_URL`, `HF_TOKEN`으로 Hugging Face 웹 GUI에서 생성한 Inference Endpoint를 호출한다.
 - `HF_SERVING_TYPE=serverless`: `ENCODER_MODEL_ID`, `DECODER_MODEL_ID`, `HF_TOKEN`으로 Hugging Face serverless API를 호출한다.
-- `HF_SERVING_TYPE=endpoint`: `ENCODER_ENDPOINT_URL`, `DECODER_ENDPOINT_URL`, `HF_TOKEN`으로 dedicated Inference Endpoint를 호출한다.
+
+Encoder가 Hugging Face Spaces의 custom FastAPI/Gradio API로 제공되는 경우에도
+wrapper 입장에서는 URL을 호출한다는 점이 같으므로 `HF_SERVING_TYPE=endpoint`를
+사용한다. Space API가 `{"text": "..."}`를 기대하면
+`ENCODER_REQUEST_FORMAT=text_json`으로 바꾼다.
+
+Decoder가 Hugging Face Inference Providers의 OpenAI-compatible chat completion을
+사용하면 다음 값을 설정한다.
+
+```text
+DECODER_API_TYPE=chat_completion
+HF_PROVIDER_CHAT_URL=https://router.huggingface.co/v1/chat/completions
+DECODER_MODEL_ID=Qwen/...
+```
 
 HF 호출은 일시적인 5xx 또는 네트워크 실패에 대비해 retry/backoff를 적용한다.
 
@@ -71,16 +85,19 @@ AI_SERVICE_MODE=hf_endpoint
 
 ## Future HF Inference Connection
 
-Hugging Face Endpoint가 준비되면 다음 작업만으로 실제 추론 mode로 전환하는 것을 목표로 한다.
+Hugging Face Inference Endpoint가 준비되면 다음 작업만으로 실제 추론 mode로 전환하는 것을 목표로 한다.
 
 1. Encoder 모델을 Hugging Face Hub에 업로드한다.
 2. Decoder text-generation 모델을 Hugging Face Hub에서 사용할 수 있게 준비한다.
-3. `.env` 또는 secret manager에 `HF_TOKEN`, `ENCODER_MODEL_ID`, `DECODER_MODEL_ID`를 등록한다.
-4. `AI_SERVICE_MODE=hf_endpoint`, `HF_SERVING_TYPE=serverless`로 변경한다.
-5. `/health`, `/analyze` smoke test를 실행한다.
-6. serverless API의 rate limit, cold start, 모델 지원 여부가 문제가 되면 dedicated Endpoint로 전환한다.
+3. Hugging Face 웹 GUI에서 각 모델의 `Deploy`를 눌러 Inference Endpoint를 생성한다.
+4. 생성된 Encoder/Decoder endpoint URL을 복사한다.
+5. `.env` 또는 secret manager에 `HF_TOKEN`, `ENCODER_ENDPOINT_URL`, decoder 관련 값을 등록한다.
+6. `AI_SERVICE_MODE=hf_endpoint`, `HF_SERVING_TYPE=endpoint`로 변경한다.
+7. `/ready`, `/health`, `/analyze` smoke test를 실행한다.
 
-자세한 연결 전 확인 항목은 [hf_serverless_checklist.md](hf_serverless_checklist.md)를 참고한다.
+`ENCODER_MODEL_ID`, `DECODER_MODEL_ID`, model version 값은 endpoint 호출 대상이 아니라 response metadata와 rollback 추적용으로 계속 유지한다.
+
+자세한 연결 전 확인 항목은 [hf_endpoint_checklist.md](hf_endpoint_checklist.md)를 참고한다.
 
 ## Response Normalization
 

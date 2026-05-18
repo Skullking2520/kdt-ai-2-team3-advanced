@@ -1,12 +1,18 @@
-# Hugging Face Serverless Connection Checklist
+# Hugging Face Inference Endpoint Connection Checklist
 
 이 문서는 모델링팀이 Encoder 모델을 Hugging Face Hub에 올린 뒤
-deploy wrapper를 실제 HF serverless API와 연결할 때 확인할 항목을 정리한다.
+Hugging Face 웹 GUI의 `Deploy` 기능, Spaces API, Inference Providers를 사용해
+deploy wrapper를 실제 HF inference API와 연결할 때 확인할 항목을 정리한다.
 
 ## Required Inputs From Modeling
 
 - Encoder model ID
 - Encoder model version 또는 revision
+- Encoder endpoint URL
+- Encoder serving shape
+  - HF Inference Endpoint인지 확인
+  - HF Spaces custom API인지 확인
+  - 요청 payload가 `{"inputs": text}`인지 `{"text": text}`인지 확인
 - Encoder label mapping
   - `LABEL_0`이 정상인지 확인
   - `LABEL_1`이 스미싱인지 확인
@@ -19,22 +25,32 @@ deploy wrapper를 실제 HF serverless API와 연결할 때 확인할 항목을 
   - prototype response를 그대로 반환하는 custom handler인지 확인
 - Decoder model ID
 - Decoder model version 또는 revision
+- Decoder endpoint URL
 - Decoder task
   - 현재 deploy wrapper는 text-generation 응답을 기준으로 정규화한다.
+- Decoder API type
+  - `text_generation`: HF text-generation style payload
+  - `chat_completion`: Inference Providers OpenAI-compatible chat completion
 
 ## Environment Settings
 
-HF serverless API를 사용할 때는 다음 값을 secret 또는 실행 환경에 주입한다.
+Hugging Face 웹 GUI에서 생성한 Inference Endpoint를 사용할 때는 다음 값을 secret 또는 실행 환경에 주입한다.
 
 ```text
 AI_SERVICE_MODE=hf_endpoint
-HF_SERVING_TYPE=serverless
+HF_SERVING_TYPE=endpoint
 HF_TOKEN=
-HF_SERVERLESS_BASE_URL=https://router.huggingface.co/hf-inference/models
+
+ENCODER_ENDPOINT_URL=
+ENCODER_PREPROCESS_ENABLED=true
+ENCODER_REQUEST_FORMAT=hf_inputs
 
 ENCODER_MODEL_ID=team/kcelectra-smishing-classifier
 ENCODER_MODEL_VERSION=v1.0.0
 
+DECODER_API_TYPE=chat_completion
+HF_PROVIDER_CHAT_URL=https://router.huggingface.co/v1/chat/completions
+DECODER_ENDPOINT_URL=
 DECODER_MODEL_ID=team/decoder-explainer
 DECODER_MODEL_VERSION=v1.0.0
 
@@ -45,6 +61,47 @@ DECODER_ON_NORMAL=false
 ```
 
 실제 `HF_TOKEN` 값은 `.env.example`이나 문서에 작성하지 않는다.
+
+`ENCODER_MODEL_ID`, `DECODER_MODEL_ID`, version 값은 wrapper response metadata와
+추후 rollback 추적에 사용한다. 실제 호출 대상은 endpoint URL이다.
+
+## Hugging Face GUI Flow
+
+모델링팀이 진행한 방식은 다음 흐름으로 이해하면 된다.
+
+```text
+Hugging Face model page
+-> Deploy
+-> Inference Endpoints
+-> endpoint 생성
+-> endpoint URL 복사
+-> deploy wrapper 환경변수에 연결
+```
+
+Encoder와 Decoder는 역할이 다르므로 endpoint URL도 분리해서 관리한다.
+
+- Encoder Endpoint: 스미싱/정상 분류
+- Decoder Endpoint: 판단 이유 text-generation
+
+Encoder가 Spaces 무료 CPU에서 동작하는 custom API라면 endpoint URL 자리에 Space의
+API URL을 넣는다. 단, Space는 free CPU에서 sleep/cold start가 발생할 수 있으므로
+첫 요청 latency를 smoke test에서 확인해야 한다.
+
+Decoder가 Inference Providers를 쓰는 Qwen 모델이라면 dedicated decoder endpoint URL이
+없어도 된다. 이 경우 `DECODER_API_TYPE=chat_completion`으로 설정하고
+`DECODER_MODEL_ID`에 provider에서 지원되는 Qwen 모델 ID를 넣는다.
+
+## Optional Serverless Fallback
+
+별도 endpoint URL 없이 model ID 기반 serverless API를 호출해야 하는 경우에는
+다음 설정으로 전환할 수 있다.
+
+```text
+HF_SERVING_TYPE=serverless
+HF_SERVERLESS_BASE_URL=https://router.huggingface.co/hf-inference/models
+ENCODER_MODEL_ID=team/kcelectra-smishing-classifier
+DECODER_MODEL_ID=team/decoder-explainer
+```
 
 ## Expected Encoder Responses
 
@@ -139,15 +196,20 @@ curl -X POST http://localhost:8001/analyze \
 - secret 값이 response나 log에 노출되지 않는지
 - `X-Request-ID`가 deploy wrapper log에서 확인되는지
 
-## Fallback To Dedicated Endpoint
+현재 encoder는 전처리된 학습 `text`를 기준으로 학습되었으므로
+`ENCODER_PREPROCESS_ENABLED=true`를 기본으로 사용한다. 이 값이 켜져 있으면
+deploy wrapper가 `[Web발신]`을 제거하고 URL, 긴 전화번호, 금액 표현을
+`<URL>`, `<PHONE>`, `<MONEY>`로 치환한 뒤 encoder endpoint에 전달한다.
 
-HF serverless API에서 모델 크기, cold start, rate limit, task 지원 문제가 생기면
-dedicated Inference Endpoint로 전환한다.
+## Fallback To Serverless
+
+전용 endpoint 비용을 줄이거나 endpoint URL 없이 model ID 기반 호출을 시험해야
+하면 serverless mode로 전환할 수 있다.
 
 ```text
-HF_SERVING_TYPE=endpoint
-ENCODER_ENDPOINT_URL=
-DECODER_ENDPOINT_URL=
+HF_SERVING_TYPE=serverless
+ENCODER_MODEL_ID=
+DECODER_MODEL_ID=
 ```
 
 Backend contract는 그대로 유지한다.

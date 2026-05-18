@@ -3,7 +3,11 @@ import unittest
 from deploy.app.main import (
     ResponseNormalizationError,
     Settings,
+    build_decoder_payload,
+    build_encoder_payload,
+    clean_text_for_encoder,
     collect_settings_errors,
+    normalize_decoder_response,
     normalize_encoder_response,
 )
 
@@ -103,18 +107,130 @@ class SettingsValidationTest(unittest.TestCase):
         self.assertIn("ENCODER_MODEL_ID is required", errors)
         self.assertIn("DECODER_MODEL_ID is required", errors)
 
-    def test_endpoint_mode_requires_endpoint_urls(self) -> None:
+    def test_endpoint_mode_allows_encoder_only_by_default(self) -> None:
         settings = Settings(
             serving_mode="hf_endpoint",
             hf_serving_type="endpoint",
+            hf_token="test-token",
+            encoder_endpoint_url="https://encoder.example",
+            decoder_endpoint_url="",
+        )
+
+        errors = collect_settings_errors(settings)
+
+        self.assertEqual(errors, [])
+
+    def test_endpoint_mode_requires_decoder_url_when_decoder_is_required(
+        self,
+    ) -> None:
+        settings = Settings(
+            serving_mode="hf_endpoint",
+            hf_serving_type="endpoint",
+            hf_token="",
+            decoder_required=True,
             encoder_endpoint_url="",
             decoder_endpoint_url="",
         )
 
         errors = collect_settings_errors(settings)
 
+        self.assertIn("HF_TOKEN is required", errors)
         self.assertIn("ENCODER_ENDPOINT_URL is required", errors)
         self.assertIn("DECODER_ENDPOINT_URL is required", errors)
+
+    def test_endpoint_chat_completion_decoder_does_not_require_decoder_url(
+        self,
+    ) -> None:
+        settings = Settings(
+            serving_mode="hf_endpoint",
+            hf_serving_type="endpoint",
+            hf_token="test-token",
+            encoder_endpoint_url="https://encoder.example",
+            decoder_endpoint_url="",
+            decoder_api_type="chat_completion",
+            decoder_model_id="Qwen/Qwen2.5-7B-Instruct",
+        )
+
+        errors = collect_settings_errors(settings)
+
+        self.assertEqual(errors, [])
+
+
+class RequestPayloadTest(unittest.TestCase):
+    def test_encoder_preprocess_matches_training_text_rule(self) -> None:
+        text = (
+            "[Web발신] 배송 주소 오류로 반송 예정입니다. "
+            "http://fake.kr/track"
+        )
+
+        cleaned = clean_text_for_encoder(text)
+
+        self.assertEqual(
+            cleaned,
+            "배송 주소 오류로 반송 예정입니다. <URL>",
+        )
+
+    def test_encoder_preprocess_keeps_short_verification_code(self) -> None:
+        text = "[Web발신] 인증번호 123456 입니다."
+
+        cleaned = clean_text_for_encoder(text)
+
+        self.assertEqual(cleaned, "인증번호 123456 입니다.")
+
+    def test_encoder_preprocess_masks_long_phone_number(self) -> None:
+        text = "연락주세요 010-1234-5678"
+
+        cleaned = clean_text_for_encoder(text)
+
+        self.assertEqual(cleaned, "연락주세요 <PHONE>")
+
+    def test_encoder_text_json_payload(self) -> None:
+        settings = Settings(encoder_request_format="text_json")
+
+        payload = build_encoder_payload(settings, "[Web발신] hello")
+
+        self.assertEqual(payload, {"text": "hello"})
+
+    def test_encoder_preprocess_can_be_disabled(self) -> None:
+        settings = Settings(
+            encoder_request_format="hf_inputs",
+            encoder_preprocess_enabled=False,
+        )
+
+        payload = build_encoder_payload(settings, "[Web발신] hello")
+
+        self.assertEqual(payload, {"inputs": "[Web발신] hello"})
+
+    def test_decoder_chat_completion_payload(self) -> None:
+        settings = Settings(
+            decoder_api_type="chat_completion",
+            decoder_model_id="Qwen/Qwen2.5-7B-Instruct",
+            decoder_max_new_tokens=80,
+            decoder_temperature=0.2,
+        )
+
+        payload = build_decoder_payload(settings, "explain")
+
+        self.assertEqual(payload["model"], "Qwen/Qwen2.5-7B-Instruct")
+        self.assertEqual(payload["messages"][0]["content"], "explain")
+        self.assertEqual(payload["max_tokens"], 80)
+
+
+class DecoderNormalizationTest(unittest.TestCase):
+    def test_openai_compatible_chat_completion_response(self) -> None:
+        response = {
+            "choices": [
+                {
+                    "message": {
+                        "content": "스미싱으로 의심되는 이유입니다.",
+                    }
+                }
+            ]
+        }
+
+        reason = normalize_decoder_response(response)
+
+        self.assertEqual(reason, "스미싱으로 의심되는 이유입니다.")
 
 
 if __name__ == "__main__":

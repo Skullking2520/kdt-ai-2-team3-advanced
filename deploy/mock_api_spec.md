@@ -112,16 +112,20 @@ URL과 suspicious keyword가 함께 있거나, 금전 표현과 전화번호가 
 
 ## Future Switch to HF Inference API
 
-Hugging Face serverless API를 우선 사용한다면 다음 환경변수를 설정하고 mode를 변경한다.
+모델팀이 Hugging Face 웹 GUI에서 생성한 Inference Endpoint를 연결할 때는 다음 환경변수를 설정하고 mode를 변경한다.
 
 ```text
 AI_SERVICE_MODE=hf_endpoint
-HF_SERVING_TYPE=serverless
+HF_SERVING_TYPE=endpoint
 HF_TOKEN=
-ENCODER_MODEL_ID=
+ENCODER_ENDPOINT_URL=
+ENCODER_REQUEST_FORMAT=hf_inputs
+DECODER_API_TYPE=chat_completion
 DECODER_MODEL_ID=
 DECODER_ON_NORMAL=false
 ```
+
+`ENCODER_MODEL_ID`, `DECODER_MODEL_ID`, version 값은 응답 metadata와 rollback 추적용으로 유지한다.
 
 Backend는 `/analyze` contract가 유지되는 한 별도 변경 없이 동일 API를 호출한다.
 

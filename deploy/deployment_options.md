@@ -1,6 +1,6 @@
 # Deployment Options
 
-이 문서는 모델 서빙과 deploy wrapper 배포 선택지를 비교한다. 현재 추천 구조는 Hugging Face inference API를 `deploy/app/` FastAPI wrapper가 감싸는 B안이다. 1차 실제 연결은 serverless API를 우선 가정하고, 필요하면 dedicated Inference Endpoint로 전환한다.
+이 문서는 모델 서빙과 deploy wrapper 배포 선택지를 비교한다. 현재 추천 구조는 Hugging Face inference API를 `deploy/app/` FastAPI wrapper가 감싸는 B안이다. 모델팀의 현재 방식은 Hugging Face 웹 GUI에서 모델의 `Deploy` 버튼으로 Inference Endpoint를 생성하는 흐름이므로, 실제 연결 기본값은 dedicated Inference Endpoint URL을 사용하는 `HF_SERVING_TYPE=endpoint`다.
 
 ## Option A: FastAPI Direct Model Serving
 
@@ -25,8 +25,8 @@ Hugging Face serverless API 또는 dedicated Inference Endpoint가 모델 추론
 ### Pros
 
 - 모델 serving 운영 부담이 줄어든다.
-- serverless mode에서는 endpoint 생성 없이 model ID 기반으로 호출할 수 있다.
 - dedicated endpoint mode에서는 Encoder와 Decoder를 독립 endpoint로 관리할 수 있다.
+- serverless mode에서는 endpoint 생성 없이 model ID 기반으로 호출할 수 있다.
 - 모델 교체 시 model ID, model version, endpoint URL 기준으로 전환하기 쉽다.
 - Backend는 항상 동일한 deploy wrapper API만 호출하면 된다.
 
@@ -68,5 +68,8 @@ Hugging Face serverless API 또는 dedicated Inference Endpoint가 모델 추론
 - Encoder KcELECTRA classifier는 FastAPI 직접 서빙도 가능하다.
 - Decoder LLM은 직접 서버에 올리면 자원 부담이 크므로 Hugging Face serverless API, dedicated Endpoint, 또는 외부 API가 현실적이다.
 - 이번 설계는 B안, 즉 Hugging Face inference API를 사용하는 deploy wrapper 구조를 기준으로 한다.
-- 현재 우선순위는 `HF_SERVING_TYPE=serverless`이고, 운영 안정성 또는 성능 제어가 필요하면 `HF_SERVING_TYPE=endpoint`로 전환한다.
+- 현재 우선순위는 모델팀이 Hugging Face GUI에서 생성한 endpoint URL을 연결하는 `HF_SERVING_TYPE=endpoint`다.
+- `HF_SERVING_TYPE=serverless`는 endpoint URL 없이 model ID 기반 호출이 필요할 때를 위한 보조 경로로 유지한다.
+- Encoder가 가벼워 Hugging Face Spaces 무료 CPU에서 충분히 동작하면, Space의 API URL을 `ENCODER_ENDPOINT_URL`로 연결할 수 있다. 단, free Space는 sleep/cold start를 고려해야 한다.
+- Decoder가 Qwen 계열 few-shot 모델을 Inference Providers에서 사용할 수 있으면 `DECODER_API_TYPE=chat_completion`으로 OpenAI-compatible router를 호출한다.
 - `ai_service/`는 모델링 담당자 영역으로 유지하고, wrapper 구현은 `deploy/app/`에 둔다.
