@@ -9,6 +9,7 @@ router = APIRouter(prefix="/report")
 async def report_smishing(request: ReportRequest):
     """
     프론트엔드의 "신고"를 받아 db에 저장한다.
+    TODO: 이제 모델에서 가져와서 결과를 꾸민 후 반환하게 수정
     """
 
     print(request)

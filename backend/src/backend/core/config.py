@@ -5,14 +5,29 @@ from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 from slowapi.middleware import SlowAPIMiddleware
 from slowapi.util import get_remote_address
-from starlette_csrf.middleware import CSRFMiddleware
 
 from ..api import predict, report, root
 from ..db import is_dev
+from .exceptions import JSONCSRFMiddleware
 from .pydantic_settings import settings  # 환경 변수 로드
 
 limiter = Limiter(key_func=get_remote_address, default_limits=["15/minutes"])
 # get_remote_address: Returns the ip address for the current request
+
+CORS_OPTIONS = {
+    "allow_origins": [
+        "http://localhost:5173",
+        "http://127.0.0.1:5173",
+        "https://smishing-detect-kdt2.cloud",
+    ],
+    "allow_credentials": True,
+    "allow_methods": ["*"],
+    "allow_headers": ["*"],
+}
+
+
+def apply_cors_middleware(app):
+    return CORSMiddleware(app, **CORS_OPTIONS)
 
 
 def configure_app(app: FastAPI):
@@ -24,18 +39,9 @@ def configure_app(app: FastAPI):
     ).instrument(app).expose(app, include_in_schema=False)
     # expose(): GET /metrics 등록
 
-    # cors 설정 추가
-    app.add_middleware(
-        CORSMiddleware,
-        allow_origins=["http://localhost:5173", "https://smishing-detect-kdt2.cloud"],
-        allow_credentials=True,  # 쿠키 공유 허용
-        allow_methods=["*"],
-        allow_headers=["*"],
-    )
-
     # csrf 설정 추가
     app.add_middleware(
-        CSRFMiddleware,
+        JSONCSRFMiddleware,
         secret=str(settings.CSRF_SECRET),
         cookie_secure=not is_dev,  # http 개발환경 비암호화
         cookie_samesite="lax",  # cross-origin 전송용
