@@ -21,8 +21,16 @@ class Settings(BaseSettings):
     # 만약 .env에 필수값으로 두지 않고 기본값을 주려면 아래처럼 선언합니다.
     # SQLALCHEMY_DATABASE_URL: str = "sqlite:///./test.db"
 
-    # csrf 비밀키 설정
-    CSRF_SECRET: str = Field(default="your_csrf_key")
+    # Hugging Face Inference Endpoint 설정
+    HF_SMISHING_ENCODER_URL: str | None = Field(default=None)
+    HF_SMISHING_DECODER_URL: str | None = Field(default=None)
+    HF_TOKEN: str | None = Field(default=None)
+    HF_TIMEOUT_SECONDS: int = Field(default=30)
+    HF_DECODER_MAX_NEW_TOKENS: int = Field(default=128)
+    ENCODER_API_KEY: str | None = Field(default=None)
+    ENCODER_INFERENCE_ENDPOINT: str | None = Field(default=None)
+    EXPLAINER_PROVIDER: str = Field(default="featherless-ai")
+    EXPLAINER_MODEL: str = Field(default="Qwen/Qwen3-1.7B")
 
     # .env 파일 로드 설정 (pydantic v2 방식)
     model_config = SettingsConfigDict(
@@ -36,3 +44,4 @@ class Settings(BaseSettings):
 settings = Settings()
 
 print("환경 변수 로드 완료")  # 확인용, TODO: 로거로 교체
+print(settings)

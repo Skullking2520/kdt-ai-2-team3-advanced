@@ -163,16 +163,41 @@ function App() {
   );
 
   return (
-    <main className={warm ? "min-h-screen bg-[#fff7ed] text-slate-950" : "min-h-screen bg-slate-50 text-slate-950"}>
+    <main
+      className={
+        warm
+          ? "min-h-screen bg-[#fff7ed] text-slate-950"
+          : "min-h-screen bg-slate-50 text-slate-950"
+      }
+    >
       <Header mode={mode} setMode={setMode} warm={warm} />
       {activeTab === "check" ? (
         <IntroPage checkForm={checkForm} warm={warm} />
       ) : (
         <section className="mx-auto w-full max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
           <div>
-            {activeTab === "result" && <ResultPage copyState={copyState} hasResult={hasResult} onBack={() => changeTab("check")} onCopy={copyShare} onReport={reportResult} message={submittedMessage} result={result} warm={warm} />}
+            {activeTab === "result" && (
+              <ResultPage
+                copyState={copyState}
+                hasResult={hasResult}
+                onBack={() => changeTab("check")}
+                onCopy={copyShare}
+                onReport={reportResult}
+                message={submittedMessage}
+                result={result}
+                warm={warm}
+              />
+            )}
             {activeTab === "cases" && <CasesPage warm={warm} />}
-            {activeTab === "report" && <ReportPage reportText={reportText} reportType={reportType} setReportText={setReportText} setReportType={setReportType} warm={warm} />}
+            {activeTab === "report" && (
+              <ReportPage
+                reportText={reportText}
+                reportType={reportType}
+                setReportText={setReportText}
+                setReportType={setReportType}
+                warm={warm}
+              />
+            )}
             {activeTab === "guide" && <GuidePage warm={warm} />}
           </div>
         </section>

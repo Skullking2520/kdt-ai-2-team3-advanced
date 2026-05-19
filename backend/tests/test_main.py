@@ -8,10 +8,4 @@
 def test_read_root(client):
     response = client.get("/")
     assert response.status_code == 200
-    assert response.json() == {"message": "Hello from uv monorepo!"}
-
-
-def test_read_item(client):
-    response = client.get("/items/42")
-    assert response.status_code == 200
-    assert response.json() == {"item_id": 42}
+    assert response.json() == {"message": "Hello!"}

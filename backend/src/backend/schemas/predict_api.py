@@ -1,7 +1,7 @@
 # POST predict api에 대한 스키마
 from typing import List, Optional
 
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict, Field
 
 
 # 요청 바디 스키마 (프론트엔드에서 { message, allowTrainingUse } 전송)
@@ -27,3 +27,10 @@ class PredictResponse(BaseModel):
     explanation: str
     highlightedTerms: List[str]
     factorScores: List[FactorScore]
+
+
+class EncoderClassificationOutput(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    label: str = Field(min_length=1)
+    score: float = Field(ge=0, le=1)

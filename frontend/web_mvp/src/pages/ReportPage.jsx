@@ -1,4 +1,5 @@
-import { Flag, Send } from "lucide-react";
+import { useState } from "react"; // useState 추가
+import { Flag, Send, CheckCircle2 } from "lucide-react";
 import { panelClass, SectionTitle } from "../components/mvp/ui.jsx";
 import { REPORT_PAGE_TEXT, REPORT_TYPES } from "../constants.js";
 
