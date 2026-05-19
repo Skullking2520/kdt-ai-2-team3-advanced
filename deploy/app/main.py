@@ -134,9 +134,9 @@ class Settings(BaseModel):
     )
     encoder_preprocess_enabled: bool = Field(default=True)
     encoder_request_format: str = Field(default="hf_inputs")
-    decoder_api_type: str = Field(default="chat_completion")
+    decoder_api_type: str = Field(default="text_generation")
     decoder_provider: str = Field(default="featherless-ai")
-    decoder_required: bool = Field(default=False)
+    decoder_required: bool = Field(default=True)
     encoder_endpoint_url: str = Field(default="")
     decoder_endpoint_url: str = Field(default="")
     encoder_model_id: str = Field(
@@ -222,11 +222,11 @@ def load_settings() -> Settings:
             os.getenv("ENCODER_PREPROCESS_ENABLED"), default=True
         ),
         encoder_request_format=os.getenv("ENCODER_REQUEST_FORMAT", "hf_inputs"),
-        decoder_api_type=os.getenv("DECODER_API_TYPE", "chat_completion"),
+        decoder_api_type=os.getenv("DECODER_API_TYPE", "text_generation"),
         decoder_provider=os.getenv(
             "DECODER_PROVIDER", os.getenv("EXPLAINER_PROVIDER", "featherless-ai")
         ),
-        decoder_required=parse_bool(os.getenv("DECODER_REQUIRED"), default=False),
+        decoder_required=parse_bool(os.getenv("DECODER_REQUIRED"), default=True),
         encoder_endpoint_url=os.getenv("ENCODER_ENDPOINT_URL", ""),
         decoder_endpoint_url=os.getenv("DECODER_ENDPOINT_URL", ""),
         encoder_model_id=os.getenv(

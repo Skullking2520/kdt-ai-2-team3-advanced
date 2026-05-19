@@ -101,6 +101,7 @@ class SettingsValidationTest(unittest.TestCase):
             hf_token="",
             encoder_model_id="",
             decoder_model_id="",
+            decoder_required=False,
         )
 
         errors = collect_settings_errors(settings)
@@ -126,13 +127,16 @@ class SettingsValidationTest(unittest.TestCase):
     def test_temperature_can_be_zero(self) -> None:
         self.assertEqual(parse_non_negative_float("0", default=0.3), 0.0)
 
-    def test_endpoint_mode_allows_encoder_only_by_default(self) -> None:
+    def test_endpoint_mode_allows_encoder_only_when_decoder_not_required(
+        self,
+    ) -> None:
         settings = Settings(
             serving_mode="hf_endpoint",
             hf_serving_type="endpoint",
             hf_token="test-token",
             encoder_endpoint_url="https://encoder.example",
             decoder_endpoint_url="",
+            decoder_required=False,
         )
 
         errors = collect_settings_errors(settings)

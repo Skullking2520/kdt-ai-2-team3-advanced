@@ -77,7 +77,7 @@ Verified commands:
 ## Notes
 
 - `AI_SERVICE_MODE` 기본값은 `deploy/.env.example`에서 관리한다. compose `environment`로 하드코딩하면 `hf_endpoint` 전환 시 env file 값을 덮어쓸 수 있으므로 피한다.
-- 모델팀이 Hugging Face 웹 GUI에서 생성한 Encoder endpoint를 연결할 때는 `HF_SERVING_TYPE=endpoint`와 `ENCODER_ENDPOINT_URL`을 사용한다. Decoder는 기본적으로 `Qwen/Qwen3-1.7B`를 Hugging Face Inference Providers chat completion API로 호출한다.
+- 모델팀이 Hugging Face 웹 GUI에서 생성한 Encoder/Decoder endpoint를 연결할 때는 `HF_SERVING_TYPE=endpoint`, `ENCODER_ENDPOINT_URL`, `DECODER_ENDPOINT_URL`을 사용한다. Decoder는 기본적으로 `DECODER_API_TYPE=text_generation`으로 Qwen endpoint를 호출한다.
 - `HF_SERVING_TYPE=serverless`는 endpoint URL 없이 model ID 기반 호출이 필요할 때만 사용한다.
 - 실제 secret은 `.env.example`에 작성하지 않는다.
 - 운영 환경에서는 GitHub Secrets, cloud secret manager, server environment variables 중 하나로 secret을 주입한다.

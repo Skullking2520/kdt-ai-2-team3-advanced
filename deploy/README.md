@@ -51,16 +51,13 @@
 
 최종 목표는 `deploy` wrapper가 Hugging Face inference API를 직접 감싸는 async FastAPI wrapper 역할을 하는 구조다. 백엔드는 deploy wrapper의 `/analyze` API만 호출하고, deploy wrapper는 FastAPI lifespan에서 관리되는 공유 `httpx.AsyncClient`로 Encoder와 Decoder를 순차 호출한 뒤 `label`, `confidence`, `reason` 형식으로 정규화한다. 기본값에서는 Encoder가 `normal`을 반환하면 decoder 호출을 생략하고 정적 안전 설명을 반환한다.
 
-현재 모델팀은 Encoder를 Hugging Face Inference Endpoint 또는 Spaces의 가벼운
-API로 배포하고, Decoder는 `Qwen/Qwen3-1.7B`를 Hugging Face Inference
-Providers chat completion API로 few-shot 호출한다. 따라서 실제 연결 기본값은
-`HF_SERVING_TYPE=endpoint`로 두고, Encoder는 `ENCODER_ENDPOINT_URL`에 연결한다.
-Decoder는 기본적으로 `DECODER_API_TYPE=chat_completion`,
-`DECODER_MODEL_ID=Qwen/Qwen3-1.7B`를 사용한다. dedicated/custom decoder URL을
-쓰는 경우에만 `DECODER_ENDPOINT_URL`을 설정한다.
-모델링 prototype과 같은 provider인 `DECODER_PROVIDER=featherless-ai`를 사용한다.
-`chat_completion` decoder는 모델링 prototype과 같은
-`huggingface_hub.InferenceClient` 경로로 호출한다.
+현재 모델팀은 Encoder와 Decoder를 Hugging Face Dedicated Inference Endpoint로
+배포한다. 따라서 실제 연결 기본값은 `HF_SERVING_TYPE=endpoint`로 두고,
+Encoder는 `ENCODER_ENDPOINT_URL`, Decoder는 `DECODER_ENDPOINT_URL`에 연결한다.
+Decoder endpoint는 `DECODER_API_TYPE=text_generation`으로 호출하며, wrapper가
+few-shot prompt를 `{"inputs": "...", "parameters": {...}}` 형식으로 전달한다.
+`DECODER_API_TYPE=chat_completion`과 `DECODER_PROVIDER=featherless-ai`는
+Inference Providers fallback이 필요할 때만 사용한다.
 
 운영 확인용 endpoint는 두 단계로 나눈다. `/health`는 앱 프로세스가 살아 있는지만 확인하고, `/ready`는 현재 mode에서 필요한 환경변수가 준비되었는지 확인한다.
 
@@ -75,7 +72,7 @@ Frontend /predict request
 -> Backend static pattern pre-filtering
 -> Static hit이면 backend가 DB log 저장 후 frontend 응답 생성
 -> Static miss이면 backend가 deploy wrapper POST /analyze 호출
--> Deploy wrapper가 Encoder Endpoint와 Decoder Provider API 결과를 정규화
+-> Deploy wrapper가 Encoder Endpoint와 Decoder Endpoint 결과를 정규화
 -> Backend가 smishing log, model metadata, static pattern 후보를 저장
 -> Backend가 frontend 응답 형식으로 변환
 ```

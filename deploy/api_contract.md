@@ -4,10 +4,10 @@
 
 내부 구현은 FastAPI lifespan에서 관리되는 공유 `httpx.AsyncClient`를 사용해 Hugging Face Encoder/Decoder inference API를 호출한다. Decoder는 encoder의 `label`, `confidence`, `features`가 필요하므로 두 호출은 병렬이 아니라 순차 `await` 구조로 처리한다. API contract는 기존과 동일하게 유지한다.
 
-모델팀이 Hugging Face 웹 GUI의 `Deploy` 기능으로 Encoder Inference Endpoint를
-생성하면 deploy wrapper는 `HF_SERVING_TYPE=endpoint`로 실행하고,
-환경변수의 `ENCODER_ENDPOINT_URL`을 호출한다. Decoder는 기본적으로
-`Qwen/Qwen3-1.7B`를 Hugging Face Inference Providers chat completion API로
+모델팀이 Hugging Face 웹 GUI의 `Deploy` 기능으로 Encoder/Decoder Inference
+Endpoint를 생성하면 deploy wrapper는 `HF_SERVING_TYPE=endpoint`로 실행하고,
+환경변수의 `ENCODER_ENDPOINT_URL`, `DECODER_ENDPOINT_URL`을 호출한다. Decoder는
+기본적으로 `Qwen/Qwen3-1.7B` endpoint를 `DECODER_API_TYPE=text_generation`으로
 호출한다.
 `HF_SERVING_TYPE=serverless`는 model ID 기반 호출이 필요할 때 사용하는 보조
 경로다.
@@ -22,12 +22,11 @@ Space API가 `{"text": text}`를 기대하면 `ENCODER_REQUEST_FORMAT=text_json`
 `[Web발신]` 제거, URL/긴 전화번호/금액 치환 등을 적용한 뒤 encoder endpoint에
 전달한다.
 
-Decoder가 Hugging Face Inference Providers의 Qwen chat completion을 사용하면
-`DECODER_API_TYPE=chat_completion`과 `DECODER_MODEL_ID`를 설정한다. 모델링
-prototype의 `EXPLAINER_PROVIDER`와 같은 provider 지정이 필요하면
-`DECODER_PROVIDER=featherless-ai`를 함께 설정한다. Deploy wrapper는 모델링
-prototype과 같은 `huggingface_hub.InferenceClient` 경로를 기본으로 사용하며,
-필요하면 `DECODER_PROVIDER` 또는 `EXPLAINER_PROVIDER`로 provider를 바꿀 수 있다.
+Decoder가 Hugging Face Dedicated Endpoint의 text-generation API를 사용하면
+`DECODER_API_TYPE=text_generation`과 `DECODER_ENDPOINT_URL`을 설정한다.
+Inference Providers fallback을 사용해야 하는 경우에는
+`DECODER_API_TYPE=chat_completion`, `DECODER_MODEL_ID`,
+`DECODER_PROVIDER=featherless-ai`를 설정한다.
 
 `DECODER_REQUIRED=false`이면 decoder 설정이 아직 없어도 encoder 결과와 정적
 fallback reason으로 `/analyze` 응답을 반환한다. Encoder endpoint 연결을 먼저
@@ -89,7 +88,8 @@ Deploy wrapper 상태 확인용 endpoint다.
   "decoder_provider": "featherless-ai",
   "errors": [
     "HF_TOKEN is required",
-    "ENCODER_ENDPOINT_URL is required"
+    "ENCODER_ENDPOINT_URL is required",
+    "DECODER_ENDPOINT_URL is required"
   ]
 }
 ```
@@ -292,9 +292,9 @@ Deploy wrapper는 이 값을 backend contract에 맞춰 정규화한다.
 - `features` 문자열 -> `features: string[]`
 - `risk_level`, `score`는 가능한 경우 그대로 전달
 
-Decoder는 `Qwen/Qwen3-1.7B` chat completion 모델을 기본값으로 사용한다. Deploy wrapper는 Encoder의 `text`, `label`, `confidence`, `features`를 prompt 문자열로 구성해 decoder에 전달하고, decoder output을 `reason`으로 정규화한다.
+Decoder는 `Qwen/Qwen3-1.7B` text-generation endpoint를 기본값으로 사용한다. Deploy wrapper는 Encoder의 `text`, `label`, `confidence`, `features`를 prompt 문자열로 구성해 decoder에 전달하고, decoder output을 `reason`으로 정규화한다.
 
-기본값은 `DECODER_ON_NORMAL=false`다. 이 경우 Encoder가 `normal`을 반환하면 decoder를 호출하지 않고 정적 안전 설명을 반환한다. Encoder가 `phishing`을 반환하면 Qwen chat completion API를 호출해 설명을 생성한다.
+기본값은 `DECODER_ON_NORMAL=false`다. 이 경우 Encoder가 `normal`을 반환하면 decoder를 호출하지 않고 정적 안전 설명을 반환한다. Encoder가 `phishing`을 반환하면 Qwen decoder endpoint를 호출해 설명을 생성한다.
 
 ## HF Serverless Text-Classification Response
 
