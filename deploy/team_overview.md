@@ -17,13 +17,13 @@ Backend가 AI 모델을 직접 호출하지 않고, deploy wrapper가 대신 호
 
 ## 왜 필요한가
 
-AI 모델은 아직 학습과 배포 방식이 바뀔 수 있다. 하지만 backend와 frontend는 미리 개발해야 한다.
+AI 모델은 학습과 배포 방식이 바뀔 수 있고, backend와 frontend는 그 변화와 독립적으로 개발되어야 한다.
 
 그래서 deploy wrapper가 중간에서 API 모양을 고정한다.
 
 ```text
 Backend는 항상 deploy wrapper의 POST /analyze만 호출한다.
-모델이 mock이든, HF serverless든, dedicated endpoint든 backend contract는 크게 바뀌지 않는다.
+모델이 mock이든, HF endpoint든 backend contract는 크게 바뀌지 않는다.
 ```
 
 ## 전체 흐름
@@ -81,7 +81,7 @@ Response:
   "features": ["외부 링크 포함: http://fake.kr/track"],
   "risk_level": "위험 높음",
   "score": 91,
-  "encoder_model_id": "Skullking1123/kcelectra-smishing-classifier",
+  "encoder_model_id": "kdt-2-team4-newbiz/kcelectra-smishing-classifier",
   "encoder_model_version": "v1.0.0",
   "decoder_model_id": "Qwen/Qwen3-1.7B",
   "decoder_model_version": "v1.0.0",
@@ -107,7 +107,7 @@ Deploy wrapper는 다음 일을 맡지 않는다.
 
 ## Mock Mode란
 
-현재 모델 endpoint가 아직 완전히 준비되지 않았기 때문에 기본값은 mock mode다.
+mock mode는 실제 HF token이나 endpoint 호출 없이 wrapper contract와 Docker 실행을 확인하기 위한 개발/검증 mode다.
 
 ```text
 AI_SERVICE_MODE=mock
@@ -115,12 +115,12 @@ AI_SERVICE_MODE=mock
 
 mock mode는 실제 Hugging Face API를 호출하지 않는다. 대신 URL, 전화번호, 금액 표현, 위험 keyword 같은 신호를 간단히 보고 가짜 분석 결과를 반환한다.
 
-목적은 실제 모델이 없어도 backend와 frontend가 먼저 개발할 수 있게 하는 것이다.
+목적은 실제 모델을 호출하지 않아도 backend와 frontend가 contract 기준으로 개발하고 테스트할 수 있게 하는 것이다.
 
 ## 실제 모델 연결 방식
 
-현재 모델팀은 Encoder를 Hugging Face Inference Endpoint 또는 Spaces API로
-배포하고, Decoder는 `Qwen/Qwen3-1.7B`를 Inference Providers에서
+현재 Encoder는 Hugging Face Inference Endpoint로 배포되어 있고, Decoder는
+`Qwen/Qwen3-1.7B`를 Featherless AI provider의 Inference Providers
 few-shot chat completion으로 호출한다.
 
 ```text
@@ -128,6 +128,7 @@ AI_SERVICE_MODE=hf_endpoint
 HF_SERVING_TYPE=endpoint
 HF_TOKEN=...
 ENCODER_ENDPOINT_URL=...
+ENCODER_MODEL_ID=kdt-2-team4-newbiz/kcelectra-smishing-classifier
 ENCODER_REQUEST_FORMAT=hf_inputs
 DECODER_API_TYPE=chat_completion
 DECODER_PROVIDER=featherless-ai

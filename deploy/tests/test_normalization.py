@@ -180,14 +180,14 @@ class SettingsValidationTest(unittest.TestCase):
             serving_mode="hf_endpoint",
             hf_serving_type="serverless",
             hf_token="test-token",
-            encoder_model_id="Skullking1123/kcelectra-smishing-classifier",
+            encoder_model_id="kdt-2-team4-newbiz/kcelectra-smishing-classifier",
             decoder_api_type="chat_completion",
             decoder_model_id="Qwen/Qwen3-1.7B",
         )
 
         encoder_url, decoder_url = resolve_hf_urls(settings)
 
-        self.assertIn("Skullking1123/kcelectra-smishing-classifier", encoder_url)
+        self.assertIn("kdt-2-team4-newbiz/kcelectra-smishing-classifier", encoder_url)
         self.assertEqual(decoder_url, "")
 
 

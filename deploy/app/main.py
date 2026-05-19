@@ -140,7 +140,7 @@ class Settings(BaseModel):
     encoder_endpoint_url: str = Field(default="")
     decoder_endpoint_url: str = Field(default="")
     encoder_model_id: str = Field(
-        default="Skullking1123/kcelectra-smishing-classifier"
+        default="kdt-2-team4-newbiz/kcelectra-smishing-classifier"
     )
     encoder_model_version: str = Field(default="v1.0.0")
     decoder_model_id: str = Field(default="Qwen/Qwen3-1.7B")
@@ -230,7 +230,7 @@ def load_settings() -> Settings:
         encoder_endpoint_url=os.getenv("ENCODER_ENDPOINT_URL", ""),
         decoder_endpoint_url=os.getenv("DECODER_ENDPOINT_URL", ""),
         encoder_model_id=os.getenv(
-            "ENCODER_MODEL_ID", "Skullking1123/kcelectra-smishing-classifier"
+            "ENCODER_MODEL_ID", "kdt-2-team4-newbiz/kcelectra-smishing-classifier"
         ),
         encoder_model_version=os.getenv("ENCODER_MODEL_VERSION", "v1.0.0"),
         decoder_model_id=os.getenv(

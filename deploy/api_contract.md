@@ -41,7 +41,7 @@ http://localhost:8001
 
 Backend가 deploy wrapper를 호출할 때는 backend 환경에서 `AI_SERVICE_URL` 같은 변수로 이 base URL을 관리하는 것을 권장한다. Deploy wrapper 자체는 이 값을 사용하지 않는다.
 
-Backend는 frontend가 호출하는 `/predict` API와 deploy wrapper가 제공하는 `/analyze` API 사이의 adapter 역할을 한다. URL filtering, static pattern matching, DB 저장, frontend 응답 변환은 backend에서 처리한다.
+Backend는 frontend가 호출하는 `/predict` API와 deploy wrapper가 제공하는 `/analyze` API 사이의 adapter 역할을 한다. URL filtering, static pattern matching, DB 저장, frontend 응답 변환은 backend에서 처리한다. 현재 backend `/predict`는 mock 응답을 반환하므로, 실제 연동 단계에서는 backend가 `AI_SERVICE_URL`을 읽고 deploy wrapper의 `/analyze`를 호출하는 adapter를 추가해야 한다.
 
 ## GET `/health`
 
@@ -69,9 +69,10 @@ Deploy wrapper 상태 확인용 endpoint다.
 {
   "ready": true,
   "service": "deploy_wrapper",
-  "serving_mode": "mock",
-  "hf_serving_type": "serverless",
+  "serving_mode": "hf_endpoint",
+  "hf_serving_type": "endpoint",
   "decoder_on_normal": false,
+  "decoder_provider": "featherless-ai",
   "errors": []
 }
 ```
@@ -85,10 +86,10 @@ Deploy wrapper 상태 확인용 endpoint다.
   "serving_mode": "hf_endpoint",
   "hf_serving_type": "endpoint",
   "decoder_on_normal": false,
+  "decoder_provider": "featherless-ai",
   "errors": [
     "HF_TOKEN is required",
-    "ENCODER_ENDPOINT_URL is required",
-    "DECODER_ENDPOINT_URL is required"
+    "ENCODER_ENDPOINT_URL is required"
   ]
 }
 ```
@@ -122,7 +123,7 @@ Backend가 `static_patterns` table에서 URL, 전화번호, keyword를 pre-filte
   ],
   "risk_level": "위험 높음",
   "score": 91,
-  "encoder_model_id": "Skullking1123/kcelectra-smishing-classifier",
+  "encoder_model_id": "kdt-2-team4-newbiz/kcelectra-smishing-classifier",
   "encoder_model_version": "v1.0.0",
   "decoder_model_id": "Qwen/Qwen3-1.7B",
   "decoder_model_version": "v1.0.0",

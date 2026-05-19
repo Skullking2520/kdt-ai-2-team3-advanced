@@ -106,7 +106,7 @@ Endpoint가 `Running` 상태가 되면 endpoint URL을 복사한다.
 현재 생성된 CPU endpoint:
 
 ```text
-https://yivp6hva59vxaxs2.eu-west-1.aws.endpoints.huggingface.cloud
+https://khin1nm7hl3imchn.eu-west-1.aws.endpoints.huggingface.cloud
 ```
 
 ## Connect Deploy Wrapper
@@ -126,7 +126,7 @@ DECODER_MODEL_ID=Qwen/Qwen3-1.7B
 DECODER_REQUIRED=false
 DECODER_ON_NORMAL=false
 
-ENCODER_MODEL_ID=<HF_USERNAME_OR_ORG>/kcelectra-smishing-classifier
+ENCODER_MODEL_ID=kdt-2-team4-newbiz/kcelectra-smishing-classifier
 ENCODER_MODEL_VERSION=v1.0.0
 ```
 
@@ -137,9 +137,9 @@ Decoder 연결 전 encoder만 먼저 테스트해야 하면 `DECODER_REQUIRED=fa
 현재 CPU endpoint 기준 예시:
 
 ```text
-ENCODER_ENDPOINT_URL=https://yivp6hva59vxaxs2.eu-west-1.aws.endpoints.huggingface.cloud
+ENCODER_ENDPOINT_URL=https://khin1nm7hl3imchn.eu-west-1.aws.endpoints.huggingface.cloud
 ENCODER_PREPROCESS_ENABLED=true
-ENCODER_MODEL_ID=Skullking1123/kcelectra-smishing-classifier
+ENCODER_MODEL_ID=kdt-2-team4-newbiz/kcelectra-smishing-classifier
 ENCODER_MODEL_VERSION=v1.0.0
 ```
 
@@ -162,7 +162,7 @@ Encoder endpoint 직접 확인:
 
 ```bash
 curl -X POST \
-  https://yivp6hva59vxaxs2.eu-west-1.aws.endpoints.huggingface.cloud \
+  https://khin1nm7hl3imchn.eu-west-1.aws.endpoints.huggingface.cloud \
   -H "Authorization: Bearer <HF_TOKEN>" \
   -H "Content-Type: application/json" \
   -d '{"inputs":"배송 주소 오류로 반송 예정입니다. <URL>"}'
@@ -247,7 +247,7 @@ Deploy wrapper normal response:
   "features": [],
   "risk_level": "정상 가능성 높음",
   "score": 1,
-  "encoder_model_id": "Skullking1123/kcelectra-smishing-classifier",
+  "encoder_model_id": "kdt-2-team4-newbiz/kcelectra-smishing-classifier",
   "encoder_model_version": "v1.0.0",
   "serving_mode": "hf_endpoint"
 }
@@ -264,7 +264,7 @@ Deploy wrapper phishing response:
   "features": [],
   "risk_level": "위험 높음",
   "score": 92,
-  "encoder_model_id": "Skullking1123/kcelectra-smishing-classifier",
+  "encoder_model_id": "kdt-2-team4-newbiz/kcelectra-smishing-classifier",
   "encoder_model_version": "v1.0.0",
   "serving_mode": "hf_endpoint"
 }
@@ -306,7 +306,7 @@ KcELECTRA encoder는 `ElectraForSequenceClassification` 기반 text-classificati
 | Framework/runtime | Transformers 또는 PyTorch text-classification |
 | Do not use | vLLM, TGI, Text Generation runtime |
 | Hardware | CPU로 먼저 테스트 |
-| Model | `Skullking1123/kcelectra-smishing-classifier` |
+| Model | `kdt-2-team4-newbiz/kcelectra-smishing-classifier` |
 
 HF UI에서 선택지가 자동으로 LLM runtime으로 잡히면 model card의 YAML metadata와
 `config.json`을 다시 확인한다.

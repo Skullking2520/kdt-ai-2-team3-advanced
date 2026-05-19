@@ -44,7 +44,7 @@ ENCODER_ENDPOINT_URL=
 ENCODER_PREPROCESS_ENABLED=true
 ENCODER_REQUEST_FORMAT=hf_inputs
 
-ENCODER_MODEL_ID=Skullking1123/kcelectra-smishing-classifier
+ENCODER_MODEL_ID=kdt-2-team4-newbiz/kcelectra-smishing-classifier
 ENCODER_MODEL_VERSION=v1.0.0
 
 DECODER_API_TYPE=chat_completion
@@ -100,7 +100,7 @@ Decoder가 Inference Providers를 쓰는 Qwen 모델이라면 dedicated decoder 
 ```text
 HF_SERVING_TYPE=serverless
 HF_SERVERLESS_BASE_URL=https://router.huggingface.co/hf-inference/models
-ENCODER_MODEL_ID=Skullking1123/kcelectra-smishing-classifier
+ENCODER_MODEL_ID=kdt-2-team4-newbiz/kcelectra-smishing-classifier
 DECODER_MODEL_ID=Qwen/Qwen3-1.7B
 ```
 
