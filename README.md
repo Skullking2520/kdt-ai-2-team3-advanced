@@ -154,7 +154,7 @@ Frontend
 - AI 분석 결과를 frontend 응답 형식으로 변환
 - MySQL 기반 로그/패턴/신고 데이터 저장 구조 관리
 
-현재 backend에는 `static_patterns`, `smishing_logs`, `model_info`, `inference_logs` 등의 SQLAlchemy 모델과 MySQL 개발용 compose가 포함되어 있습니다.
+현재 backend에는 `static_patterns`, `smishing_logs`, `model_info` 등의 SQLAlchemy 모델과 MySQL 개발용 compose가 포함되어 있습니다.
 
 자세한 내용은 [`backend/README.md`](backend/README.md)를 참고합니다.
 
