@@ -1,8 +1,10 @@
 node_modules/
 dist/
+.vite/
 .DS_Store
 .env
 .env.local
 .env.*.local
+*.zip
 *.swp
 *.swo
