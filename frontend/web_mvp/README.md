@@ -40,7 +40,6 @@ npm run build
 - 프론트는 스미싱 판정, 점수 계산, 유형 판단을 하지 않습니다.
 - API 실패 시 프론트 규칙 기반 분석으로 대체하지 않고 에러 문구를 표시합니다.
 - API 경로는 현재 `/predict` 기준입니다. `/api/v1/smishing/analyze`로 바꾸지 않습니다.
-- CSRF 쿠키 초기화와 `getCookie.js` 흐름은 기존 백엔드 연동을 유지합니다.
 - 화면 문구와 예시 메시지는 `src/constants.js`에서 관리합니다.
 
 ## 폴더 구조
@@ -65,7 +64,6 @@ src/
     smishingService.js            # 백엔드 /predict 호출 및 응답 정규화
   utils/
     API_URL.js                    # 백엔드 기본 주소와 /predict URL
-    getCookie.js                  # CSRF 쿠키 조회
     analyzeSmishing.js            # 예전 fallback 방지를 위해 호출 시 에러를 던지는 보호 함수
     analyzeSmishing.test.js       # fallback 비활성화 및 예시 메시지 테스트
   data/
@@ -108,7 +106,9 @@ VITE_SMISHING_HOME_URL=http://localhost:8000
   "summary": "택배 안내처럼 보이지만 주소 확인 링크가 포함되어 주의가 필요합니다.",
   "categories": ["택배 사칭형"],
   "reasons": ["배송지 오류를 이유로 링크 접속을 유도합니다."],
-  "recommendations": ["문자 안의 링크를 열지 말고 공식 앱에서 배송 상태를 확인하세요."]
+  "recommendations": [
+    "문자 안의 링크를 열지 말고 공식 앱에서 배송 상태를 확인하세요."
+  ]
 }
 ```
 

@@ -33,26 +33,6 @@ function App() {
   const warm = mode === "warm";
 
   useEffect(() => {
-    // 백엔드가 CSRF 쿠키를 내려주는 구조라 앱 시작 시 한 번 쿠키를 받아둡니다.
-    const initCSRF = async () => {
-      try {
-        const response = await fetch(HOME_URL, {
-          method: "GET",
-          credentials: "include" // backend가 보내는 쿠키 수용
-        })
-
-        if (response.ok) {
-          console.log("CSRF cookie accepted");
-        }
-      } catch (error) {
-        console.error("csrf initialization failed");
-      }
-    }
-
-    initCSRF();
-  }, []) // 컴포넌트가 처음 켜질 때 한번만 실행
-
-  useEffect(() => {
     const syncTabFromHash = () => {
       const hash = window.location.hash.replace("#", "");
       if (tabIds.includes(hash)) setActiveTab(hash);

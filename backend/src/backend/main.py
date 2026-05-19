@@ -23,5 +23,5 @@ app = FastAPI(lifespan=lifespan, exception_handlers=exception_handlers)
 
 configure_app(app)  # 일괄적인 설정값 주입
 
-# CORS를 앱 전체의 가장 바깥에 둬서 검증/CSRF/서버 에러 응답에도 헤더가 붙게 한다.
+# CORS를 앱 전체의 가장 바깥에 둬서 검증/서버 에러 응답에도 헤더가 붙게 한다.
 app.add_middleware(CORSMiddleware, **CORS_OPTIONS)
