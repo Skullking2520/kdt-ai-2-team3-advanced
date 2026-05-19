@@ -1,8 +1,4 @@
-from fastapi import APIRouter, Depends
-from sqlalchemy.ext.asyncio import AsyncSession
-
-from ..db.session import get_db
-from ..models.inference_log import InferenceLog
+from fastapi import APIRouter
 
 router = APIRouter()  # tags=[]는 swagger 기능으로 묶임
 
@@ -15,15 +11,3 @@ def read_root():  # await할게 없으면 async하지 않는다.
 @router.get("/health")
 def health_check():
     return {"status": "ok"}
-
-
-# 테스트 API 엔드포인트
-@router.get("/db_test")
-async def db_test(db: AsyncSession = Depends(get_db)):
-    # 가짜 추론 데이터 생성 및 저장
-    new_log = InferenceLog(model_name="my_model_v1", prediction=0.98)
-    db.add(new_log)  # 메모리에만 추가하므로 await 없음
-    await db.commit()
-    await db.refresh(new_log)
-
-    return {"status": "success", "saved_id": new_log.id, "data": new_log}

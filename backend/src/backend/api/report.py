@@ -14,8 +14,7 @@ async def report_smishing(
     db: AsyncSession = Depends(get_db),
 ):
     """
-    프론트엔드의 "신고"를 받아 db에 저장한다.
-    TODO: 이제 모델에서 가져와서 결과를 꾸민 후 반환하게 수정
+    프론트엔드의 "신고"를 받아 db에 저장한다
     """
 
     await save_report_static_patterns(db, request)

@@ -1,7 +1,35 @@
-from sqlalchemy import func, select
+from sqlalchemy import func, select, tuple_
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from ..models.static_patterns import StaticPattern
+from ..models.static_patterns import PatternType, StaticPattern
+
+
+async def find_matching_static_patterns(
+    db: AsyncSession,
+    extracted_patterns: dict[PatternType, list[str]],
+) -> list[StaticPattern]:
+    # 데이터베이스(DB)에 이미 존재하는지 한 번에 대량 조회(Bulk Lookup)
+    lookup_pairs = []
+    for pattern_type, values in extracted_patterns.items():
+        lookup_pairs.extend(
+            (pattern_type, value.strip().lower())
+            for value in values
+            if value and value.strip()
+        )
+
+    if not lookup_pairs:
+        return []
+
+    rows = await db.execute(
+        select(StaticPattern).where(
+            tuple_(
+                StaticPattern.pattern_type,
+                func.lower(StaticPattern.pattern_value),
+            ).in_(set(lookup_pairs))
+        )
+    )
+
+    return list(rows.scalars().all())
 
 
 async def create_static_patterns_if_new(
