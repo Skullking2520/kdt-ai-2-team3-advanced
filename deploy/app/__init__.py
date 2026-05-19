@@ -1,0 +1,2 @@
+"""Deployment wrapper FastAPI application."""
+

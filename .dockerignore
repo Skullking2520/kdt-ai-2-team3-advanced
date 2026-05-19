@@ -1,26 +1,29 @@
 # .dockerignore는 도커 빌드 시 이미지에 포함할 필요가 없는 파일이나 폴더를 제외하는 명단입니다.
-
 # .gitignore와 역할이 매우 비슷합니다.
 
 # Git 관련
-
 .git
 .gitignore
 
 # 파이썬/uv 관련
-
-**pycache**/
-\*.py[cod]
+**/__pycache__/
+*.py[cod]
 .venv/
+venv/
 .uv/
+.ruff_cache/
 
 # 배포/환경 설정
-
 .env
+.env.*
+!.env.example
 Dockerfile
 .dockerignore
 
 # 테스트 및 로그
-
 tests/
-\*.log
+*.log
+
+# 로컬 산출물
+codex_전달용/
+raw_data/
