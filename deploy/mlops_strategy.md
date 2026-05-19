@@ -24,9 +24,11 @@ ENCODER_MODEL_ID=kdt-2-team4-newbiz/kcelectra-smishing-classifier
 ENCODER_MODEL_VERSION=v1.0.0
 DECODER_MODEL_ID=Qwen/Qwen3-1.7B
 DECODER_MODEL_VERSION=v1.0.0
+DECODER_API_TYPE=text_generation
+# Used only for Inference Providers fallback.
 DECODER_PROVIDER=featherless-ai
 ENCODER_ENDPOINT_URL=
-DECODER_ENDPOINT_URL=
+DECODER_ENDPOINT_URL=<decoder endpoint url>
 ```
 
 ## Versioning

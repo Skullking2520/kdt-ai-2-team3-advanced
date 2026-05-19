@@ -103,11 +103,8 @@ Model page
 
 Endpoint가 `Running` 상태가 되면 endpoint URL을 복사한다.
 
-현재 생성된 CPU endpoint:
-
-```text
-https://khin1nm7hl3imchn.eu-west-1.aws.endpoints.huggingface.cloud
-```
+생성된 endpoint URL은 Git에 직접 기록하지 않고 로컬 `.env` 또는 secret manager에만
+저장한다.
 
 ## Connect Deploy Wrapper
 
@@ -134,10 +131,20 @@ Decoder 연결 전 encoder만 먼저 테스트해야 하면 `DECODER_REQUIRED=fa
 이 경우 decoder 설정이 없어도 deploy wrapper가 encoder 결과와 정적 fallback reason으로
 응답한다.
 
+Decoder Dedicated Endpoint까지 연결할 때는 다음처럼 바꾼다.
+
+```text
+DECODER_API_TYPE=text_generation
+DECODER_ENDPOINT_URL=<decoder endpoint url>
+DECODER_REQUIRED=true
+DECODER_ON_NORMAL=false
+DECODER_MODEL_ID=Qwen/Qwen3-1.7B
+```
+
 현재 CPU endpoint 기준 예시:
 
 ```text
-ENCODER_ENDPOINT_URL=https://khin1nm7hl3imchn.eu-west-1.aws.endpoints.huggingface.cloud
+ENCODER_ENDPOINT_URL=<encoder endpoint url>
 ENCODER_PREPROCESS_ENABLED=true
 ENCODER_MODEL_ID=kdt-2-team4-newbiz/kcelectra-smishing-classifier
 ENCODER_MODEL_VERSION=v1.0.0
@@ -162,7 +169,7 @@ Encoder endpoint 직접 확인:
 
 ```bash
 curl -X POST \
-  https://khin1nm7hl3imchn.eu-west-1.aws.endpoints.huggingface.cloud \
+  <encoder endpoint url> \
   -H "Authorization: Bearer <HF_TOKEN>" \
   -H "Content-Type: application/json" \
   -d '{"inputs":"배송 주소 오류로 반송 예정입니다. <URL>"}'

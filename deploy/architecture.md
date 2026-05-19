@@ -54,7 +54,7 @@ graph LR
    - `HF_SERVING_TYPE=endpoint`: HF Endpoint 또는 Space API URL 호출
    - `HF_SERVING_TYPE=serverless`: model ID 기반 serverless API 호출
 6. Encoder는 피싱 분류 label과 confidence를 반환한다.
-7. Decoder는 dedicated endpoint 또는 Inference Providers chat completion으로 explanation/reason을 생성한다.
+7. Decoder는 기본적으로 dedicated endpoint에서 explanation/reason을 생성한다. Inference Providers chat completion은 fallback 경로로만 둔다.
 8. deploy wrapper가 응답을 정규화해 backend에 반환한다.
 9. Backend가 결과를 DB에 저장하고 frontend에 전달한다.
 10. 사용자가 신고를 누르고 전화번호가 입력된 경우, frontend/backend가 신고 안내 흐름과 전화번호 신고 횟수 저장을 처리한다.
