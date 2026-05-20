@@ -1,3 +1,5 @@
+import { LoaderCircle } from "lucide-react";
+
 import { exampleMessages } from "../services/smishingService";
 import { pasteMessage } from "../data/staticContent";
 import { panelClass } from "../components/mvp/ui.jsx";
@@ -40,11 +42,12 @@ export function CheckForm({
                 {CHECK_PAGE_TEXT.pasteButton}
               </button>
               <button
-                className="min-h-11 rounded-full bg-sky-500 px-6 text-sm font-black text-white disabled:bg-slate-200"
+                className="inline-flex min-h-11 items-center gap-2 rounded-full bg-sky-500 px-6 text-sm font-black text-white disabled:bg-slate-200"
                 disabled={!message.trim() || isAnalyzing}
                 onClick={onAnalyze}
                 type="button"
               >
+                {isAnalyzing && <LoaderCircle className="h-4 w-4 animate-spin" />}
                 {isAnalyzing ? CHECK_PAGE_TEXT.compactAnalyzingButton : CHECK_PAGE_TEXT.compactAnalyzeButton}
               </button>
             </div>
@@ -149,6 +152,7 @@ export function CheckForm({
           onClick={onAnalyze}
           type="button"
         >
+          {isAnalyzing && <LoaderCircle className="h-5 w-5 animate-spin" />}
           {isAnalyzing ? CHECK_PAGE_TEXT.analyzingButton : CHECK_PAGE_TEXT.analyzeButton}
         </button>
       </div>

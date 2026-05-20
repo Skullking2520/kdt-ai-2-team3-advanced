@@ -7,13 +7,18 @@ export const CHECK_PAGE_TEXT = {
   examplePrompt: "예시 메시지",
   eyebrow: "Message Analysis",
   sectionTitle: "의심가는 메시지를 입력하세요",
-  sectionDescription: "문자, 카카오톡, 택배 안내, 환급금 안내 등 의심되는 내용을 붙여넣어 분석할 수 있습니다.",
+  sectionDescription:
+    "문자, 카카오톡, 택배 안내, 환급금 안내 등 의심되는 내용을 붙여넣어 분석할 수 있습니다.",
   messageLabel: "의심가는 메시지를 입력하세요",
-  messagePlaceholder: "문자, 카카오톡, 택배 안내, 환급금 안내 등 의심되는 내용을 붙여넣어 분석할 수 있습니다.",
+  messagePlaceholder:
+    "문자, 카카오톡, 택배 안내, 환급금 안내 등 의심되는 내용을 붙여넣어 분석할 수 있습니다.",
   tooShortMessage: "분석할 내용이 부족합니다.",
-  serverErrorMessage: "분석 서버에 연결하지 못했습니다. 잠시 후 다시 시도해주세요.",
-  trainingConsentCompact: "선택 동의: 분석 정확도 개선을 위해 입력한 메시지를 개인정보 제거 후 학습 데이터로 활용할 수 있습니다. 동의하지 않아도 메시지 분석 기능은 이용할 수 있습니다.",
-  trainingConsentTitle: "선택 동의: 분석 정확도 개선을 위해 입력한 메시지를 개인정보 제거 후 학습 데이터로 활용할 수 있습니다. 동의하지 않아도 메시지 분석 기능은 이용할 수 있습니다.",
+  serverErrorMessage:
+    "분석 서버에 연결하지 못했습니다. 잠시 후 다시 시도해주세요.",
+  trainingConsentCompact:
+    "선택 동의: 분석 정확도 개선을 위해 입력한 메시지를 개인정보 제거 후 학습 데이터로 활용할 수 있습니다. 동의하지 않아도 메시지 분석 기능은 이용할 수 있습니다.",
+  trainingConsentTitle:
+    "선택 동의: 분석 정확도 개선을 위해 입력한 메시지를 개인정보 제거 후 학습 데이터로 활용할 수 있습니다. 동의하지 않아도 메시지 분석 기능은 이용할 수 있습니다.",
   trainingConsentDescription: "",
   analyzingButton: "분석 중입니다",
   analyzeButton: "분석하기",
@@ -56,7 +61,8 @@ export const RESULT_PAGE_TEXT = {
     "기타",
   ],
   feedbackThanks: "피드백이 기록되었습니다.",
-  aiDisclaimer: "AI 판단 결과는 완벽하지 않을 수 있습니다. 조금이라도 의심되면 해당 기관이나 업체의 공식 앱, 공식 홈페이지, 대표 고객센터처럼 직접 확인할 수 있는 채널을 이용하세요.",
+  aiDisclaimer:
+    "AI 판단 결과는 완벽하지 않을 수 있습니다. 조금이라도 의심되면 해당 기관이나 업체의 공식 앱, 공식 홈페이지, 대표 고객센터처럼 직접 확인할 수 있는 채널을 이용하세요.",
 };
 
 export const HEADER_TEXT = {
@@ -78,7 +84,8 @@ export const HEADER_TEXT = {
 export const REPORT_PAGE_TEXT = {
   subtitle: "Report",
   title: "스미싱 신고 안내",
-  description: "새로 발견한 의심 문자를 정리해 신고할 수 있도록 돕는 화면입니다. 신고 API가 연결되면 이 화면에서 서버로 전송합니다.",
+  description:
+    "새로 발견한 의심 문자를 정리해 신고할 수 있도록 돕는 화면입니다. 신고 API가 연결되면 이 화면에서 서버로 전송합니다.",
   typeLabel: "신고 유형",
   messageLabel: "의심 문자 내용",
   messagePlaceholder: "받으신 문자 내용을 입력해주세요.",
