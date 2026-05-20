@@ -1,21 +1,40 @@
+# .dockerignore는 Docker build context에 포함할 필요가 없는 파일과 폴더를
+# 제외하는 명단입니다. 이 레포는 여러 Dockerfile이 루트 context를 공유할 수
+# 있으므로 backend/, frontend/, ai_service/ 같은 서비스 소스 폴더는 제외하지 않습니다.
+
+# Git 관련
 .git
-.venv
-venv
-__pycache__
-*.pyc
-.ruff_cache
+.gitignore
+
+# Python/uv 관련
+**/__pycache__/
+*.py[cod]
+.venv/
+venv/
+.uv/
+.ruff_cache/
+
+# 환경 설정 및 secret
 .env
 .env.*
 !.env.example
-raw_data
-docs
-e2e_tests
-infra
-load_tests
-nginx
-prometheus
-modeling_help_local
-wandb
+
+# 로컬/실험 산출물
+codex_전달용/
+modeling_help_local/
+wandb/
+raw_data/
 *.jsonl
 *.safetensors
 *.bin
+
+# 빌드에 필요 없는 문서/테스트/인프라 보조 폴더
+docs/
+e2e_tests/
+infra/
+load_tests/
+nginx/
+prometheus/
+
+# 로그
+*.log
