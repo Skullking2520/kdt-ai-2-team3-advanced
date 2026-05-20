@@ -4,7 +4,33 @@
 
 내부 구현은 FastAPI lifespan에서 관리되는 공유 `httpx.AsyncClient`를 사용해 Hugging Face Encoder/Decoder inference API를 호출한다. Decoder는 encoder의 `label`, `confidence`, `features`가 필요하므로 두 호출은 병렬이 아니라 순차 `await` 구조로 처리한다. API contract는 기존과 동일하게 유지한다.
 
-`HF_SERVING_TYPE=serverless`이면 model ID 기반 Hugging Face serverless API를 호출한다. `HF_SERVING_TYPE=endpoint`이면 dedicated Inference Endpoint URL을 호출한다.
+모델팀이 Hugging Face 웹 GUI의 `Deploy` 기능으로 Encoder/Decoder Inference
+Endpoint를 생성하면 deploy wrapper는 `HF_SERVING_TYPE=endpoint`로 실행하고,
+환경변수의 `ENCODER_ENDPOINT_URL`, `DECODER_ENDPOINT_URL`을 호출한다. Decoder는
+기본적으로 `Qwen/Qwen3-1.7B` endpoint를 `DECODER_API_TYPE=text_generation`으로
+호출한다.
+`HF_SERVING_TYPE=serverless`는 model ID 기반 호출이 필요할 때 사용하는 보조
+경로다.
+
+Encoder가 Hugging Face Spaces의 custom API로 배포되는 경우에도
+`ENCODER_ENDPOINT_URL`에 Space API URL을 넣어 같은 wrapper contract를 유지한다.
+Space API가 `{"text": text}`를 기대하면 `ENCODER_REQUEST_FORMAT=text_json`으로
+설정한다.
+
+현재 encoder는 학습 시 전처리된 `text` 컬럼을 사용했으므로 deploy wrapper가
+기본적으로 동일한 전처리를 적용한다. `ENCODER_PREPROCESS_ENABLED=true`이면
+`[Web발신]` 제거, URL/긴 전화번호/금액 치환 등을 적용한 뒤 encoder endpoint에
+전달한다.
+
+Decoder가 Hugging Face Dedicated Endpoint의 text-generation API를 사용하면
+`DECODER_API_TYPE=text_generation`과 `DECODER_ENDPOINT_URL`을 설정한다.
+Inference Providers fallback을 사용해야 하는 경우에는
+`DECODER_API_TYPE=chat_completion`, `DECODER_MODEL_ID`,
+`DECODER_PROVIDER=featherless-ai`를 설정한다.
+
+`DECODER_REQUIRED=false`이면 decoder 설정이 아직 없어도 encoder 결과와 정적
+fallback reason으로 `/analyze` 응답을 반환한다. Encoder endpoint 연결을 먼저
+검증하는 단계에서 사용한다.
 
 Base URL 예시:
 
@@ -14,7 +40,7 @@ http://localhost:8001
 
 Backend가 deploy wrapper를 호출할 때는 backend 환경에서 `AI_SERVICE_URL` 같은 변수로 이 base URL을 관리하는 것을 권장한다. Deploy wrapper 자체는 이 값을 사용하지 않는다.
 
-Backend는 frontend가 호출하는 `/predict` API와 deploy wrapper가 제공하는 `/analyze` API 사이의 adapter 역할을 한다. URL filtering, static pattern matching, DB 저장, frontend 응답 변환은 backend에서 처리한다.
+Backend는 frontend가 호출하는 `/predict` API와 deploy wrapper가 제공하는 `/analyze` API 사이의 adapter 역할을 한다. URL filtering, static pattern matching, DB 저장, frontend 응답 변환은 backend에서 처리한다. 현재 backend `/predict`는 mock 응답을 반환하므로, 실제 연동 단계에서는 backend가 `AI_SERVICE_URL`을 읽고 deploy wrapper의 `/analyze`를 호출하는 adapter를 추가해야 한다.
 
 ## GET `/health`
 
@@ -34,7 +60,7 @@ Deploy wrapper 상태 확인용 endpoint다.
 
 현재 설정으로 deploy wrapper가 요청을 처리할 준비가 되었는지 확인한다.
 
-`mock` mode에서는 별도 HF 설정 없이 ready 상태가 된다. `hf_endpoint` mode에서는 `HF_TOKEN`, model ID, endpoint URL 같은 필수 설정이 있는지 확인한다. 실제 HF inference 호출은 하지 않는다.
+`mock` mode에서는 별도 HF 설정 없이 ready 상태가 된다. `hf_endpoint` mode에서는 `HF_TOKEN`, endpoint URL 또는 model ID 같은 필수 설정이 있는지 확인한다. 실제 HF inference 호출은 하지 않는다.
 
 ### Ready Response
 
@@ -42,9 +68,10 @@ Deploy wrapper 상태 확인용 endpoint다.
 {
   "ready": true,
   "service": "deploy_wrapper",
-  "serving_mode": "mock",
-  "hf_serving_type": "serverless",
+  "serving_mode": "hf_endpoint",
+  "hf_serving_type": "endpoint",
   "decoder_on_normal": false,
+  "decoder_provider": "featherless-ai",
   "errors": []
 }
 ```
@@ -56,10 +83,13 @@ Deploy wrapper 상태 확인용 endpoint다.
   "ready": false,
   "service": "deploy_wrapper",
   "serving_mode": "hf_endpoint",
-  "hf_serving_type": "serverless",
+  "hf_serving_type": "endpoint",
   "decoder_on_normal": false,
+  "decoder_provider": "featherless-ai",
   "errors": [
-    "HF_TOKEN is required"
+    "HF_TOKEN is required",
+    "ENCODER_ENDPOINT_URL is required",
+    "DECODER_ENDPOINT_URL is required"
   ]
 }
 ```
@@ -93,9 +123,9 @@ Backend가 `static_patterns` table에서 URL, 전화번호, keyword를 pre-filte
   ],
   "risk_level": "위험 높음",
   "score": 91,
-  "encoder_model_id": "team/kcelectra-smishing-classifier",
+  "encoder_model_id": "kdt-2-team4-newbiz/kcelectra-smishing-classifier",
   "encoder_model_version": "v1.0.0",
-  "decoder_model_id": "team/decoder-explainer",
+  "decoder_model_id": "Qwen/Qwen3-1.7B",
   "decoder_model_version": "v1.0.0",
   "serving_mode": "mock"
 }
@@ -180,6 +210,19 @@ curl http://localhost:8001/ready
 | `error_code` | string | 실패 시 error code |
 | `message` | string | 실패 시 사람이 읽을 수 있는 message |
 
+## HF Runtime Options
+
+| Env | Description |
+| --- | --- |
+| `HF_SERVING_TYPE` | `endpoint` 또는 `serverless` |
+| `ENCODER_ENDPOINT_URL` | Encoder Inference Endpoint 또는 Space API URL |
+| `ENCODER_PREPROCESS_ENABLED` | Encoder 호출 전 학습 전처리 규칙 적용 여부 |
+| `ENCODER_REQUEST_FORMAT` | `hf_inputs` 또는 `text_json` |
+| `DECODER_API_TYPE` | `text_generation` 또는 `chat_completion` |
+| `DECODER_PROVIDER` | HF Inference Providers provider 이름. 기본값: `featherless-ai` |
+| `DECODER_REQUIRED` | decoder 미설정 시 오류를 낼지 여부 |
+| `DECODER_ENDPOINT_URL` | Decoder dedicated/custom endpoint URL |
+
 ## Recommended Backend Handling
 
 - Backend는 frontend의 `/predict` request를 받은 뒤 static pattern pre-filtering을 먼저 수행할 수 있다.
@@ -249,9 +292,9 @@ Deploy wrapper는 이 값을 backend contract에 맞춰 정규화한다.
 - `features` 문자열 -> `features: string[]`
 - `risk_level`, `score`는 가능한 경우 그대로 전달
 
-Decoder는 text-generation 모델이라고 가정한다. Deploy wrapper는 Encoder의 `text`, `label`, `confidence`, `features`를 prompt 문자열로 구성해 decoder에 전달하고, decoder output을 `reason`으로 정규화한다.
+Decoder는 `Qwen/Qwen3-1.7B` text-generation endpoint를 기본값으로 사용한다. Deploy wrapper는 Encoder의 `text`, `label`, `confidence`, `features`를 prompt 문자열로 구성해 decoder에 전달하고, decoder output을 `reason`으로 정규화한다.
 
-기본값은 `DECODER_ON_NORMAL=false`다. 이 경우 Encoder가 `normal`을 반환하면 decoder를 호출하지 않고 정적 안전 설명을 반환한다. Encoder가 `phishing`을 반환하면 decoder text-generation API를 호출해 설명을 생성한다.
+기본값은 `DECODER_ON_NORMAL=false`다. 이 경우 Encoder가 `normal`을 반환하면 decoder를 호출하지 않고 정적 안전 설명을 반환한다. Encoder가 `phishing`을 반환하면 Qwen decoder endpoint를 호출해 설명을 생성한다.
 
 ## HF Serverless Text-Classification Response
 
