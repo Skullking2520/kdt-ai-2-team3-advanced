@@ -110,7 +110,7 @@ def _to_pattern_lookup(extracted: dict[str, list[str]]) -> dict[PatternType, lis
     return {
         PatternType.URL: extracted["urls"],
         PatternType.PHONE: extracted["phones"],
-        PatternType.KEYWORD: extracted["keywords"],
+        # 키워드 매칭은 URL, 전화번호보다 단조로우므로 그냥 기록만 함
     }
 
 
@@ -173,8 +173,8 @@ def _get_explainer_client():
             "api_key": settings.HF_TOKEN,
             "timeout": settings.HF_TIMEOUT_SECONDS,
         }
-        if settings.EXPLAINER_PROVIDER:
-            kwargs["provider"] = settings.EXPLAINER_PROVIDER
+        if settings.DECODER_ENDPOINT_URL:
+            kwargs["base_url"] = settings.DECODER_ENDPOINT_URL
 
         _explainer_client = AsyncInferenceClient(**kwargs)
 
@@ -218,6 +218,14 @@ def _is_smishing_label(label: str) -> bool:
     return label.strip().lower() in SMISHING_LABELS
 
 
+def _confidence_to_risk_score(label: str, confidence: float) -> int:
+    confidence_score = _score_to_percent(confidence)
+    if _is_smishing_label(label):
+        return confidence_score
+
+    return 100 - confidence_score
+
+
 async def request_encoder_prediction(text: str) -> EncoderClassificationOutput:
     response = await _get_encoder_client().text_classification(text=text)
 
@@ -256,29 +264,46 @@ def _build_features(text: str, extracted: dict[str, list[str]]) -> str:
     return "\n".join(items) if items else "- 특이 사항 없음"
 
 
-def _build_messages(text: str, features: str) -> list[dict[str, str]]:
-    messages = [{"role": "system", "content": _SYSTEM_PROMPT}]
-    for example in _FEW_SHOT_EXAMPLES:
-        messages.append(
-            {
-                "role": "user",
-                "content": (
-                    f"문자 내용: {example['text']}\n"
-                    f"감지된 특징:\n{example['features']}\n"
-                    "이유:"
-                ),
-            }
-        )
-        messages.append({"role": "assistant", "content": example["answer"]})
+def _build_raw_prompt(text: str, features: str) -> str:
+    prompt = f"<|im_start|>system\n{_SYSTEM_PROMPT}<|im_end|>\n"
 
-    messages.append(
-        {
-            "role": "user",
-            "content": f"문자 내용: {text[:300]}\n감지된 특징:\n{features}\n이유:",
-        }
+    for example in _FEW_SHOT_EXAMPLES:
+        prompt += (
+            "<|im_start|>user\n"
+            f"문자 내용: {example['text']}\n"
+            f"감지된 특징:\n{example['features']}\n"
+            "이유:<|im_end|>\n"
+            "<|im_start|>assistant\n"
+            f"{example['answer']}<|im_end|>\n"
+        )
+
+    prompt += (
+        "<|im_start|>user\n"
+        f"문자 내용: {text[:300]}\n"
+        f"감지된 특징:\n{features}\n"
+        "이유:<|im_end|>\n"
+        "<|im_start|>assistant\n"
     )
 
-    return messages
+    return prompt
+
+
+def _normalize_generation_output(raw_output: Any) -> str:
+    if not isinstance(raw_output, str):
+        raw_output = getattr(raw_output, "generated_text", str(raw_output))
+
+    if "이유:" in raw_output:
+        raw_output = raw_output.split("이유:")[-1].strip()
+
+    raw_output = _think_pattern.sub("", raw_output).strip()
+    raw_output = raw_output.replace("<think>", "").replace("</think>", "").strip()
+
+    for remove_word in ["<|im_start|>", "assistant", "<|im_end|>"]:
+        raw_output = raw_output.replace(remove_word, "")
+
+    lines = [line.strip() for line in raw_output.split("\n") if line.strip()]
+
+    return lines[0] if lines else ""
 
 
 def _extract_status_code(exc: Exception) -> int | None:
@@ -296,7 +321,7 @@ def _extract_status_code(exc: Exception) -> int | None:
 
 def _is_explainer_unavailable(exc: Exception) -> bool:
     status_code = _extract_status_code(exc)
-    if status_code in {503, 504, 529}:
+    if status_code in {400, 404, 422, 503, 504, 529}:
         return True
 
     message = str(exc).lower()
@@ -304,6 +329,9 @@ def _is_explainer_unavailable(exc: Exception) -> bool:
         "timeout" in message
         or "timed out" in message
         or "service unavailable" in message
+        or "not supported" in message
+        or "unsupported" in message
+        or "provider" in message
     )
 
 
@@ -316,14 +344,15 @@ async def generate_explanation(
         return NORMAL_EXPLANATION
 
     try:
-        response = await _get_explainer_client().chat.completions.create(
-            model=settings.EXPLAINER_MODEL,
-            messages=_build_messages(text, features),
-            max_tokens=settings.HF_DECODER_MAX_NEW_TOKENS,
-            temperature=0,
+        model = None if settings.DECODER_ENDPOINT_URL else settings.EXPLAINER_MODEL
+        raw_output = await _get_explainer_client().text_generation(
+            prompt=_build_raw_prompt(text, features),
+            model=model,
+            max_new_tokens=settings.HF_DECODER_MAX_NEW_TOKENS,
+            temperature=0.01,
+            return_full_text=False,
         )
-        raw = response.choices[0].message.content or ""
-        explanation = _think_pattern.sub("", raw).strip()
+        explanation = _normalize_generation_output(raw_output)
 
         return explanation or EXPLAINER_UNAVAILABLE_EXPLANATION
     except Exception as exc:
@@ -378,10 +407,14 @@ async def predict_smishing(
         return build_static_pattern_response(message, matches)
 
     encoder_output = await request_encoder_prediction(message)
-    score = _score_to_percent(encoder_output.score)
+    is_smishing = _is_smishing_label(encoder_output.label)
+    risk_score = _confidence_to_risk_score(
+        encoder_output.label,
+        encoder_output.score,
+    )
 
-    if not _is_smishing_label(encoder_output.label):
-        return build_safe_response(message, score)
+    if not is_smishing:
+        return build_safe_response(message, risk_score)
 
     features = _build_features(message, extracted)
     reason = await generate_explanation(message, "스미싱", features)
@@ -395,7 +428,7 @@ async def predict_smishing(
 
     return build_model_smishing_response(
         input_text=message,
-        score=score,
+        score=risk_score,
         reason=reason,
         highlighted_terms=highlighted_terms,
     )

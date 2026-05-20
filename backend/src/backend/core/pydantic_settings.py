@@ -29,7 +29,7 @@ class Settings(BaseSettings):
     HF_DECODER_MAX_NEW_TOKENS: int = Field(default=128)
     ENCODER_API_KEY: str | None = Field(default=None)
     ENCODER_INFERENCE_ENDPOINT: str | None = Field(default=None)
-    EXPLAINER_PROVIDER: str = Field(default="featherless-ai")
+    DECODER_ENDPOINT_URL: str | None = Field(default=None)
     EXPLAINER_MODEL: str = Field(default="Qwen/Qwen3-1.7B")
 
     # .env 파일 로드 설정 (pydantic v2 방식)
@@ -44,4 +44,3 @@ class Settings(BaseSettings):
 settings = Settings()
 
 print("환경 변수 로드 완료")  # 확인용, TODO: 로거로 교체
-print(settings)
