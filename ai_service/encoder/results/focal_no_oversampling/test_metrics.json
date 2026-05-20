@@ -1,0 +1,19 @@
+{
+  "experiment_name": "focal_no_oversampling",
+  "selected_for_deployment": true,
+  "huggingface_model_id": "kdt-2-team4-newbiz/kcelectra-smishing-classifier",
+  "base_model": "beomi/KcELECTRA-base",
+  "use_focal_loss": true,
+  "positive_oversampling_ratio": null,
+  "optuna_trial_number": 0,
+  "optuna_valid_f1": 0.9593887080798076,
+  "test_acc": 0.9892622451053452,
+  "test_f1": 0.9551055091346835,
+  "test_precision": 0.9458625525946704,
+  "test_recall": 0.9645308924485125,
+  "test_fp": 193,
+  "test_fn": 124,
+  "test_tn": 25833,
+  "test_tp": 3372,
+  "elapsed_minutes": 133.53170038461684
+}

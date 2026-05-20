@@ -1,0 +1,9 @@
+{
+  "learning_rate": 2.098493476958062e-05,
+  "batch_size": 8,
+  "gradient_accumulation_steps": 2,
+  "max_length": 128,
+  "weight_decay": 0.034016486547408534,
+  "warmup_ratio": 0.049113925893428535,
+  "epochs": 3
+}
