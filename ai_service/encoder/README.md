@@ -100,16 +100,11 @@ python ai_service/encoder/training/run_kcelectra_retrain_experiments.py \
 
 ## What Is Not Committed
 
-다음 파일은 크거나 민감할 수 있으므로 Git에 올리지 않는다.
+대용량이거나 민감할 수 있는 산출물은 Git에 올리지 않는다.
 
-- `model.safetensors`
-- `training_args.bin`
-- `final_model/`
-- `*.zip`
-- 원본 dataset
-- `cleaned_dataset.jsonl`
-- `test_predictions.csv`
-- W&B run directory
+- 모델 가중치와 압축 파일
+- 원본/전처리 dataset
+- 개별 prediction dump와 W&B local run
+- 재생성 가능한 학습 산출물
 
 모델 파일은 Hugging Face Hub에서 관리한다.
-

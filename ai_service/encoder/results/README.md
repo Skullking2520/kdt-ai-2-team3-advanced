@@ -11,15 +11,10 @@
 
 ## Excluded
 
-다음 파일은 대용량이거나 재생성 가능한 산출물이므로 Git에 포함하지 않는다.
+대용량이거나 재생성 가능한 산출물은 Git에 포함하지 않는다.
 
-- `final_model/`
-- `model.safetensors`
-- `training_args.bin`
-- `test_predictions.csv`
-- plot image
-- W&B local run
-- dataset files
+예를 들어 모델 가중치, dataset, 개별 prediction dump, W&B local run, plot image는
+로컬 또는 외부 저장소에서 관리한다.
 
 ## Selected Result
 
@@ -30,4 +25,3 @@ Hugging Face:
 ```text
 https://huggingface.co/kdt-2-team4-newbiz/kcelectra-smishing-classifier
 ```
-
