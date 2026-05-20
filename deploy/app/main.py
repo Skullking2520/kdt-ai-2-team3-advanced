@@ -53,6 +53,12 @@ URL_PATTERN = re.compile(
     re.IGNORECASE,
 )
 PHONE_PATTERN = re.compile(r"(?:\d{2,3}-\d{3,4}-\d{4}|\d{10,11})")
+PHONE_MASK_PATTERN = re.compile(
+    r"(?<!\w)"
+    r"(?:\+?\d{1,3}[- ]?)?"
+    r"(?:\d{2,4}[- ]\d{3,4}[- ]\d{4}|\d{8,})"
+    r"(?!\w)"
+)
 MONEY_PATTERN = re.compile(
     r"\d+[,\d]*\s?(?:만원권|만원|천원|억원|원|KRW|USD|\$)|"
     r"\$\s?\d+[,\d]*|\d+[,\d]*\s?\$",
@@ -66,6 +72,7 @@ EXTERNAL_CONTACT_PATTERN = re.compile(
     r"\s*(?:ID|id|아이디)?\s*[:：]\s*\S+",
     re.IGNORECASE,
 )
+THINK_PATTERN = re.compile(r"<think>.*?</think>", re.DOTALL)
 
 LABEL_ALIASES = {
     "LABEL_0": "normal",
@@ -125,11 +132,18 @@ class Settings(BaseModel):
     hf_serverless_base_url: str = Field(
         default="https://router.huggingface.co/hf-inference/models"
     )
+    encoder_preprocess_enabled: bool = Field(default=True)
+    encoder_request_format: str = Field(default="hf_inputs")
+    decoder_api_type: str = Field(default="text_generation")
+    decoder_provider: str = Field(default="featherless-ai")
+    decoder_required: bool = Field(default=True)
     encoder_endpoint_url: str = Field(default="")
     decoder_endpoint_url: str = Field(default="")
-    encoder_model_id: str = Field(default="team/kcelectra-smishing-classifier")
+    encoder_model_id: str = Field(
+        default="kdt-2-team4-newbiz/kcelectra-smishing-classifier"
+    )
     encoder_model_version: str = Field(default="v1.0.0")
-    decoder_model_id: str = Field(default="team/decoder-explainer")
+    decoder_model_id: str = Field(default="Qwen/Qwen3-1.7B")
     decoder_model_version: str = Field(default="v1.0.0")
     request_timeout_seconds: int = Field(default=60)
     hf_max_retries: int = Field(default=2)
@@ -204,13 +218,25 @@ def load_settings() -> Settings:
             "HF_SERVERLESS_BASE_URL",
             "https://router.huggingface.co/hf-inference/models",
         ),
+        encoder_preprocess_enabled=parse_bool(
+            os.getenv("ENCODER_PREPROCESS_ENABLED"), default=True
+        ),
+        encoder_request_format=os.getenv("ENCODER_REQUEST_FORMAT", "hf_inputs"),
+        decoder_api_type=os.getenv("DECODER_API_TYPE", "text_generation"),
+        decoder_provider=os.getenv(
+            "DECODER_PROVIDER", os.getenv("EXPLAINER_PROVIDER", "featherless-ai")
+        ),
+        decoder_required=parse_bool(os.getenv("DECODER_REQUIRED"), default=True),
         encoder_endpoint_url=os.getenv("ENCODER_ENDPOINT_URL", ""),
         decoder_endpoint_url=os.getenv("DECODER_ENDPOINT_URL", ""),
         encoder_model_id=os.getenv(
-            "ENCODER_MODEL_ID", "team/kcelectra-smishing-classifier"
+            "ENCODER_MODEL_ID", "kdt-2-team4-newbiz/kcelectra-smishing-classifier"
         ),
         encoder_model_version=os.getenv("ENCODER_MODEL_VERSION", "v1.0.0"),
-        decoder_model_id=os.getenv("DECODER_MODEL_ID", "team/decoder-explainer"),
+        decoder_model_id=os.getenv(
+            "DECODER_MODEL_ID",
+            os.getenv("EXPLAINER_MODEL", "Qwen/Qwen3-1.7B"),
+        ),
         decoder_model_version=os.getenv("DECODER_MODEL_VERSION", "v1.0.0"),
         request_timeout_seconds=timeout_seconds,
         hf_max_retries=parse_non_negative_int(
@@ -222,7 +248,7 @@ def load_settings() -> Settings:
         decoder_max_new_tokens=parse_positive_int(
             os.getenv("DECODER_MAX_NEW_TOKENS"), default=120
         ),
-        decoder_temperature=parse_positive_float(
+        decoder_temperature=parse_non_negative_float(
             os.getenv("DECODER_TEMPERATURE"), default=0.3
         ),
         decoder_on_normal=parse_bool(os.getenv("DECODER_ON_NORMAL"), default=False),
@@ -310,6 +336,37 @@ def parse_normalized_float(value: Any, field_name: str) -> float:
     return parsed
 
 
+def digit_count(value: str) -> int:
+    return len(re.sub(r"\D", "", value))
+
+
+def normalize_spaces(text: str) -> str:
+    text = re.sub(r"[\n\r\t]+", " ", text)
+    text = re.sub(r"\s+", " ", text)
+    return text.strip()
+
+
+def clean_text_for_encoder(text: str) -> str:
+    cleaned = normalize_spaces(str(text))
+    cleaned = WEB_PATTERN.sub(" ", cleaned)
+    cleaned = FOREIGN_PATTERN.sub(" <FOREIGN_SEND> ", cleaned)
+    cleaned = URL_PATTERN.sub(" <URL> ", cleaned)
+    cleaned = MONEY_PATTERN.sub(" <MONEY> ", cleaned)
+
+    def mask_phone(match: re.Match[str]) -> str:
+        value = match.group(0)
+        if digit_count(value) >= 8:
+            return " <PHONE> "
+        return value
+
+    cleaned = PHONE_MASK_PATTERN.sub(mask_phone, cleaned)
+    cleaned = re.sub(r"([!?~])\1{2,}", r"\1\1", cleaned)
+    cleaned = re.sub(r"(★)\1+", r"\1", cleaned)
+    cleaned = re.sub(r"(☆)\1+", r"\1", cleaned)
+    cleaned = re.sub(r"[^\w\s가-힣<>\[\]\(\)\.\,\!\?\:\-\/~★☆]", " ", cleaned)
+    return normalize_spaces(cleaned)
+
+
 def base_response(settings: Settings) -> dict[str, str]:
     return {
         "encoder_model_id": settings.encoder_model_id,
@@ -329,6 +386,12 @@ def collect_settings_errors(settings: Settings) -> list[str]:
     if settings.serving_mode != "hf_endpoint":
         return errors
 
+    if settings.encoder_request_format not in {"hf_inputs", "text_json"}:
+        errors.append("ENCODER_REQUEST_FORMAT must be hf_inputs or text_json")
+
+    if settings.decoder_api_type not in {"text_generation", "chat_completion"}:
+        errors.append("DECODER_API_TYPE must be text_generation or chat_completion")
+
     if settings.hf_serving_type not in {"serverless", "endpoint"}:
         errors.append("HF_SERVING_TYPE must be serverless or endpoint")
 
@@ -337,14 +400,27 @@ def collect_settings_errors(settings: Settings) -> list[str]:
             errors.append("HF_TOKEN is required")
         if not settings.encoder_model_id:
             errors.append("ENCODER_MODEL_ID is required")
-        if not settings.decoder_model_id:
+        if settings.decoder_required and not settings.decoder_model_id:
             errors.append("DECODER_MODEL_ID is required")
 
     if settings.hf_serving_type == "endpoint":
+        if not settings.hf_token:
+            errors.append("HF_TOKEN is required")
         if not settings.encoder_endpoint_url:
             errors.append("ENCODER_ENDPOINT_URL is required")
-        if not settings.decoder_endpoint_url:
+        if (
+            settings.decoder_required
+            and
+            settings.decoder_api_type == "text_generation"
+            and not settings.decoder_endpoint_url
+        ):
             errors.append("DECODER_ENDPOINT_URL is required")
+        if (
+            settings.decoder_required
+            and settings.decoder_api_type == "chat_completion"
+        ):
+            if not settings.decoder_model_id:
+                errors.append("DECODER_MODEL_ID is required")
 
     return errors
 
@@ -558,18 +634,78 @@ def resolve_hf_urls(settings: Settings) -> tuple[str, str]:
         case "serverless":
             if not settings.hf_token:
                 raise ConfigurationError("HF_TOKEN is required for serverless mode")
-            if not settings.encoder_model_id or not settings.decoder_model_id:
-                raise ConfigurationError("HF model IDs are not configured")
+            if not settings.encoder_model_id:
+                raise ConfigurationError("ENCODER_MODEL_ID is not configured")
+            decoder_url = (
+                ""
+                if settings.decoder_api_type == "chat_completion"
+                else build_serverless_model_url(settings, settings.decoder_model_id)
+            )
             return (
                 build_serverless_model_url(settings, settings.encoder_model_id),
-                build_serverless_model_url(settings, settings.decoder_model_id),
+                decoder_url,
             )
         case "endpoint":
-            if not settings.encoder_endpoint_url or not settings.decoder_endpoint_url:
-                raise ConfigurationError("HF endpoint URLs are not configured")
-            return settings.encoder_endpoint_url, settings.decoder_endpoint_url
+            if not settings.encoder_endpoint_url:
+                raise ConfigurationError("ENCODER_ENDPOINT_URL is not configured")
+            if (
+                settings.decoder_required
+                and settings.decoder_api_type != "chat_completion"
+                and not settings.decoder_endpoint_url
+            ):
+                raise ConfigurationError("DECODER_ENDPOINT_URL is not configured")
+            decoder_url = settings.decoder_endpoint_url
+            return settings.encoder_endpoint_url, decoder_url
 
     raise ConfigurationError("HF_SERVING_TYPE must be serverless or endpoint")
+
+
+def build_encoder_input(settings: Settings, text: str) -> str:
+    if settings.encoder_preprocess_enabled:
+        return clean_text_for_encoder(text)
+    return text
+
+
+def build_encoder_payload(settings: Settings, text: str) -> dict[str, Any]:
+    encoder_text = build_encoder_input(settings, text)
+    match settings.encoder_request_format:
+        case "hf_inputs":
+            return {"inputs": encoder_text}
+        case "text_json":
+            return {"text": encoder_text}
+    raise ConfigurationError("ENCODER_REQUEST_FORMAT must be hf_inputs or text_json")
+
+
+def build_decoder_payload(
+    settings: Settings,
+    prompt: str,
+) -> dict[str, Any]:
+    match settings.decoder_api_type:
+        case "text_generation":
+            return {
+                "inputs": prompt,
+                "parameters": {
+                    "max_new_tokens": settings.decoder_max_new_tokens,
+                    "temperature": settings.decoder_temperature,
+                    "return_full_text": False,
+                },
+            }
+        case "chat_completion":
+            return {
+                "model": settings.decoder_model_id,
+                "messages": [
+                    {
+                        "role": "user",
+                        "content": prompt,
+                    }
+                ],
+                "max_tokens": settings.decoder_max_new_tokens,
+                "temperature": settings.decoder_temperature,
+                "stream": False,
+            }
+    raise ConfigurationError(
+        "DECODER_API_TYPE must be text_generation or chat_completion"
+    )
 
 
 def normalize_feature_lines(raw_features: Any) -> list[str]:
@@ -699,22 +835,63 @@ def normalize_decoder_response(response_payload: Any) -> str:
     if isinstance(response_payload, list) and response_payload:
         first_item = response_payload[0]
         if isinstance(first_item, dict):
-            return str(
+            reason = str(
                 first_item.get("generated_text")
                 or first_item.get("summary_text")
                 or first_item.get("reason")
                 or "판단 근거를 생성하지 못했습니다."
             )
+            return THINK_PATTERN.sub("", reason).strip()
 
     if isinstance(response_payload, dict):
-        return str(
+        choices = response_payload.get("choices")
+        if isinstance(choices, list) and choices:
+            first_choice = choices[0]
+            if isinstance(first_choice, dict):
+                message = first_choice.get("message")
+                if isinstance(message, dict) and message.get("content"):
+                    reason = str(message["content"])
+                    return THINK_PATTERN.sub("", reason).strip()
+                if first_choice.get("text"):
+                    reason = str(first_choice["text"])
+                    return THINK_PATTERN.sub("", reason).strip()
+
+        reason = str(
             response_payload.get("generated_text")
             or response_payload.get("reason")
             or response_payload.get("text")
             or "판단 근거를 생성하지 못했습니다."
         )
+        return THINK_PATTERN.sub("", reason).strip()
 
     return "판단 근거를 생성하지 못했습니다."
+
+
+def call_hf_inference_client_chat(
+    settings: Settings,
+    messages: list[dict[str, str]],
+) -> str:
+    from huggingface_hub import InferenceClient
+
+    try:
+        kwargs: dict[str, str | int] = {
+            "api_key": settings.hf_token,
+            "timeout": settings.request_timeout_seconds,
+        }
+        if settings.decoder_provider:
+            kwargs["provider"] = settings.decoder_provider
+
+        client = InferenceClient(**kwargs)
+        response = client.chat.completions.create(
+            model=settings.decoder_model_id,
+            messages=messages,
+            max_tokens=settings.decoder_max_new_tokens,
+            temperature=settings.decoder_temperature,
+        )
+        content = response.choices[0].message.content or ""
+        return THINK_PATTERN.sub("", str(content)).strip()
+    except Exception as exc:
+        raise UpstreamInferenceError("HF decoder provider request failed") from exc
 
 
 def build_decoder_prompt(
@@ -740,6 +917,22 @@ def build_decoder_prompt(
     )
 
 
+def build_decoder_messages(prompt: str) -> list[dict[str, str]]:
+    return [
+        {
+            "role": "system",
+            "content": (
+                "/no_think\n"
+                "당신은 스미싱(SMS 피싱) 탐지 전문가입니다. "
+                "주어진 문자 내용과 감지된 특징을 근거로, "
+                "해당 문자가 스미싱으로 의심되는 이유를 "
+                "두 문장 이내로 설명하세요."
+            ),
+        },
+        {"role": "user", "content": prompt},
+    ]
+
+
 def build_normal_fallback_reason(features: list[str]) -> str:
     if features:
         return (
@@ -749,6 +942,19 @@ def build_normal_fallback_reason(features: list[str]) -> str:
     return (
         "피싱으로 의심되는 강한 표현이나 링크 클릭 유도 "
         "패턴이 뚜렷하지 않습니다."
+    )
+
+
+def build_phishing_fallback_reason(features: list[str]) -> str:
+    if features:
+        return (
+            f"{', '.join(features[:3])} 같은 피싱 의심 요소가 포함되어 "
+            "위험도가 높게 분류되었습니다."
+        )
+    return (
+        "모델이 스미싱 위험이 높은 문자로 분류했습니다. "
+        "링크 접속, 개인정보 입력, 금전 요구 여부를 "
+        "주의해야 합니다."
     )
 
 
@@ -765,7 +971,7 @@ async def hf_endpoint_analyze(
         client,
         encoder_url,
         settings.hf_token,
-        {"inputs": text},
+        build_encoder_payload(settings, text),
         settings.request_timeout_seconds,
         settings.hf_max_retries,
         settings.hf_retry_backoff_seconds,
@@ -775,27 +981,48 @@ async def hf_endpoint_analyze(
         encoder_payload
     )
 
-    if label == "normal" and not settings.decoder_on_normal:
+    should_call_decoder = settings.decoder_required or (
+        label != "normal" or settings.decoder_on_normal
+    )
+    if (
+        settings.decoder_api_type == "text_generation"
+        and not settings.decoder_endpoint_url
+    ):
+        should_call_decoder = False
+    if settings.decoder_api_type == "chat_completion":
+        if not settings.decoder_model_id:
+            should_call_decoder = False
+
+    if not should_call_decoder:
+        reason = (
+            build_normal_fallback_reason(features)
+            if label == "normal"
+            else build_phishing_fallback_reason(features)
+        )
+    elif label == "normal" and not settings.decoder_on_normal:
         reason = build_normal_fallback_reason(features)
     else:
-        decoder_payload = await post_hf_endpoint(
-            client,
-            decoder_url,
-            settings.hf_token,
-            {
-                "inputs": build_decoder_prompt(text, label, confidence, features),
-                "parameters": {
-                    "max_new_tokens": settings.decoder_max_new_tokens,
-                    "temperature": settings.decoder_temperature,
-                    "return_full_text": False,
-                },
-            },
-            settings.request_timeout_seconds,
-            settings.hf_max_retries,
-            settings.hf_retry_backoff_seconds,
-            request_id,
-        )
-        reason = normalize_decoder_response(decoder_payload)
+        prompt = build_decoder_prompt(text, label, confidence, features)
+        if settings.decoder_api_type == "chat_completion" and not (
+            settings.decoder_endpoint_url
+        ):
+            reason = await asyncio.to_thread(
+                call_hf_inference_client_chat,
+                settings,
+                build_decoder_messages(prompt),
+            )
+        else:
+            decoder_payload = await post_hf_endpoint(
+                client,
+                decoder_url,
+                settings.hf_token,
+                build_decoder_payload(settings, prompt),
+                settings.request_timeout_seconds,
+                settings.hf_max_retries,
+                settings.hf_retry_backoff_seconds,
+                request_id,
+            )
+            reason = normalize_decoder_response(decoder_payload)
 
     payload: dict[str, Any] = {
         "success": True,
@@ -833,6 +1060,7 @@ async def ready() -> JSONResponse:
             "serving_mode": settings.serving_mode,
             "hf_serving_type": settings.hf_serving_type,
             "decoder_on_normal": settings.decoder_on_normal,
+            "decoder_provider": settings.decoder_provider or None,
             "errors": errors,
         },
     )

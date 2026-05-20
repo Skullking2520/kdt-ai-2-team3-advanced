@@ -17,13 +17,13 @@ Backend가 AI 모델을 직접 호출하지 않고, deploy wrapper가 대신 호
 
 ## 왜 필요한가
 
-AI 모델은 아직 학습과 배포 방식이 바뀔 수 있다. 하지만 backend와 frontend는 미리 개발해야 한다.
+AI 모델은 학습과 배포 방식이 바뀔 수 있고, backend와 frontend는 그 변화와 독립적으로 개발되어야 한다.
 
 그래서 deploy wrapper가 중간에서 API 모양을 고정한다.
 
 ```text
 Backend는 항상 deploy wrapper의 POST /analyze만 호출한다.
-모델이 mock이든, HF serverless든, dedicated endpoint든 backend contract는 크게 바뀌지 않는다.
+모델이 mock이든, HF endpoint든 backend contract는 크게 바뀌지 않는다.
 ```
 
 ## 전체 흐름
@@ -39,7 +39,7 @@ Backend는 항상 deploy wrapper의 POST /analyze만 호출한다.
 5. 정적 패턴에 걸리지 않으면 backend가 deploy wrapper /analyze를 호출한다.
 6. Deploy wrapper가 Hugging Face encoder 모델을 호출한다.
 7. Encoder가 스미싱 여부, 점수, 특징을 반환한다.
-8. Deploy wrapper가 decoder text-generation 모델을 호출해 설명 문장을 만든다.
+8. Deploy wrapper가 Qwen decoder endpoint를 호출해 설명 문장을 만든다.
 9. Deploy wrapper가 결과를 정리해서 backend에 반환한다.
 10. Backend가 DB에 저장하고 frontend 응답 형식으로 바꿔 반환한다.
 ```
@@ -81,9 +81,9 @@ Response:
   "features": ["외부 링크 포함: http://fake.kr/track"],
   "risk_level": "위험 높음",
   "score": 91,
-  "encoder_model_id": "team/kcelectra-smishing-classifier",
+  "encoder_model_id": "kdt-2-team4-newbiz/kcelectra-smishing-classifier",
   "encoder_model_version": "v1.0.0",
-  "decoder_model_id": "team/decoder-explainer",
+  "decoder_model_id": "Qwen/Qwen3-1.7B",
   "decoder_model_version": "v1.0.0",
   "serving_mode": "mock"
 }
@@ -107,7 +107,7 @@ Deploy wrapper는 다음 일을 맡지 않는다.
 
 ## Mock Mode란
 
-현재 모델 endpoint가 아직 완전히 준비되지 않았기 때문에 기본값은 mock mode다.
+mock mode는 실제 HF token이나 endpoint 호출 없이 wrapper contract와 Docker 실행을 확인하기 위한 개발/검증 mode다.
 
 ```text
 AI_SERVICE_MODE=mock
@@ -115,28 +115,38 @@ AI_SERVICE_MODE=mock
 
 mock mode는 실제 Hugging Face API를 호출하지 않는다. 대신 URL, 전화번호, 금액 표현, 위험 keyword 같은 신호를 간단히 보고 가짜 분석 결과를 반환한다.
 
-목적은 실제 모델이 없어도 backend와 frontend가 먼저 개발할 수 있게 하는 것이다.
+목적은 실제 모델을 호출하지 않아도 backend와 frontend가 contract 기준으로 개발하고 테스트할 수 있게 하는 것이다.
 
 ## 실제 모델 연결 방식
 
-현재 1차 실제 연결은 Hugging Face serverless API를 우선 가정한다.
+현재 Encoder와 Decoder는 Hugging Face Dedicated Inference Endpoint로 배포되어
+있다. Decoder는 `Qwen/Qwen3-1.7B` endpoint를 few-shot text-generation으로
+호출한다.
 
 ```text
 AI_SERVICE_MODE=hf_endpoint
-HF_SERVING_TYPE=serverless
+HF_SERVING_TYPE=endpoint
 HF_TOKEN=...
-ENCODER_MODEL_ID=...
-DECODER_MODEL_ID=...
+ENCODER_ENDPOINT_URL=...
+ENCODER_MODEL_ID=kdt-2-team4-newbiz/kcelectra-smishing-classifier
+ENCODER_REQUEST_FORMAT=hf_inputs
+DECODER_API_TYPE=text_generation
+DECODER_ENDPOINT_URL=<decoder endpoint url>
+DECODER_REQUIRED=true
+DECODER_MODEL_ID=Qwen/Qwen3-1.7B
 ```
 
-이 방식은 별도 endpoint URL을 만들지 않고, Hugging Face model ID를 기준으로 호출한다.
+이 방식은 Encoder URL과 Decoder URL을 deploy wrapper가 HTTP로 순차 호출한다.
+`ENCODER_MODEL_ID`, `DECODER_MODEL_ID`는 응답 metadata와 모델 추적용으로 계속
+관리한다. Inference Providers fallback을 써야 하는 경우에만
+`DECODER_API_TYPE=chat_completion`, `DECODER_PROVIDER=featherless-ai`를 설정한다.
 
-운영 안정성이나 성능 제어가 필요하면 dedicated endpoint 방식으로 바꿀 수 있다.
+별도 endpoint URL 없이 model ID로 호출해야 하면 serverless 방식도 열어둔다.
 
 ```text
-HF_SERVING_TYPE=endpoint
-ENCODER_ENDPOINT_URL=...
-DECODER_ENDPOINT_URL=...
+HF_SERVING_TYPE=serverless
+ENCODER_MODEL_ID=...
+DECODER_MODEL_ID=Qwen/Qwen3-1.7B
 ```
 
 Backend는 두 방식의 차이를 몰라도 된다. Backend는 계속 deploy wrapper의 `/analyze`만 호출한다.
@@ -202,6 +212,6 @@ docker compose -f docker-compose.example.yml down
 - Backend가 deploy wrapper를 호출한다.
 - URL/static pattern filtering은 backend 책임이다.
 - Deploy wrapper는 AI 모델 호출과 응답 정규화를 담당한다.
-- 현재는 mock mode로 동작한다.
+- mock mode와 실제 Hugging Face model 호출 mode를 모두 지원한다.
 - 실제 모델 연결 시에도 backend는 `/analyze` contract만 유지하면 된다.
 - 실제 token, DB password, HF token은 Git에 올리지 않는다.
