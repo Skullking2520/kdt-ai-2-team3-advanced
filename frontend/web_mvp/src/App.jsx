@@ -2,12 +2,12 @@ import { useEffect, useMemo, useState } from "react";
 import { Header, IntroPage } from "./components/layout/Header";
 import { MVP_TABS } from "./data/mvpTabs";
 import { predictSmishing } from "./services/smishingService";
-import { analyzeSmishing } from "./utils/analyzeSmishing";
 import { CheckForm } from "./pages/CheckPage";
 import { ResultPage } from "./pages/ResultPage";
 import { CasesPage } from "./pages/CasesPage";
 import { ReportPage } from "./pages/ReportPage";
 import { GuidePage } from "./pages/GuidePage";
+import { CHECK_PAGE_TEXT, FORM_LIMITS } from "./constants.js";
 import { HOME_URL } from "./utils/API_URL"
 
 function App() {
@@ -27,29 +27,10 @@ function App() {
   const [reportText, setReportText] = useState("");
   const [reportType, setReportType] = useState("택배 사칭형");
   const [isAnalyzing, setIsAnalyzing] = useState(false);
-  const fallbackResult = useMemo(() => analyzeSmishing(submittedMessage), [submittedMessage]);
-  const result = analysisResult ?? fallbackResult;
-  const hasResult = submittedMessage.trim().length > 0;
+  const [analysisError, setAnalysisError] = useState("");
+  const result = analysisResult;
+  const hasResult = Boolean(result);
   const warm = mode === "warm";
-
-  useEffect(() => {
-    const initCSRF = async () => {
-      try {
-        const response = await fetch(HOME_URL, {
-          method: "GET",
-          credentials: "include" // backend가 보내는 쿠키 수용
-        })
-
-        if (response.ok) {
-          console.log("CSRF cookie accepted");
-        }
-      } catch (error) {
-        console.error("csrf initialization failed");
-      }
-    }
-
-    initCSRF();
-  }, []) // 컴포넌트가 처음 켜질 때 한번만 실행
 
   useEffect(() => {
     const syncTabFromHash = () => {
@@ -68,21 +49,32 @@ function App() {
   };
 
   const analyze = async () => {
-    if (!message.trim() || isAnalyzing) return;
+    // 최종 판정은 백엔드가 담당하므로 프론트는 입력 검증 후 API 응답만 사용합니다.
+    const trimmedMessage = message.trim();
+    if (!trimmedMessage || isAnalyzing) return;
+    if (trimmedMessage.length < FORM_LIMITS.messageMinLength) {
+      setAnalysisError(CHECK_PAGE_TEXT.tooShortMessage);
+      return;
+    }
     setIsAnalyzing(true);
     setSubmittedMessage(message);
+    setAnalysisError("");
     try {
-      const nextResult = await predictSmishing({ message, allowTrainingUse });
+      const nextResult = await predictSmishing({ message: trimmedMessage, allowTrainingUse });
       setAnalysisResult(nextResult);
       changeTab("result");
       setPasteState("idle");
       setCopyState("idle");
+    } catch (error) {
+      setAnalysisResult(null);
+      setAnalysisError(CHECK_PAGE_TEXT.serverErrorMessage);
     } finally {
       setIsAnalyzing(false);
     }
   };
 
   const paste = async () => {
+    // 브라우저 권한 정책상 클립보드 접근이 막히면 안내 상태만 표시합니다.
     if (!navigator.clipboard?.readText) {
       setPasteState("failed");
       return;
@@ -101,15 +93,15 @@ function App() {
   };
 
   const copyShare = async () => {
+    // 공유 문구는 백엔드 결과의 요약과 근거 일부만 담아 과도한 원문 노출을 줄입니다.
     if (!result) {
       setCopyState("failed");
       return;
     }
     const shareText = [
       `문자안심 체크 결과: ${result.riskLevel} (${result.riskScore}/100)`,
-      `사칭 유형: ${result.impersonationType}`,
-      `의심 근거: ${result.suspiciousEvidence.slice(0, 2).join(", ")}`,
-      result.familyCheckMessage,
+      result.summary,
+      `판단 근거: ${(result.reasons ?? []).slice(0, 2).join(", ")}`,
     ].filter(Boolean).join("\n");
 
     try {
@@ -121,28 +113,22 @@ function App() {
   };
 
   const reportResult = () => {
+    // 신고 화면에는 사용자가 검사한 원문과 백엔드가 분류한 첫 카테고리를 넘깁니다.
     setReportText(submittedMessage);
-    setReportType(result.impersonationType);
+    setReportType(result?.categories?.[0] ?? "기타");
     changeTab("report");
   };
 
-  const useExample = async (text) => {
+  const useExample = (text) => {
     if (isAnalyzing) return;
-    setIsAnalyzing(true);
     setMessage(text);
-    setSubmittedMessage(text);
-    try {
-      const nextResult = await predictSmishing({ message: text, allowTrainingUse });
-      setAnalysisResult(nextResult);
-      changeTab("result");
-    } finally {
-      setIsAnalyzing(false);
-    }
+    setAnalysisError("");
   };
 
   const checkForm = (
     <CheckForm
       allowTrainingUse={allowTrainingUse}
+      analysisError={analysisError}
       compact
       isAnalyzing={isAnalyzing}
       message={message}
@@ -157,16 +143,41 @@ function App() {
   );
 
   return (
-    <main className={warm ? "min-h-screen bg-[#fff7ed] text-slate-950" : "min-h-screen bg-slate-50 text-slate-950"}>
+    <main
+      className={
+        warm
+          ? "min-h-screen bg-[#fff7ed] text-slate-950"
+          : "min-h-screen bg-slate-50 text-slate-950"
+      }
+    >
       <Header mode={mode} setMode={setMode} warm={warm} />
       {activeTab === "check" ? (
         <IntroPage checkForm={checkForm} warm={warm} />
       ) : (
         <section className="mx-auto w-full max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
           <div>
-            {activeTab === "result" && <ResultPage copyState={copyState} hasResult={hasResult} onBack={() => changeTab("check")} onCopy={copyShare} onReport={reportResult} message={submittedMessage} result={result} warm={warm} />}
+            {activeTab === "result" && (
+              <ResultPage
+                copyState={copyState}
+                hasResult={hasResult}
+                onBack={() => changeTab("check")}
+                onCopy={copyShare}
+                onReport={reportResult}
+                message={submittedMessage}
+                result={result}
+                warm={warm}
+              />
+            )}
             {activeTab === "cases" && <CasesPage warm={warm} />}
-            {activeTab === "report" && <ReportPage reportText={reportText} reportType={reportType} setReportText={setReportText} setReportType={setReportType} warm={warm} />}
+            {activeTab === "report" && (
+              <ReportPage
+                reportText={reportText}
+                reportType={reportType}
+                setReportText={setReportText}
+                setReportType={setReportType}
+                warm={warm}
+              />
+            )}
             {activeTab === "guide" && <GuidePage warm={warm} />}
           </div>
         </section>

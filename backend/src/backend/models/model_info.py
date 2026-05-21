@@ -13,6 +13,7 @@ if TYPE_CHECKING:
 
 class ModelInfo(Base):
     __tablename__ = "model_info"
+    __table_args__ = {"mysql_charset": "utf8mb4", "mysql_collate": "utf8mb4_unicode_ci"}
 
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
     model_name: Mapped[str] = mapped_column(String(100), nullable=False)
