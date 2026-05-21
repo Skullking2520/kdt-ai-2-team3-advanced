@@ -1,3 +1,4 @@
+from sqlalchemy.engine import make_url
 from sqlalchemy.ext.asyncio import create_async_engine
 
 # models 폴더에 모은 모든 모델에 대해 테이블을 생성한다.
@@ -7,11 +8,18 @@ from ..core.pydantic_settings import settings  # 환경변수 로드
 from . import is_dev
 
 # 1. DB 연결 설정 (asyncmy 드라이버 사용)
-# 형식: mysql+asyncmy://유저명:비밀번호@호스트:포트/DB명
-SQLALCHEMY_DATABASE_URL = str(settings.DATABASE_URL)
+# 형식: mysql+asyncmy://유저명:비밀번호@호스트:포트/DB명?chatset=utf8mb4
+SQLALCHEMY_DATABASE_URL = make_url(
+    str(settings.DATABASE_URL).strip()
+).update_query_dict({"charset": "utf8mb4"})
 
 engine = create_async_engine(
     SQLALCHEMY_DATABASE_URL,
+    connect_args={
+        "charset": "utf8mb4",
+        "use_unicode": True,
+        "init_command": "SET NAMES utf8mb4 COLLATE utf8mb4_unicode_ci",
+    },
     pool_size=20,  # 기본 풀 커넥션 크기
     max_overflow=10,  # 최대 초과 허용 커넥션 개수
     pool_timeout=30,  # 커넥션 획득 대기시간

@@ -15,6 +15,7 @@ class PatternType(enum.Enum):
 # AI 연산 자원을 소모하기 전, 알려진 위협을 즉각 차단하기 위한 테이블
 class StaticPattern(Base):
     __tablename__ = "static_patterns"
+    __table_args__ = {"mysql_charset": "utf8mb4", "mysql_collate": "utf8mb4_unicode_ci"}
 
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
     pattern_type: Mapped[PatternType] = mapped_column(Enum(PatternType), nullable=False)

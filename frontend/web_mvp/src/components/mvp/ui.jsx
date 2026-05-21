@@ -1,4 +1,5 @@
 import { AlertCircle, AlertTriangle, CheckCircle2 } from "lucide-react";
+import { RISK_LEVEL_TEXT, RISK_VISUAL_TEXT } from "../../constants.js";
 
 export function panelClass(warm, extra = "") {
   return `${extra} rounded-3xl border ${warm ? "border-amber-200 bg-amber-50 shadow-lg shadow-amber-100/60" : "border-slate-200 bg-white shadow-lg shadow-slate-200/60"}`;
@@ -9,9 +10,10 @@ export function activeClass(warm) {
 }
 
 export function riskVisual(level) {
-  if (level === "위험") return { icon: AlertTriangle, panel: "border-red-300 bg-red-50", text: "text-red-700", bar: "bg-red-600", headline: "스미싱 가능성이 높아요" };
-  if (level === "주의") return { icon: AlertCircle, panel: "border-amber-300 bg-amber-50", text: "text-amber-700", bar: "bg-amber-500", headline: "한 번 더 확인이 필요해요" };
-  return { icon: CheckCircle2, panel: "border-emerald-300 bg-emerald-50", text: "text-emerald-700", bar: "bg-emerald-600", headline: "스미싱이 아닐 가능성이 높아요" };
+  if (level === RISK_LEVEL_TEXT.danger) return { icon: AlertTriangle, panel: "border-red-300 bg-red-50", text: "text-red-700", bar: "bg-red-600", headline: RISK_VISUAL_TEXT.dangerHeadline };
+  if (level === RISK_LEVEL_TEXT.warning) return { icon: AlertCircle, panel: "border-amber-300 bg-amber-50", text: "text-amber-700", bar: "bg-amber-500", headline: RISK_VISUAL_TEXT.warningHeadline };
+  if (level === RISK_LEVEL_TEXT.lowSuspicion) return { icon: AlertCircle, panel: "border-sky-300 bg-sky-50", text: "text-sky-700", bar: "bg-sky-500", headline: RISK_VISUAL_TEXT.lowSuspicionHeadline };
+  return { icon: CheckCircle2, panel: "border-emerald-300 bg-emerald-50", text: "text-emerald-700", bar: "bg-emerald-600", headline: RISK_VISUAL_TEXT.normalHeadline };
 }
 
 export function SectionTitle({ icon: Icon, subtitle, title, warm }) {
@@ -43,8 +45,8 @@ export function Card({ children, icon: Icon, title, warm, className = "" }) {
 export function EmptyState({ onBack, warm }) {
   return (
     <div className={panelClass(warm, "mx-auto max-w-xl p-8 text-center")}>
-      <p className="text-lg font-black">먼저 문자를 검사해 주세요.</p>
-      <button className={activeClass(warm) + " mt-5 rounded-2xl px-5 py-3 font-black"} onClick={onBack} type="button">검사 화면으로 이동</button>
+      <p className="text-lg font-black">{RISK_VISUAL_TEXT.emptyMessage}</p>
+      <button className={activeClass(warm) + " mt-5 rounded-2xl px-5 py-3 font-black"} onClick={onBack} type="button">{RISK_VISUAL_TEXT.emptyButton}</button>
     </div>
   );
 }

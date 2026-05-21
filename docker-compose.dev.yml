@@ -1,0 +1,85 @@
+# backend에서 개발하기 위해 필요한 docker-compose 파일
+# 루트 폴더에서 docker compose -f docker-compose.dev.yml up -d --build으로 시작
+services:
+  fastapi:
+    build:
+      context: . # COPY가 참조하는 기준 디렉토리
+      dockerfile: ./backend/Dockerfile # 백엔드 도커파일은 루트 실행 가정
+    container_name: fastapi
+    ports:
+      - "8000:8000"
+    env_file:
+      - .env
+    networks:
+      - monitoring
+  mysql:
+    image: mysql:8.4
+    container_name: mysql_container
+    restart: always
+    command:
+      - "--character-set-server=utf8mb4"
+      - "--collation-server=utf8mb4_unicode_ci"
+    env_file: # 기본은 명령을 내리는 현재 경로 .env를 읽어옴
+      - .env
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_DATABASE: ${MYSQL_DATABASE}
+      MYSQL_USER: ${MYSQL_USER}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+    ports:
+      - "3306:3306" # host port: container port
+    volumes:
+      - mysql_data:/var/lib/mysql
+
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+      - "--storage.tsdb.retention.time=7d" # 7일치 데이터 보관
+    networks:
+      - monitoring
+    restart: unless-stopped
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: grafana
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin123 # 초기비밀번호
+    volumes:
+      - grafana_data:/var/lib/grafana
+    networks:
+      - monitoring
+    restart: unless-stopped
+
+  node-exporter: # 리눅스 유닉스 계열 서버 os metric 수집해줌
+    image: prom/node-exporter:latest
+    container_name: node-exporter
+    ports:
+      - "9100:9100"
+    volumes:
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /:/rootfs:ro
+    command:
+      - "--path.procfs=/host/proc"
+      - "--path.sysfs=/host/sys"
+    networks:
+      - monitoring
+    restart: unless-stopped
+
+volumes:
+  mysql_data:
+  prometheus_data:
+  grafana_data:
+
+networks:
+  monitoring:
+    driver: bridge
