@@ -1,0 +1,28 @@
+model:
+  base_model: Qwen/Qwen3-1.7B
+  task_type: CAUSAL_LM
+
+lora:
+  r: 16
+  lora_alpha: 32  # r * 2
+  target_modules: [q_proj, k_proj, v_proj, o_proj]
+  lora_dropout: 0.05
+  bias: none
+
+training:
+  epochs: 1
+  per_device_train_batch_size: 2
+  per_device_eval_batch_size: 2
+  gradient_accumulation_steps: 8  # effective_batch_size = 16
+  learning_rate: 0.0002
+  warmup_ratio: 0.05
+  max_length: 512
+  eval_steps: 10
+  save_steps: 10
+  fp16: false
+  bf16: false
+
+data:
+  train_file: data/decoder_train.jsonl
+  test_split_ratio: 0.1
+  seed: 42
