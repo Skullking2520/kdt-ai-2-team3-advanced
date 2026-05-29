@@ -6,7 +6,7 @@ readme = "README.md"
 
 requires-python = "==3.12.*"
 dependencies = [
-    "langfuse>=2.0.0",
+    "langfuse>=4.0.0", # 주의: self-hosted runner는 v3이하로 해야됨
     "openai>=1.0.0", # test용 임시 클라이언트
     "python-dotenv>=1.2.2",
     "pydantic>=2.0.0",
