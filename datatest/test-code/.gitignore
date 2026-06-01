@@ -1,0 +1,28 @@
+# Python-generated files
+__pycache__/
+*.py[oc]
+build/
+dist/
+wheels/
+*.egg-info
+
+# Virtual environments
+.venv
+# Python
+*.py[cod]
+*.egg-info/
+
+# 가상환경
+.venv/
+venv/
+
+# ChromaDB 데이터
+chroma_db/
+
+# 환경 변수
+.env
+
+# IDE
+.vscode/
+.idea/
+.DS_Store
