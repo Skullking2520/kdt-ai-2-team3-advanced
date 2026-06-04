@@ -1,7 +1,29 @@
 """ChromaDB 헬퍼.
 
 임베딩 모델은 jhgan/ko-sroberta-multitask, 768차원, cosine.
+
+
+[메타데이터 스키마]
+{
+    "id": "case_kisa_2025_001",
+    "document": "본인인증 위해 첨부 링크 클릭 바랍니다",
+    "metadata": {
+        "source":           "train_data | crawling | user_input",
+        "security_type":    "스미싱 | 피싱 | 보이스피싱 | zero-day | 악성앱",
+        "language":         "ko | en",
+        "chunk_idx":        0,
+        "original_doc_id":  "doc-uuid",
+        "source_url":       "https://boannews.com",
+        "doc_version":      "v2.1",
+        "pipeline_version": "p-0.4.0",
+        "question":         "골든 데이터셋 질문 (선택)",
+        "ground_truth":     "전문가 정답 (선택)",
+        "collected_at":     "2026-06-01T10:00:00Z",
+        "updated_at":       "2026-06-01",
+    }
+}
 """
+
 
 import chromadb
 from sentence_transformers import SentenceTransformer
@@ -86,3 +108,4 @@ def search_similar(query_text: str, n_results: int = 3) -> list[dict]:
             "metadata": meta,
         })
     return output
+

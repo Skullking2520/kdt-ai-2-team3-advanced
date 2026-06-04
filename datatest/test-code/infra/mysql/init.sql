@@ -107,3 +107,23 @@ VALUES
     ('phone', '02-1234-5678',
      SHA2('02-1234-5678', 256),
      '결제사칭', 'sample', 'medium');
+
+-- ─────────────────────────────────────────────────
+-- blacklist에 VT 컬럼 추가
+-- ─────────────────────────────────────────────────
+ALTER TABLE blacklist
+    ADD COLUMN vt_score        TINYINT     NULL COMMENT '악성 탐지 엔진 수',
+    ADD COLUMN vt_total        TINYINT     NULL COMMENT '전체 검사 엔진 수',
+    ADD COLUMN vt_risk         VARCHAR(16) NULL COMMENT '위험등급(한글)',
+    ADD COLUMN vt_last_checked TIMESTAMP   NULL COMMENT '마지막 VT 조회 시각',
+    ADD COLUMN vt_report_path  VARCHAR(500) NULL COMMENT 'S3 원본 응답 경로';
+
+-- ─────────────────────────────────────────────────
+-- 4) vt_quota : VirusTotal 일별 사용량 추적
+-- ─────────────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS vt_quota (
+    date         DATE     PRIMARY KEY,
+    auto_used    INT      DEFAULT 0,
+    manual_used  INT      DEFAULT 0,
+    updated_at   TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+);

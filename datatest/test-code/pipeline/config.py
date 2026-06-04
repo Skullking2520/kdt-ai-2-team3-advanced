@@ -34,3 +34,9 @@ EMBEDDING_MODEL = "jhgan/ko-sroberta-multitask"
 SCORE_RAG_LOW = 40   # 이 이상이면 RAG 사용
 SCORE_RAG_HIGH = 70  # 이 이하면 RAG 사용
 SCORE_THRESHOLD = 70 # 위험 높음 기준
+
+# ─ VirusTotal ─────────────────────────────────
+VT_API_KEY = os.getenv("VIRUSTOTAL_API_KEY", "")
+VT_DAILY_AUTO_LIMIT = 400
+VT_DAILY_MANUAL_LIMIT = 100
+VT_RATE_LIMIT_PER_MIN = 4

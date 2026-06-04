@@ -176,3 +176,5 @@ MySQL 컨테이너가 안 떴거나 비밀번호 다름. `docker compose ps`로 
 ### ChromaDB 결과 비어있음
 `pipeline/seed_chroma.py` 먼저 실행했는지 확인.
 
+- `vt_quota` : VirusTotal 일별 사용량 추적
+- `blacklist` : VT 조회 결과 컬럼 추가 (vt_score, vt_total, vt_risk, vt_last_checked)

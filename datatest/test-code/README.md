@@ -130,3 +130,15 @@ smishing-test-setup/
 - AWS S3 입출력
 - SmsClassifier 모델 추론과 연동
 - raw → labeled → processed → reason 흐름 구현
+
+## 추가된 모듈 2026 06 04
+
+### VirusTotal 연동 (`pipeline/virustotal_io.py`)
+- URL/도메인 악성 여부 자동 조회
+- 일별 할당량 관리 (자동 400회 / 수동 100회)
+- 한글 요약 보고서 생성
+
+### APScheduler (`pipeline/scheduler.py`)
+- 매일 02:00 KST 자동 VT 스캔
+- blacklist 테이블 VT 결과 자동 갱신
+- S3 `analytics/virustotal/` 에 배치 결과 저장

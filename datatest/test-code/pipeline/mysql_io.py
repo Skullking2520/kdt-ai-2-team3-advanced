@@ -124,3 +124,28 @@ def fetch_log(sms_id: str) -> dict | None:
             (sms_id,),
         )
         return cur.fetchone()
+
+def update_blacklist_vt(
+    blacklist_id: int,
+    vt_score: int,
+    vt_total: int,
+    vt_risk: str,
+    vt_report_path: str | None = None,
+) -> None:
+    sql = """
+        UPDATE blacklist
+        SET vt_score        = %(vt_score)s,
+            vt_total        = %(vt_total)s,
+            vt_risk         = %(vt_risk)s,
+            vt_last_checked = NOW(),
+            vt_report_path  = %(vt_report_path)s
+        WHERE id = %(id)s
+    """
+    with get_conn() as conn, conn.cursor() as cur:
+        cur.execute(sql, {
+            "id": blacklist_id,
+            "vt_score": vt_score,
+            "vt_total": vt_total,
+            "vt_risk": vt_risk,
+            "vt_report_path": vt_report_path,
+        })
