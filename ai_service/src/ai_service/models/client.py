@@ -1,6 +1,6 @@
 # ollama / openai llm 인스턴스화
-import os
-from typing import Any, Optional
+#import os
+from typing import Any
 from langchain_ollama import ChatOllama
 from ..config.settings import settings
 
