@@ -168,10 +168,14 @@ def extract_static_patterns(text):
 
 
 url_pattern = re.compile(
-    r"(?:https?://\S+|www\.\S+|(?:[a-zA-Z0-9가-힣-]+\.)+(?:com|net|org|kr|co\.kr|go\.kr|or\.kr|ne\.kr|io|ai|ly|me|cc|xyz|top|site|shop|info|biz)(?:/\S*)?)",
+    r"(?:https?://\S+|www\.\S+|(?<!@)(?:[a-zA-Z0-9가-힣-]+\.)+(?:com|net|org|kr|co\.kr|go\.kr|or\.kr|ne\.kr|io|ai|ly|me|cc|xyz|top|site|shop|info|biz)(?:/\S*)?)",
     re.IGNORECASE,
 )
-phone_pattern = re.compile(r"(?<!\d)(?:\d{2,3}-\d{3,4}-\d{4}|\d{10,11})(?!\d)")
+phone_pattern = re.compile(r"(?<!\d)(?:\d{2,3}-\d{3,4}-\d{4}|\d{4}-\d{4}|\d{10,11})(?!\d)")
+_ssn_pattern = re.compile(r"(?<!\d)\d{6}-\d{7}(?!\d)")
+_account_pattern = re.compile(r"(?<!\d)\d{3,6}-\d{2,6}-\d{5,8}(?!\d)")
+_card_pattern = re.compile(r"(?<!\d)\d{4}-\d{4}-\d{4}-\d{4}(?!\d)")
+_email_pattern = re.compile(r"[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}")
 
 money_pattern = re.compile(
     r"\d+[,\d]*\s?(?:만원권|만원|천원|억원|원|KRW|USD|\$)|\$\s?\d+[,\d]*|\d+[,\d]*\s?\$",
@@ -199,6 +203,11 @@ def clean_for_model(text):
 
     text = re.sub(r"\[?\s*(국외|국제)\s*발신\s*\]?", " <FOREIGN_SEND> ", text)
 
+    # 개인정보 마스킹: 이메일 → SSN → 카드번호 → 계좌번호 → URL → 전화번호 순 (패턴 겹침 방지)
+    text = _email_pattern.sub(" <EMAIL> ", text)
+    text = _ssn_pattern.sub(" <SSN> ", text)
+    text = _card_pattern.sub(" <CARD> ", text)
+    text = _account_pattern.sub(" <ACCOUNT> ", text)
     text = url_pattern.sub(" <URL> ", text)
     text = phone_pattern.sub(" <PHONE> ", text)
 
