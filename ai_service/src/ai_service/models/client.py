@@ -1,0 +1,1 @@
+# ollama / openai llm 인스턴스화

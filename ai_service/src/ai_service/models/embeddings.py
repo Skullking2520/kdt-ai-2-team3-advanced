@@ -1,0 +1,1 @@
+# 로컬 (huggingface / ollama) 및 운영용 임베딩 설정
