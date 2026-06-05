@@ -159,9 +159,11 @@ def _dedupe_preserve_order(values):
 
 def extract_static_patterns(text):
     text = str(text)
+    # 이메일 도메인이 URL로 잘못 추출되는 것을 방지
+    text_without_emails = _email_pattern.sub(" ", text)
 
     return {
-        "urls": _dedupe_preserve_order(url_pattern.findall(text)),
+        "urls": _dedupe_preserve_order(url_pattern.findall(text_without_emails)),
         "phones": _dedupe_preserve_order(phone_pattern.findall(text)),
         "keywords": _dedupe_preserve_order(smishing_keyword_pattern.findall(text)),
     }
