@@ -36,7 +36,6 @@ venv/
 *.pth
 *.ckpt
 *.bin
-data/
 
 # IDE
 .vscode/
