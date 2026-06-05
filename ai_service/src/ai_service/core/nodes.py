@@ -1,18 +1,57 @@
 # 노드 (여기서 vectordb_service를 호출)
 # 각 노드가 수행할 python함수들 (llm 호출 노드, 도구 실행 노드 등)
-from ..config.prompts import RAG_ANSWER_PROMPT
-from ..models.client import get_ollama_llm
-# todo: 아래는 예시일 뿐이고, langgraph 각 노드 로직부터 구성해야함!
-def answer_smishing_reason_node(state):
-    llm = get_ollama_llm(model_name="qwen2.5:7b")
+from langchain_core.messages import HumanMessage
+from ..config.prompts import RAG_ANSWER_PROMPT, ROUTER_PROMPT, SIMPLE_SMISHING_REASON_PROMPT
+from .singleton_llm import get_singleton_llm, _DEFAULT_MODEL
+from .state import SmishingGraphState
+from .tools import _search_zeroday_logic
 
-    # 템플릿과 llm을 체인으로 연결한 뒤 바로 실행
-    chain = RAG_ANSWER_PROMPT | llm
+def router_node(state: SmishingGraphState):
+    """ 입력 문장이 신종 제로데이 패턴인지, 퓨샷으로 즉시 추론 가능한 일반 패턴인지 분류 """
+    llm = get_singleton_llm(model_name=_DEFAULT_MODEL)
 
-    # state에서 꺼낸 값들을 프롬프트 변수에 매핑
-    response = chain.invoke({
-        "context": state["context"],
-        "messages": state["messages"]
-    })
+    messages = state["messages"]
+    prompt = ROUTER_PROMPT.format_prompt(messages=messages)
+    response = llm.invoke(prompt)
 
     return {"messages": [response]}
+
+def naive_rag_node(state: SmishingGraphState):
+    """ VectorDB에서 문서를 검색하고, 이를 프롬프트에 주입하여 답변을 생성 """
+    llm = get_singleton_llm(model_name=_DEFAULT_MODEL)
+
+    messages = state["messages"]
+
+    # 마지막 유저 메시지 (본문 + OCR 결합 텍스트)를 추출하여 검색 쿼리로 사용
+    raw_content = messages[-2].content if len(messages) > 1 else messages[0].content
+
+     # 2. 타입에 따라 안전하게 문자열(str)로 가공합니다.
+    if isinstance(raw_content, str):
+        user_query = raw_content
+    elif isinstance(raw_content, list):
+        # 멀티모달(이미지+텍스트) 형태일 경우 텍스트 요소만 합치거나, 통째로 문자열 변환
+        user_query = " ".join([str(item) for item in raw_content])
+    else:
+        user_query = str(raw_content)
+
+    # tools.py의 검색 모듈 실행
+    context = _search_zeroday_logic(user_query)
+    
+    prompt = RAG_ANSWER_PROMPT.format_prompt(context=context, messages=messages)
+    response = llm.invoke(prompt)
+
+    return {"messages": [response]}
+
+def simple_reason_node(state: SmishingGraphState):
+    """ RAG 인덱싱 없이 내장된 퓨샷 기반으로 스미싱 사유를 즉시 json으로 추출 """
+    llm = get_singleton_llm(model_name=_DEFAULT_MODEL)
+
+    messages = state["messages"]
+
+    # 라우터의 ai 응답 메시지를 제외하고 오직 유저가 보낸 HumanMessage만 필터링
+    user_messages = [m for m in messages if isinstance(m, HumanMessage)]
+
+    prompt = SIMPLE_SMISHING_REASON_PROMPT.format_prompt(messages=user_messages)
+    response = llm.invoke(prompt)
+
+    return {"final_output": response.content}
