@@ -16,13 +16,11 @@ RISK_RECOMMENDED_ACTIONS = [
 STATIC_PATTERN_REASON_TEMPLATES = {
     PatternType.URL: "악성 URL이 탐지되었습니다: {value}",
     PatternType.PHONE: "악성 전화번호가 탐지되었습니다: {value}",
-    PatternType.KEYWORD: "스미싱 의심 키워드가 탐지되었습니다: {value}",
 }
 
 STATIC_PATTERN_FACTOR_LABELS = {
     PatternType.URL: "링크 유도",
     PatternType.PHONE: "연락처 유도",
-    PatternType.KEYWORD: "의심 키워드",
 }
 
 
