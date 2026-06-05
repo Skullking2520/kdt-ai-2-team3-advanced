@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from datetime import datetime
 from typing import TYPE_CHECKING
 
 from sqlalchemy import TIMESTAMP, Boolean, ForeignKey, Numeric, Text, func
@@ -19,10 +20,10 @@ class SmishingLog(Base):
     message_content: Mapped[str] = mapped_column(Text, nullable=False)
     is_smishing: Mapped[bool] = mapped_column(Boolean, nullable=False)
     ai_score: Mapped[float] = mapped_column(Numeric(5, 4), nullable=True)
-    reasoning: Mapped[str] = mapped_column(Text, nullable=True)  # 디코더 출력 결과
+    reasoning: Mapped[str | None] = mapped_column(Text, nullable=True)  # 디코더 출력 결과
 
-    model_id: Mapped[int] = mapped_column(ForeignKey("model_info.id"), nullable=True)
-    created_at: Mapped[str] = mapped_column(TIMESTAMP, server_default=func.now())
+    model_id: Mapped[int | None] = mapped_column(ForeignKey("model_info.id"), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(TIMESTAMP, server_default=func.now())
 
     # 관계 설정
-    model: Mapped[ModelInfo] = relationship(back_populates="logs")
+    model: Mapped[ModelInfo | None] = relationship(back_populates="logs")

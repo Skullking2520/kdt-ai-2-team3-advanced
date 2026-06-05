@@ -1,6 +1,7 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, List
+from datetime import datetime
+from typing import TYPE_CHECKING
 
 from sqlalchemy import TIMESTAMP, Boolean, String, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
@@ -20,7 +21,7 @@ class ModelInfo(Base):
     encoder_version: Mapped[str] = mapped_column(String(50), nullable=True)
     decoder_version: Mapped[str] = mapped_column(String(50), nullable=True)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
-    created_at: Mapped[str] = mapped_column(TIMESTAMP, server_default=func.now())
+    created_at: Mapped[datetime] = mapped_column(TIMESTAMP, server_default=func.now())
 
     # 관계 설정: 하나의 모델 정보는 여러 로그를 가질 수 있음
-    logs: Mapped[List[SmishingLog]] = relationship(back_populates="model")
+    logs: Mapped[list[SmishingLog]] = relationship(back_populates="model")
