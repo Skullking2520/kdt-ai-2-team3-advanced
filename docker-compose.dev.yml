@@ -30,6 +30,8 @@ services:
       - "3306:3306" # host port: container port
     volumes:
       - mysql_data:/var/lib/mysql
+    networks:
+      - monitoring
 
   prometheus:
     image: prom/prometheus:latest
