@@ -5,34 +5,7 @@
 from ..config.settings import settings
 from .chroma_client import ChromaClient
 from .pinecone_client import PineconeClient
-from pydantic import SecretStr
-
-def get_embedding_model():
-    """설정에 맞는 임베딩 모델 객체를 생성하여 반환합니다."""
-    provider = settings.EMBEDDING_PROVIDER.lower()
-    
-    if provider == "openai":
-        from langchain_openai import OpenAIEmbeddings
-        return OpenAIEmbeddings(
-            api_key=SecretStr(settings.OPENAI_API_KEY), 
-            model=settings.EMBEDDING_MODEL_NAME
-        )
-        
-    elif provider == "ollama":
-        from langchain_ollama import OllamaEmbeddings
-        return OllamaEmbeddings(
-            base_url=settings.OLLAMA_BASE_URL,
-            model=settings.EMBEDDING_MODEL_NAME
-        )
-        
-    elif provider == "huggingface":
-        from langchain_huggingface import HuggingFaceEmbeddings
-        return HuggingFaceEmbeddings(
-            model_name=settings.EMBEDDING_MODEL_NAME
-        )
-        
-    else:
-        raise ValueError(f"지원하지 않는 임베딩 프로바이더입니다: {provider}")
+from ..models.embeddings import get_embedding_model
 
 def get_vector_db():
     # 1. 공통으로 사용할 임베딩 모델을 먼저 생성합니다.
