@@ -49,7 +49,7 @@ def test_process_vt_result() -> dict:
         pattern_type="domain",
         pattern_value=TEST_DOMAIN,
         mode="manual",
-        blacklist_id=None,   # blacklist DB 갱신 없이 조회만
+        blacklist_id=3,   # None 이면 blacklist DB 갱신 없이 조회만
     )
 
     assert summary is not None, "VT 조회 실패 (할당량 초과 또는 API 오류)"

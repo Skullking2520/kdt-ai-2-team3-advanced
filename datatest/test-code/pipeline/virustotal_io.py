@@ -31,7 +31,7 @@ from .config import (
     VT_RATE_LIMIT_PER_MIN,
 )
 from .mysql_io import get_conn, update_blacklist_vt
-from .s3_io import put_jsonl
+from .s3_io import append_vt
 
 # ─────────────────────────────────────────────────
 # 상수
@@ -211,33 +211,12 @@ def _save_to_s3(
     summary: dict,
     mode: MODE,
 ) -> str:
-    """VT 결과 S3 저장.
-
-    Returns:
-        s3://bucket/key 형식 경로
-    """
-    now = datetime.now(timezone.utc)
-    batch_id = now.strftime("%Y%m%d_%H%M%S")
-    key = (
-        f"analytics/virustotal/{mode}/"
-        f"{now.year:04d}/{now.month:02d}/{now.day:02d}/"
-        f"batch_{batch_id}.jsonl"
-    )
-
     record = {
         "pattern_value": pattern_value,
         "summary":       summary,
-        "checked_at":    now.isoformat(),
+        "checked_at":    datetime.now(timezone.utc).isoformat(),
     }
-    # 원본 응답은 summary 안에 포함되어 있음 (summary["원본응답"])
-
-    put_jsonl(key, [record])
-    return f"s3://{S3_BUCKET}/{key}"
-
-
-# ─────────────────────────────────────────────────
-# 통합 프로세스
-# ─────────────────────────────────────────────────
+    return append_vt(mode, [record])
 
 def process_vt_result(
     pattern_type: str,

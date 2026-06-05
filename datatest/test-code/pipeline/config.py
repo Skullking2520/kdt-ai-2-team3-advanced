@@ -40,3 +40,7 @@ VT_API_KEY = os.getenv("VIRUSTOTAL_API_KEY", "")
 VT_DAILY_AUTO_LIMIT = 400
 VT_DAILY_MANUAL_LIMIT = 100
 VT_RATE_LIMIT_PER_MIN = 4
+
+# ─ 배치 크기 ──────────────────────────────────
+BATCH_SIZE_PIPELINE = 100   # raw/labeled/processed/reason
+BATCH_SIZE_VT = 1000        # analytics/virustotal

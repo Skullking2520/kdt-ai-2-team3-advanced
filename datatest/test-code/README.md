@@ -142,3 +142,15 @@ smishing-test-setup/
 - 매일 02:00 KST 자동 VT 스캔
 - blacklist 테이블 VT 결과 자동 갱신
 - S3 `analytics/virustotal/` 에 배치 결과 저장
+
+## 추가된 모듈 2026 06 05
+
+### DuckDB + Streamlit 모니터링 대시보드 (`pipeline/dashboard.py`)
+- S3 데이터 직접 SQL 조회 (DuckDB)
+- 파이프라인 처리 현황, VT 조회 결과, 로그 요약, MySQL 현황
+- 실행: `uv run streamlit run pipeline/dashboard.py`
+
+### 의존성 추가
+- `duckdb==1.2.x`
+- `streamlit==1.5.3` (오타아님? 너무 낮은 버전인데)
+- `plotly`

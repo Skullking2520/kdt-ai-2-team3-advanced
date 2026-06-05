@@ -4,10 +4,10 @@ SMS 한 건을 받아 4개 Stage를 거치며 MySQL/S3/ChromaDB를 모두 사용
 
 실행:
     # 1) ChromaDB 시드 데이터 적재 (최초 1회)
-    uv run python pipeline/seed_chroma.py
+    uv run python -m pipeline.seed_chroma
 
     # 2) 통합 테스트 실행
-    uv run python pipeline/integration_test.py
+    uv run python -m pipeline.integration_test
 
 흐름:
     Step 0: UUID 생성 + processing_log 행 생성
@@ -31,8 +31,9 @@ from pipeline.mysql_io import (
     lookup_blacklist,
     update_stage,
 )
-from pipeline.preprocessor import build_labeled_record, extract_phones, extract_urls
-from pipeline.s3_io import get_jsonl, get_client, make_batch_key, put_jsonl
+from pipeline.preprocessor import build_labeled_record
+from pipeline.s3_io import get_jsonl, append_pipeline
+from pipeline.schema import make_blacklist_inference, make_model_inference
 from pipeline.vector_io import search_similar
 
 KST = ZoneInfo("Asia/Seoul")
@@ -51,25 +52,11 @@ def mock_model_inference(text: str) -> dict:
     실제 환경에선 final_model을 로드해 사용.
     여기선 score=55 하드코딩 (RAG 분기 타도록).
     """
-    score = 55
-    label = 1 if score >= SCORE_THRESHOLD else 0
-    if score >= 70:
-        risk_level = "위험 높음"
-    elif score >= 40:
-        risk_level = "주의"
-    else:
-        risk_level = "정상 가능성 높음"
-
-    return {
-        "label": label,
-        "label_name": "스미싱" if label == 1 else "정상",
-        "score": score,
-        "risk_level": risk_level,
-        "prob_1_risk": round(score / 100, 3),
-        "prob_0_normal": round(1 - score / 100, 3),
-        "features": "본인인증=1, 긴급=1",
-        "model_version": "mock_v0.0",
-    }
+    return make_model_inference(
+        score=55,
+        features="본인인증=1, 긴급=1",
+        model_version="mock_v0.0",
+    )
 
 
 def mock_llm_reason(text: str, similar_cases: list[dict] | None) -> str:
@@ -119,14 +106,12 @@ def stage1_preprocess(
 ) -> dict:
     """Step 1: 전처리 -> S3 raw/, labeled/ 저장."""
     # raw 저장
-    raw_key = make_batch_key("raw", batch_id)
-    raw_path = put_jsonl(raw_key, [raw_record])
+    raw_path = append_pipeline("raw", [raw_record])
     update_stage(sms_id, "raw", s3_path=raw_path, line_no=0)
 
     # labeled 저장
     labeled_record = build_labeled_record(raw_record)
-    labeled_key = make_batch_key("labeled", batch_id)
-    labeled_path = put_jsonl(labeled_key, [labeled_record])
+    labeled_path = append_pipeline("labeled", [labeled_record])
     update_stage(sms_id, "labeled", s3_path=labeled_path, line_no=0)
 
     return labeled_record
@@ -144,17 +129,8 @@ def stage3_model_inference(
 ) -> dict:
     """Step 3: 모델 추론 -> S3 processed/ 저장."""
     if blacklist_hit:
-        # 블랙리스트 매칭 시 모델 거치지 않고 label=1 고정
-        inference = {
-            "label": 1,
-            "label_name": "스미싱",
-            "score": 100,
-            "risk_level": "위험 높음",
-            "prob_1_risk": 1.0,
-            "prob_0_normal": 0.0,
-            "features": f"blacklist_hit={blacklist_hit['pattern_type']}",
-            "model_version": "blacklist",
-        }
+        # schema.py에서 blacklist 추론 결과 생성
+        inference = make_blacklist_inference(blacklist_hit["pattern_type"])
         static_fields = {
             "static_filter_hit": True,
             "matched_blacklist_id": blacklist_hit["id"],
@@ -162,6 +138,7 @@ def stage3_model_inference(
             "matched_pattern_value": blacklist_hit["pattern_value"],
         }
     else:
+        # schema.py에서 모델 추론 결과 생성
         inference = mock_model_inference(labeled_record["text"])
         static_fields = {
             "static_filter_hit": False,
@@ -178,8 +155,8 @@ def stage3_model_inference(
     }
 
     # S3 저장
-    processed_key = make_batch_key("processed", batch_id)
-    processed_path = put_jsonl(processed_key, [processed_record])
+    processed_path = append_pipeline("processed", [processed_record])
+
 
     # MySQL 갱신
     update_stage(
@@ -228,8 +205,7 @@ def stage4_llm_reason(
         "reasoned_at": datetime.now(KST).isoformat(),
     }
 
-    reason_key = make_batch_key("reason", batch_id)
-    reason_path = put_jsonl(reason_key, [reason_record])
+    reason_path = append_pipeline("reason", [reason_record])
     update_stage(
         sms_id, "reason",
         s3_path=reason_path, line_no=0,
@@ -273,7 +249,6 @@ def verify(sms_id: str, reason_record: dict) -> None:
     print(f"\n[S3] 각 단계 파일에서 id 매칭 확인")
     for stage in ("raw", "labeled", "processed", "reason"):
         s3_uri = log[f"s3_{stage}_path"]
-        # s3://bucket/key 에서 key만 추출
         key = s3_uri.replace(f"s3://{S3_BUCKET}/", "")
         records = get_jsonl(key)
         target = next((r for r in records if r["id"] == sms_id), None)

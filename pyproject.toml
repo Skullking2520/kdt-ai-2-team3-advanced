@@ -7,7 +7,13 @@ dependencies = [
     "backend", # 워크스페이스 내의 backend 패키지를 등록
     "ai_service",
     "ai_monitoring",
+    "datatest",
     "python-dotenv>=1.2.2",
+    "chromadb>=1.5.9",
+    "sentence-transformers>=5.5.1",
+    "pymysql>=1.2.0",
+    "boto3>=1.43.23",
+    "apscheduler>=3.11.2",
 ] # backend를 로컬 편집 가능(editable) 패키지로 등록
 
 [tool.uv.sources]
@@ -47,6 +53,7 @@ members = [
     "backend",
     "ai_service",
     "ai_monitoring"
+    "datatest",
 ]
 
 [dependency-groups]
