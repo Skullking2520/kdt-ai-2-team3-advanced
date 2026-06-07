@@ -9,6 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..core.pydantic_settings import settings
 from ..models.static_patterns import PatternType, StaticPattern
+from ..models.smishing_log import DetectionType
 from ..repository.smishing_log_repository import create_smishing_log
 from ..repository.static_pattern_repository import (
     create_static_patterns_if_new,
@@ -391,7 +392,9 @@ async def predict_smishing(
     masked_message = clean_for_model(message)
 
     if matches:
-        await create_smishing_log(db, masked_message, is_smishing=True)
+        await create_smishing_log(
+            db, masked_message, is_smishing=True, detection_type=DetectionType.STATIC_PATTERN
+        )
         return build_static_pattern_response(message, matches)
 
     encoder_output = await request_encoder_prediction(masked_message)
@@ -403,7 +406,8 @@ async def predict_smishing(
 
     if not is_smishing:
         await create_smishing_log(
-            db, masked_message, is_smishing=False, ai_score=encoder_output.score
+            db, masked_message, is_smishing=False,
+            detection_type=DetectionType.ENCODER, ai_score=encoder_output.score
         )
         return build_safe_response(message, risk_score)
 
@@ -411,7 +415,8 @@ async def predict_smishing(
     reason = await generate_explanation(masked_message, "스미싱", features)
     await create_static_patterns_if_new(db, _to_static_pattern_rows(extracted, reason))
     await create_smishing_log(
-        db, masked_message, is_smishing=True, ai_score=encoder_output.score, reasoning=reason
+        db, masked_message, is_smishing=True,
+        detection_type=DetectionType.RAG_DECODER, ai_score=encoder_output.score, reasoning=reason
     )
 
     highlighted_terms = [
