@@ -2,58 +2,78 @@ import os
 import csv
 import time
 
-try:
-    from paddleocr import PaddleOCR
-except ImportError:
-    print("PaddleOCR이 설치되어 있지 않습니다.")
-    print("아래 명령어로 설치하세요:")
-    print("pip3 install paddleocr paddlepaddle")
-    raise
+from paddleocr import PaddleOCR
 
 
 IMAGE_DIR = "images"
 OUTPUT_FILE = "paddleocr_result.csv"
 
 
-def extract_text_from_result(result):
+def extract_texts(result):
     texts = []
 
     if not result:
-        return ""
+        return texts
 
     for item in result:
         data = None
 
-        # PaddleOCR 3.x 결과가 dict처럼 들어오는 경우
+        # PaddleOCR 3.x 결과가 dict인 경우
         if isinstance(item, dict):
             data = item
 
-        # PaddleOCR 3.x 결과 객체가 json 속성을 가진 경우
+        # PaddleOCR 3.x 결과 객체가 json 속성/메서드를 가진 경우
         elif hasattr(item, "json"):
-            data = item.json
+            json_attr = getattr(item, "json")
+
+            if callable(json_attr):
+                data = json_attr()
+            else:
+                data = json_attr
 
         if not data:
             continue
 
         # 경우 1: rec_texts가 바로 있는 경우
-        if "rec_texts" in data:
+        if isinstance(data, dict) and "rec_texts" in data:
             texts.extend(data["rec_texts"])
 
         # 경우 2: res 안에 rec_texts가 있는 경우
-        elif "res" in data and isinstance(data["res"], dict):
+        elif isinstance(data, dict) and "res" in data:
             res = data["res"]
 
-            if "rec_texts" in res:
-                texts.extend(res["rec_texts"])
+            if isinstance(res, dict):
+                if "rec_texts" in res:
+                    texts.extend(res["rec_texts"])
+                elif "texts" in res:
+                    texts.extend(res["texts"])
 
-    return " ".join(texts)
+    # 중복 제거
+    unique_texts = []
+
+    for text in texts:
+        text = str(text).strip()
+
+        if text and text not in unique_texts:
+            unique_texts.append(text)
+
+    return unique_texts
 
 
 def main():
+    print("[1] PaddleOCR 3.6.0 방식 실행 시작", flush=True)
+
     ocr = PaddleOCR(
         lang="korean",
-        use_textline_orientation=True
+        use_doc_orientation_classify=False,
+        use_doc_unwarping=False,
+        use_textline_orientation=False,
+        text_det_thresh=0.05,
+        text_det_box_thresh=0.05,
+        text_rec_score_thresh=0.0,
     )
+
+    print("[2] PaddleOCR 객체 생성 완료", flush=True)
 
     image_files = []
 
@@ -69,17 +89,20 @@ def main():
 
     results = []
 
-    for filename in image_files:
+    for index, filename in enumerate(image_files, start=1):
         image_path = os.path.join(IMAGE_DIR, filename)
+
+        print(f"[{index}/{len(image_files)}] OCR 시작: {filename}", flush=True)
 
         start_time = time.time()
 
-        ocr_result = ocr.predict(image_path)
-        extracted_text = extract_text_from_result(ocr_result)
+        result = ocr.predict(image_path)
+        texts = extract_texts(result)
+        extracted_text = " ".join(texts).strip()
 
         elapsed_time = time.time() - start_time
 
-        print(f"{filename} -> {extracted_text}")
+        print(f"{filename} -> {extracted_text}", flush=True)
 
         results.append({
             "filename": filename,
@@ -96,7 +119,7 @@ def main():
         writer.writerows(results)
 
     print()
-    print(f"PaddleOCR 결과 저장 완료: {OUTPUT_FILE}")
+    print(f"PaddleOCR 결과 저장 완료: {OUTPUT_FILE}", flush=True)
 
 
 if __name__ == "__main__":

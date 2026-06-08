@@ -70,3 +70,4 @@ frontend_python/web_mvp/dist/
 !frontend_python/web_mvp/src/data/
 !frontend_python/web_mvp/src/data/**
 ocr_benchmark/images/
+paddle_env/
