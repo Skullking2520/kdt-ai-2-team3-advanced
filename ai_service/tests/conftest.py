@@ -6,9 +6,10 @@
 """
 
 import pytest
-
+import os
 from ai_service.vectordb.chroma_client import ChromaClient
 
+os.environ.setdefault("HF_XET_HIGH_PERFORMANCE", "1")
 
 class FakeEmbeddingModel:
     """테스트용 결정적(deterministic) 임베딩 모델 클래스.
