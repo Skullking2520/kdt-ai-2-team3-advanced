@@ -1,0 +1,5 @@
+OCR,compact_exact,CER,char_accuracy
+EasyOCR,5.00%,0.1119,88.81%
+PaddleOCR,0.00%,0.6923,30.77%
+Tesseract psm 6,30.00%,0.0997,90.03%
+CLOVA OCR,75.00%,0.0087,99.13%
