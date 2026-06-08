@@ -52,17 +52,18 @@ boolean 값은 반드시 JSON 표준인 true 또는 false 소문자로만 출력
 SIMPLE_SMISHING_REASON_PROMPT = ChatPromptTemplate.from_messages([
     ("system", _SIMPLE_SYSTEM_PROMPT),
     
+    # few-shot JSON 예시 중괄호가 LangChain 템플릿 변수로 해석되어 simple 노드가 깨지던 문제를 {{ ... }} 형태로 수정
     # Few-Shot Example 1
     ("user", "해외선물 Al인공지능신호 하루 만원씩 실현 잠시후 kakao.opne.s.톡방.com(참여코드: ) 클릭"),
-    ("ai", '{\n    "is_smishing": true,\n    "reason": "의심스러운 링크(kakao.opne.s.톡방.com)를 통해 개인 정보를 요구하거나 금전적 손실을 초래할 수 있는 위험한 사이트로 유도하려 하기 때문입니다."\n}'),
+    ("ai", '{{\n    "is_smishing": true,\n    "reason": "의심스러운 링크(kakao.opne.s.톡방.com)를 통해 개인 정보를 요구하거나 금전적 손실을 초래할 수 있는 위험한 사이트로 유도하려 하기 때문입니다."\n}}'),
     
     # Few-Shot Example 2
     ("user", "Please append margin for your short position of the KAVAUSDT Contracts to avoid liquidation risks. <URL> \n- 외부 링크 포함: ['https://go.bybit.com/hNXhXxFdmb']"),
-    ("ai", '{\n    "is_smishing": true,\n    "reason": "외부 링크를 통해 자금 관리 결정을 서두르게 유도하기 때문입니다. 신뢰할 수 없는 링크를 클릭하면 개인 정보나 자산이 위험에 처할 수 있습니다."\n}'),
+    ("ai", '{{\n    "is_smishing": true,\n    "reason": "외부 링크를 통해 자금 관리 결정을 서두르게 유도하기 때문입니다. 신뢰할 수 없는 링크를 클릭하면 개인 정보나 자산이 위험에 처할 수 있습니다."\n}}'),
     
     # Few-Shot Example 3
     ("user", "[대법원] 귀하의 민사소송 접수 완료. 신속한 대응 필요! 확인 → http://supcourt-kr.com/case \n- 외부 링크 포함: ['http://supcourt-kr.com/case']"),
-    ("ai", '{\n    "is_smishing": true,\n    "reason": "공식 기관인 대법원을 사칭하면서 의심스러운 URL로 개인 정보를 입력하도록 유도하기 때문입니다. 공식 기관은 일반적으로 문자 링크로 정보 확인을 요청하지 않습니다."\n}'),
+    ("ai", '{{\n    "is_smishing": true,\n    "reason": "공식 기관인 대법원을 사칭하면서 의심스러운 URL로 개인 정보를 입력하도록 유도하기 때문입니다. 공식 기관은 일반적으로 문자 링크로 정보 확인을 요청하지 않습니다."\n}}'),
     
     # 실제 동적 입력 바인딩 레이어
     MessagesPlaceholder(variable_name="messages")
