@@ -1,9 +1,10 @@
 from pydantic import BaseModel, Field
-from typing import Any
+from typing import List
+from chromadb.api.types import Metadata
 
 class VectorUpsertRequest(BaseModel):
     documents: list[str] = Field(..., min_length=1)
-    metadatas: list[dict[str, Any]] | None = None
+    metadatas: List[Metadata] | None = None
     ids: list[str] | None = None
 
 
