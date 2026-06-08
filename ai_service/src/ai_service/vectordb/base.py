@@ -8,6 +8,15 @@ class BaseVectorDB(ABC):
     @abstractmethod
     def add_documents(self, documents: List[Any], metadatas: List[Dict] | None = None) -> None:
         """ 문서 및 메타데이터 저장 """
+
+    def upsert_documents(
+        self,
+        documents: List[str],
+        metadatas: List[Dict] | None = None,
+        ids: List[str] | None = None,
+    ) -> None:
+        """문서 및 메타데이터를 저장하거나 갱신한다."""
+        self.add_documents(documents=documents, metadatas=metadatas)
     
     @abstractmethod
     def similarity_search(self, query: str, k: int = 4) -> List[Dict[str, Any]]:

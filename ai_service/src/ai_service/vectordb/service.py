@@ -2,11 +2,14 @@
 # config.py나 .env의 환경변수를 읽어와, 로컬이면 ChromaClient를, 
 # 운영이면 PineconeClient를 반환하는 구조를 짭니다.
 
+from functools import lru_cache
+
 from ..config.settings import settings
 from .chroma_client import ChromaClient
 from .pinecone_client import PineconeClient
 from ..models.embeddings import get_embedding_model
 
+@lru_cache(maxsize=1)
 def get_vector_db():
     # 1. 공통으로 사용할 임베딩 모델을 먼저 생성합니다.
     embedding_model = get_embedding_model()
@@ -21,5 +24,6 @@ def get_vector_db():
     else:
         return ChromaClient(
             persistent_directory=settings.CHROMA_DB_DIR,
-            embedding_model=embedding_model  # 인터페이스에 맞게 주입
+            embedding_model=embedding_model,  # 인터페이스에 맞게 주입
+            collection_name=settings.CHROMA_COLLECTION_NAME,
         )

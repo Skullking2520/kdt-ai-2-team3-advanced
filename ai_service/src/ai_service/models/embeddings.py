@@ -1,7 +1,10 @@
 # 로컬 (huggingface / ollama) 및 운영용 임베딩 설정
+from functools import lru_cache
+
 from pydantic import SecretStr
 from ..config.settings import settings
 
+@lru_cache(maxsize=1)
 def get_embedding_model():
     """설정에 맞는 임베딩 모델 객체를 생성하여 반환합니다."""
     # TODO: 차후 **kwargs로 추가 설정값 지원

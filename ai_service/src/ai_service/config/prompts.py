@@ -17,6 +17,8 @@ _RAG_ANSWER_SYSTEM_PROMPT = """
     "is_smishing": true,
     "reason": "[여기에 구체적인 판단 근거 작성]"
 }}
+JSON 객체 외의 설명, 마크다운, 코드블록, 접두사, 접미사는 출력하지 마세요.
+boolean 값은 반드시 JSON 표준인 true 또는 false 소문자로만 출력하세요.
 
 [Context]
 {context}"""
@@ -42,6 +44,8 @@ _SIMPLE_SYSTEM_PROMPT = """
     "is_smishing": true,
     "reason": "[여기에 퓨샷 스타일의 분석 사유 작성]"
 }}
+JSON 객체 외의 설명, 마크다운, 코드블록, 접두사, 접미사는 출력하지 마세요.
+boolean 값은 반드시 JSON 표준인 true 또는 false 소문자로만 출력하세요.
 """
 
 # Few-shot 예시 데이터를 Chat 메시지 히스토리 형태로 변환하여 프롬프트에 내장
