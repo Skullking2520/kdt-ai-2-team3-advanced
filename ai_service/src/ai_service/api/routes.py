@@ -1,5 +1,5 @@
-import json
-from typing import Any, cast
+
+from typing import Any
 from urllib.error import URLError
 from urllib.request import urlopen
 
@@ -14,24 +14,10 @@ from ..config.settings import settings
 from ..core.graph import langgraph_app
 from ..vectordb.service import get_vector_db
 from ..core.state import SmishingGraphState
+from ..utils.rag_content import _build_user_content
+from ..utils.json_utils import _try_parse_json
 
 router = APIRouter(prefix="/api/v1", tags=["ai-service"])
-
-def _build_user_content(text: str, ocr_text: str | None) -> str:
-    """ text, ocr_text로 llm에 요청할 요청 문자열 생성 """
-    if not ocr_text:
-        return text
-    return f"{text}\n\n[OCR 추출 텍스트]\n{ocr_text}"
-
-
-def _try_parse_json(raw: str) -> dict[str, Any] | None:
-    """ json 파서 헬퍼 함수, 딕셔너리 체크 포함 """
-    try:
-        parsed = json.loads(raw)
-    except json.JSONDecodeError:
-        return None
-    return parsed if isinstance(parsed, dict) else None
-
 
 @router.get("/health")
 def health() -> dict[str, Any]:
