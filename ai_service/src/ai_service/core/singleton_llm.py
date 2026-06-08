@@ -4,7 +4,7 @@ from ..config.settings import settings
 # 파이썬은 모듈을 처음 임포트할 때 메모리에 한 번만 로드하고 캐싱합니다.
 # 모듈이 로드될 때 단 한 번만 생성됩니다.
 _DEFAULT_MODEL = settings.OLLAMA_MODEL_NAME
-# todo : 프로덕션 환경에서 vllm 대비 return ChatOpenAI(**llm_kwargs)
+# todo : 프로덕션 환경에서는 vllm 대비 return ChatOpenAI(**llm_kwargs)
 singleton_llm = get_ollama_llm(
                     model_name=_DEFAULT_MODEL,
                     temperature=0.0,

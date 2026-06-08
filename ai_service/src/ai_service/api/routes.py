@@ -1,10 +1,11 @@
 import json
-from typing import Any
+from typing import Any, cast
 from urllib.error import URLError
 from urllib.request import urlopen
 
 from fastapi import APIRouter, HTTPException
 from langchain_core.messages import HumanMessage
+from chromadb.api.types import Metadata
 
 from ..schema.routes import HealthCheckResponse
 from ..schema.graph import GraphInvokeRequest, GraphInvokeResponse
@@ -12,6 +13,7 @@ from ..schema.vectordb import VectorUpsertRequest, VectorRetrieveRequest
 from ..config.settings import settings
 from ..core.graph import langgraph_app
 from ..vectordb.service import get_vector_db
+from ..core.state import SmishingGraphState
 
 router = APIRouter(prefix="/api/v1", tags=["ai-service"])
 
@@ -37,7 +39,7 @@ def health() -> dict[str, Any]:
     ollama_error = None
     
     # 1. Ollama 연결 상태 체크 (비즈니스 로직) 
-    # todo: 프로덕션 환경에서 
+    # todo: 프로덕션 환경에서 vllm 로직 추가!
     try:
         with urlopen(f"{settings.OLLAMA_BASE_URL.rstrip('/')}/api/tags", timeout=2) as response:
             ollama_ok = response.status == 200
@@ -55,7 +57,7 @@ def health() -> dict[str, Any]:
 @router.post("/graph/invoke", response_model=GraphInvokeResponse)
 def invoke_graph(request: GraphInvokeRequest) -> GraphInvokeResponse:
     user_content = _build_user_content(request.text, request.ocr_text)
-    state: dict[str, Any] = {"messages": [HumanMessage(content=user_content)]}
+    state: SmishingGraphState = {"messages": [HumanMessage(content=user_content)]}
     if request.route_override:
         state["route_override"] = request.route_override
 

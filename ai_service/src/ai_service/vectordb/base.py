@@ -12,7 +12,7 @@ class BaseVectorDB(ABC):
     def upsert_documents(
         self,
         documents: List[str],
-        metadatas: List[Dict] | None = None,
+        metadatas: List[Any] | None = None,
         ids: List[str] | None = None,
     ) -> None:
         """문서 및 메타데이터를 저장하거나 갱신한다."""
