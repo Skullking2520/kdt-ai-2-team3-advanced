@@ -19,21 +19,14 @@ import traceback
 from datetime import datetime
 from zoneinfo import ZoneInfo
 
-import boto3
-
-from .config import S3_BUCKET, S3_REGION
+from .config import S3_BUCKET
+from ._clients import get_s3_client
 
 KST = ZoneInfo("Asia/Seoul")
 
-_s3_client = None
-
 
 def _get_client():
-    """싱글톤 S3 클라이언트."""
-    global _s3_client
-    if _s3_client is None:
-        _s3_client = boto3.client("s3", region_name=S3_REGION)
-    return _s3_client
+    return get_s3_client()
 
 
 def _make_key(log_type: str) -> str:

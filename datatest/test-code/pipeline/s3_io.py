@@ -8,19 +8,13 @@ import io
 import json
 from datetime import datetime
 
-import boto3
-
-from .config import S3_BUCKET, S3_REGION, BATCH_SIZE_PIPELINE, BATCH_SIZE_VT
-
-_client = None
+from .config import S3_BUCKET, BATCH_SIZE_PIPELINE, BATCH_SIZE_VT
+from ._clients import get_s3_client
 
 
 def get_client():
     """싱글톤 S3 클라이언트."""
-    global _client
-    if _client is None:
-        _client = boto3.client("s3", region_name=S3_REGION)
-    return _client
+    return get_s3_client()
 
 
 def make_batch_key(stage: str, batch_id: str) -> str:
