@@ -79,7 +79,9 @@ def client() -> TestClient:
         TestClient: FastAPI 엔드포인트를 호출할 수 있는 테스트용 클라이언트 객체.
     """
     return TestClient(app)
-
+# pytest는 fixture 이름을 보고 client인자에 자동으로 주입합니다.
+# monkeypatch: pytest 내장 fixture
+# 각 함수 인자의 순서는 중요하지 않고, 이름이 일치하는 게 핵심이에요.
 
 def test_health_returns_json_status(monkeypatch, client):
     """Health check 엔드포인트(/api/v1/health)가 올바른 JSON 상태와 정상 여부를 응답하는지 테스트합니다.
@@ -110,11 +112,11 @@ def test_health_returns_json_status(monkeypatch, client):
 
 
 @pytest.mark.parametrize(
-    ("route_override", "context"),
-    [
+    ("route_override", "context"), # 매개변수 이름들을 정의
+    [ # 각각의 튜플이 테스트 케이스 하나의 인자 값
         ("zero_day", "택배 사칭 악성 앱 설치 사례"),
         ("general", None),
-    ],
+    ], # 각각의 튜플이 테스트 케이스 하나의 인자 값
 )
 def test_graph_invoke_returns_parseable_json(monkeypatch, client, route_override, context):
     """LangGraph 호출 엔드포인트(/api/v1/graph/invoke)가 응답 메시지를 JSON 파싱하여 올바르게 반환하는지 테스트합니다.

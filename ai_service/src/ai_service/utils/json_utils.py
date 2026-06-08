@@ -21,7 +21,6 @@ def _response_content_into_str(content: str | list | dict) -> str:
         raw_content = str(content)
     return raw_content
 
-
 def _normalize_json_output(content: str) -> str:
     """LLM 응답에서 마지막 JSON 객체를 추출해 표준 JSON 문자열로 변환한다."""
     """
@@ -37,15 +36,48 @@ def _normalize_json_output(content: str) -> str:
     LLM 에러 출력 예시: {"is_smishing": True} (올바르지 않은 JSON 표준)
     이렇게 true가 아닌 파이썬 True가 나오면 json 에러이므로 변경하기
     """
-    candidates = [content, *re.findall(r"\{.*?\}", content, flags=re.DOTALL)]
-    for candidate in reversed(candidates): 
-        # 마지막에 있는 json응답부터 시도해봄.
+
+    # 1. 텍스트 내에서 중괄호 {} 쌍이 맞는 모든 후보들을 추출합니다.
+    # Non-greedy 방식과 Greedy 방식을 모두 커버하기 위해 텍스트 전체와 정규식 결과를 결합합니다.
+    candidates = [content]
+
+    # {로 시작해서 }로 끝나는 덩어리들을 찾되, 내부 노이즈를 방지하기 위해 최소 매칭 사용
+    # 단, 정규식만으로는 한계가 있으므로 문자열 내부의 모든 중괄호 위치를 기반으로 후보군을 넓힙니다.
+    matches = re.findall(r"\{.*?\}", content, flags=re.DOTALL)
+    if matches:
+        candidates.extend(matches)
+
+    # 추가로 전체 텍스트에서 가장 처음 { 와 가장 마지막 } 범위를 한 번 더 후보에 넣습니다 (중첩 구조 대비)
+    start_idx = content.find("{")
+    end_idx = content.rfind("}")
+    if start_idx != -1 and end_idx != -1 and end_idx > start_idx:
+        candidates.append(content[start_idx : end_idx + 1])
+
+    # 2. 마지막에 위치한 JSON 응답부터 역순으로 시도합니다.
+    # 중복된 후보를 제거하되, 원래 순서(뒤에 있는 것이 먼저 오도록)를 유지합니다.
+    seen = set()
+    unique_candidates = []
+    for c in reversed(candidates):
+        if c not in seen:
+            seen.add(c)
+            unique_candidates.append(c)
+
+    for candidate in unique_candidates:
+        # 파이썬 스타일 불리언 및 None 변환 (json 표준 value값은 js 참조)
         normalized = re.sub(r"\bTrue\b", "true", candidate)
         normalized = re.sub(r"\bFalse\b", "false", normalized)
+        normalized = re.sub(r"\bNone\b", "null", normalized)
+
+        # 파이썬 스타일 작은따옴표 처리 (json에서 key는 오직 큰따옴표만 허용됨)
+        normalized = re.sub(r"'(.*?)'", r'"\1"', normalized)
+        # \1는 첫번째로 캡쳐된 그룹 ()
+
         try:
             parsed = json.loads(normalized)
+            if isinstance(parsed, dict):
+                return json.dumps(parsed, ensure_ascii=False)
+            # ensure_ascii=False 덕분에 유니코드(한글 등)가 \u0061 형태로 깨지지 않고 온전하게 출력됩니다.
         except json.JSONDecodeError:
             continue
-        if isinstance(parsed, dict):
-            return json.dumps(parsed, ensure_ascii=False)
+
     return content.strip()
