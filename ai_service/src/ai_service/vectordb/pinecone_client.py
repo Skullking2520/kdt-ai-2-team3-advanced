@@ -1,6 +1,10 @@
+from hashlib import sha1
 from typing import List, Dict, Any
+
 from pinecone import Pinecone
+
 from .base import BaseVectorDB
+
 
 class PineconeClient(BaseVectorDB):
     def __init__(self, api_key: str, index_name: str, embedding_model: Any):
@@ -14,12 +18,11 @@ class PineconeClient(BaseVectorDB):
 
     def add_documents(self, documents: List[str], metadatas: List[Dict] | None = None) -> None:
         vectors_to_upsert = []
-        
+
         for i, doc in enumerate(documents):
             # 텍스트를 벡터로 변환
             embedding = self.embedding_model.embed_query(doc)
-            doc_id = f"doc_{i}_{hash(doc)}"
-            
+            doc_id = f"doc_{i}_{sha1(doc.encode('utf-8')).hexdigest()}"
             # 메타데이터 준비 (Pinecone은 원본 텍스트를 주로 메타데이터에 저장함)
             meta = metadatas[i] if metadatas else {}
             meta["text"] = doc  # 유사도 검색 후 원본 텍스트 복원을 위해 저장 필수
