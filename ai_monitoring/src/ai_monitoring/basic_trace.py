@@ -24,7 +24,7 @@ from langfuse import get_client, propagate_attributes
 from openai import OpenAI
 from ai_monitoring.config import settings
 
-# 환경변수로 Langfuse 클리이언트 자동 초기화
+# 환경변수로 Langfuse 클라이언트 자동 초기화
 os.environ.setdefault("LANGFUSE_PUBLIC_KEY", settings.langfuse_public_key)
 os.environ.setdefault("LANGFUSE_SECRET_KEY", settings.langfuse_secret_key)
 os.environ.setdefault("LANGFUSE_BASE_URL", settings.langfuse_base_url)
