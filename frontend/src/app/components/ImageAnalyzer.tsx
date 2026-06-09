@@ -24,6 +24,7 @@ export function ImageAnalyzer() {
   const [ocrStep, setOcrStep] = useState(-1);
   const [ocrRunning, setOcrRunning] = useState(false);
   const [ocrText, setOcrText] = useState<string | null>(null);
+  const [imageResult, setImageResult] = useState<unknown>(null);
   const [isEditing, setIsEditing] = useState(false);
   const [editedText, setEditedText] = useState("");
   const [dragOver, setDragOver] = useState(false);
@@ -81,10 +82,16 @@ export function ImageAnalyzer() {
           }
           // 백엔드 연동: VITE_USE_MOCK=true 면 mock OCR, false 면 실제 OCR API
           try {
-            const dataUri = preview ?? "";
-            const ocr = await api.ocr(dataUri);
-            setOcrText(ocr.text);
-            setEditedText(ocr.text);
+            const dataUri = await new Promise<string>((resolve, reject) => {
+              const reader = new FileReader();
+              reader.onload = () => resolve(reader.result as string);
+              reader.onerror = reject;
+              reader.readAsDataURL(file!);
+            });
+            const result = await api.analyze({ type: 'image', content: dataUri });
+            setOcrText(result.content);
+            setEditedText(result.content);
+            setImageResult(result);
             setOcrRunning(false);
           } catch (e) {
             if (e instanceof ApiException) {
@@ -104,7 +111,9 @@ export function ImageAnalyzer() {
   const handleAnalyze = () => {
     const textToAnalyze = isEditing ? editedText : ocrText;
     if (!textToAnalyze || !textToAnalyze.trim()) return;
-    nav(`/analyze/progress?text=${encodeURIComponent(textToAnalyze)}&type=image`);
+    // 원본 입력이 이미지이므로 수정 여부 관계없이 기존 분석 결과 재사용 (DB 중복 저장 방지)
+    const state = imageResult ? { preloadedResult: imageResult } : undefined;
+    nav(`/analyze/progress?text=${encodeURIComponent(textToAnalyze)}&type=image`, { state });
   };
 
   const handleReset = () => {

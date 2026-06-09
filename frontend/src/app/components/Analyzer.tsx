@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from "react";
-import { useLocation, useNavigate } from "react-router";
+import { useLocation } from "react-router";
+import type { AnalysisResult as ApiAnalysisResult } from "@/types/api";
 import {
   ShieldAlert, ShieldCheck, AlertTriangle, Send, RotateCcw,
   CheckCircle2, XCircle, ChevronRight, ArrowRight, ThumbsUp,
@@ -7,8 +8,6 @@ import {
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { analyzeSms, toLegacyRiskLevel, URGENCY_KEYWORDS } from "@/lib/smsAnalysis";
-// 백엔드 연동 준비: 추후 handleAnalyze에서 api.analyze() 결과로 직접 setResult 예정
-// 현재는 즉시 미리보기를 위해 analyzeSms (오프라인) 사용
 import { api } from "@/lib/api";
 
 interface AnalysisResult {
@@ -17,6 +16,25 @@ interface AnalysisResult {
   smishing_type: string;
   reasons: string[];
   action_guide: string[];
+}
+
+// 백엔드 응답(camelCase, types/api.ts 기준)을 컴포넌트 로컬 인터페이스(snake_case)로 변환
+// riskLevel: "high"|"medium"|"low" → risk_level: "danger"|"warning"|"normal"
+// reasons[].label → reasons: string[] (UI에는 라벨 문자열만 표시)
+// actionGuide[].action → action_guide: string[]
+function adaptApiResult(api: ApiAnalysisResult): AnalysisResult {
+  const riskMap: Record<string, "danger" | "warning" | "normal"> = {
+    high: "danger",
+    medium: "warning",
+    low: "normal",
+  };
+  return {
+    risk_level: riskMap[api.riskLevel] ?? "normal",
+    risk_score: api.riskScore,
+    smishing_type: api.smishingType,
+    reasons: api.reasons.map((r) => r.label),
+    action_guide: api.actionGuide.map((a) => a.action),
+  };
 }
 
 const SAMPLE_TEXTS = [
@@ -148,7 +166,6 @@ function HighlightedText({ text }: { text: string }) {
 
 export function Analyzer() {
   const location = useLocation();
-  const navigate = useNavigate();
   const prefill = (location.state as { prefillText?: string } | null)?.prefillText ?? "";
 
   const [textInput, setTextInput] = useState(prefill);
@@ -162,8 +179,8 @@ export function Analyzer() {
 
   useEffect(() => { textareaRef.current?.focus(); }, []);
 
-  // 입력 중 빠른 미리보기 분석 (실제 분석은 /analyze/progress 플로우에서 진행)
-  // 분석 로직은 src/lib/smsAnalysis.ts 의 analyzeSms 사용 (API Contract RiskLevel 통일)
+  // 입력 중 오프라인 즉시 미리보기 — 타이핑할 때마다 로컬 분석 결과 표시
+  // "검사하기" 클릭 시 handleAnalyze가 이 결과를 백엔드 응답으로 덮어씀
   useEffect(() => {
     if (!textInput.trim()) { setResult(null); return; }
     const sms = analyzeSms(textInput);
@@ -176,13 +193,31 @@ export function Analyzer() {
     });
   }, [textInput]);
 
-  const handleAnalyze = () => {
+  // "검사하기" 클릭 → 백엔드 POST /predict 호출 → adaptApiResult로 변환 → setResult
+  // 로딩 중 ANALYSIS_STEPS 애니메이션을 600ms 간격으로 진행
+  const handleAnalyze = async () => {
     setError("");
     if (!textInput.trim()) { setError("문자 내용을 입력해주세요."); return; }
     if (textInput.trim().length < 5) { setError("분석할 문자를 조금 더 입력해주세요."); return; }
 
-    // 새로운 플로우: AnalysisProgress로 이동
-    navigate(`/analyze/progress?text=${encodeURIComponent(textInput)}&type=sms`);
+    setLoading(true);
+    setResult(null);
+    setLoadingStep(0);
+
+    const stepInterval = setInterval(() => {
+      setLoadingStep((prev) => Math.min(prev + 1, ANALYSIS_STEPS.length - 1));
+    }, 600);
+
+    try {
+      const apiResult = await api.analyze({ type: "sms", content: textInput });
+      setResult(adaptApiResult(apiResult));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "분석 중 오류가 발생했습니다.");
+    } finally {
+      clearInterval(stepInterval);
+      setLoading(false);
+      setLoadingStep(0);
+    }
   };
 
   const handleReset = () => {

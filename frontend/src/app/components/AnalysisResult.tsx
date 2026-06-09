@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useParams, useSearchParams, useNavigate } from "react-router";
+import { useParams, useSearchParams, useNavigate, useLocation } from "react-router";
 import { motion } from "motion/react";
 import { ThumbsUp, ThumbsDown, Flag, Share2, RotateCcw, Home } from "lucide-react";
 import { RiskLevelCard } from "./result/RiskLevelCard";
@@ -9,6 +9,7 @@ import { DamageScenarioCard } from "./result/DamageScenarioCard";
 import { ActionGuideCard } from "./result/ActionGuideCard";
 import { GovernmentCriteriaCard } from "./result/GovernmentCriteriaCard";
 import { analyzeSms, toLegacyRiskLevel } from "@/lib/smsAnalysis";
+import { api } from "@/lib/api";
 
 interface AnalysisResult {
   risk_level: "danger" | "warning" | "normal";
@@ -30,26 +31,63 @@ export function AnalysisResult() {
   const { id } = useParams();
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
+  const { state } = useLocation();
   const text = searchParams.get("text") || "";
+  const preloadedResult = (state as { preloadedResult?: unknown } | null)?.preloadedResult;
   const [result, setResult] = useState<AnalysisResult | null>(null);
   const [feedback, setFeedback] = useState<"correct" | "incorrect" | null>(null);
 
   useEffect(() => {
-    if (text) {
-      const sms = analyzeSms(text);
+    if (!text) return;
+
+    const riskMap: Record<string, "danger" | "warning" | "normal"> = {
+      high: "danger", medium: "warning", low: "normal",
+    };
+
+    const applyApiResult = (apiResult: ReturnType<typeof Object.assign>) => {
+      const gov = (apiResult.governmentCriteria ?? []) as { id: string; matched: boolean }[];
       setResult({
-        risk_level: toLegacyRiskLevel(sms.risk_level),
-        risk_score: sms.risk_score,
-        smishing_type: sms.smishing_type,
-        reasons: sms.reasons,
-        action_guide: sms.action_guide,
-        similar_cases: sms.similar_cases,
-        has_url: sms.has_url,
-        has_impersonation: sms.has_impersonation,
-        has_payment_request: sms.has_payment_request,
-        has_personal_info_request: sms.has_personal_info_request,
+        risk_level: riskMap[apiResult.riskLevel] ?? "normal",
+        risk_score: apiResult.riskScore,
+        smishing_type: apiResult.smishingType,
+        reasons: (apiResult.reasons as { label: string }[]).map((r: { label: string }) => r.label),
+        action_guide: (apiResult.actionGuide as { action: string }[]).map((a: { action: string }) => a.action),
+        similar_cases: (apiResult.similarCases ?? []).map((c: { title?: string; similarity?: number; year?: string }) => ({
+          title: c.title ?? "",
+          similarity: c.similarity ?? 0,
+          year: c.year ?? "",
+        })),
+        has_url:                  gov.find(c => c.id === "url_included")?.matched ?? false,
+        has_impersonation:        gov.find(c => c.id === "impersonation")?.matched ?? false,
+        has_payment_request:      gov.find(c => c.id === "payment_request")?.matched ?? false,
+        has_personal_info_request: gov.find(c => c.id === "personal_info_request")?.matched ?? false,
       });
+    };
+
+    // 이미지 분석에서 넘어온 경우 기존 결과 재사용 (DB 중복 저장 방지)
+    if (preloadedResult) {
+      applyApiResult(preloadedResult);
+      return;
     }
+
+    api.analyze({ type: "sms", content: text })
+      .then(applyApiResult)
+      .catch(() => {
+        // 백엔드 실패 시 로컬 분석으로 fallback
+        const sms = analyzeSms(text);
+        setResult({
+          risk_level: toLegacyRiskLevel(sms.risk_level),
+          risk_score: sms.risk_score,
+          smishing_type: sms.smishing_type,
+          reasons: sms.reasons,
+          action_guide: sms.action_guide,
+          similar_cases: sms.similar_cases,
+          has_url: sms.has_url,
+          has_impersonation: sms.has_impersonation,
+          has_payment_request: sms.has_payment_request,
+          has_personal_info_request: sms.has_personal_info_request,
+        });
+      });
   }, [text]);
 
   const handleFeedback = (isCorrect: boolean) => {

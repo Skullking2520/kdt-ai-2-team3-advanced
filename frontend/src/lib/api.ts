@@ -132,14 +132,14 @@ async function request<T>(path: string, options: RequestOptions = {}): Promise<T
 export const api = {
   // ── 분석 (핵심) ──────────────────────────
   analyze: (req: AnalysisRequest) =>
-    request<AnalysisResult>('/api/analyze', { method: 'POST', body: req }),
+    request<AnalysisResult>('/api/predict', { method: 'POST', body: req }),
 
   // ── OCR ─────────────────────────────────
   ocr: (image: string) =>
     request<OcrResponse>('/api/ocr', { method: 'POST', body: { image } }),
 
   // ── 발신번호 조회 ────────────────────────
-  lookupSender: (number: string) =>
+  sender: (number: string) =>
     request<SenderLookupResult>(`/api/sender/${encodeURIComponent(number)}`),
 
   // ── 검사 이력 ────────────────────────────
