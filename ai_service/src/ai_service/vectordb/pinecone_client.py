@@ -1,3 +1,4 @@
+from hashlib import sha1
 from typing import List, Dict, Any
 from pinecone import Pinecone
 from .base import BaseVectorDB
@@ -18,7 +19,8 @@ class PineconeClient(BaseVectorDB):
         for i, doc in enumerate(documents):
             # 텍스트를 벡터로 변환
             embedding = self.embedding_model.embed_query(doc)
-            doc_id = f"doc_{i}_{hash(doc)}"
+            # hash()는 프로그램 재실행시 id가 바뀌나, sha1는 결정론적임
+            doc_id = f"doc_{i}_{sha1(doc.encode("utf-8")).hexdigest()}"
             
             # 메타데이터 준비 (Pinecone은 원본 텍스트를 주로 메타데이터에 저장함)
             meta = metadatas[i] if metadatas else {}
