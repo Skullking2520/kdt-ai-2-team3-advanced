@@ -28,14 +28,6 @@ def _to_static_pattern_rows(request: ReportRequest) -> list[dict]:
         }
         for phone in extracted["phones"]
     )
-    rows.extend(
-        {
-            "pattern_type": PatternType.KEYWORD,
-            "pattern_value": keyword,
-            "description": description,
-        }
-        for keyword in extracted["keywords"]
-    )
 
     return rows
 
