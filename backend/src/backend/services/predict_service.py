@@ -9,6 +9,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..core.pydantic_settings import settings
 from ..models.static_patterns import PatternType, StaticPattern
+from ..models.smishing_log import DetectionType
+from ..repository.smishing_log_repository import create_smishing_log
 from ..repository.static_pattern_repository import (
     create_static_patterns_if_new,
     find_matching_static_patterns,
@@ -20,13 +22,12 @@ from ..templates.predict_templates import (
     build_static_pattern_response,
 )
 from ..utils.preprocessor import (
+    clean_for_model,
     external_contact_pattern,
     extract_static_patterns,
     foreign_pattern,
     kw_pattern,
     money_pattern,
-    phone_pattern,
-    url_pattern,
 )
 
 SMISHING_LABELS = {"phishing", "smishing", "scam", "spam", "fraud"}
@@ -227,6 +228,9 @@ def _confidence_to_risk_score(label: str, confidence: float) -> int:
 
 
 async def request_encoder_prediction(text: str) -> EncoderClassificationOutput:
+    if settings.USE_MOCK_MODEL:
+        return EncoderClassificationOutput(label="smishing", score=0.85)
+
     response = await _get_encoder_client().text_classification(text=text)
 
     return _validate_encoder_response(response)
@@ -235,17 +239,14 @@ async def request_encoder_prediction(text: str) -> EncoderClassificationOutput:
 def _build_features(text: str, extracted: dict[str, list[str]]) -> str:
     items = []
     external = external_contact_pattern.findall(text)
-    external_joined = " ".join(external)
 
-    urls = [url for url in extracted["urls"] if url not in external_joined]
-    if not urls:
-        urls = [url for url in url_pattern.findall(text) if url not in external_joined]
-    if urls:
-        items.append(f"- 외부 링크 포함: {', '.join(url[:60] for url in urls[:3])}")
+    if extracted["urls"]:
+        tokens = " ".join(["<URL>"] * min(len(extracted["urls"]), 3))
+        items.append(f"- 외부 링크 포함: {tokens}")
 
-    phones = extracted["phones"] or phone_pattern.findall(text)
-    if phones:
-        items.append(f"- 전화번호 포함: {phones[0]}")
+    if extracted["phones"]:
+        tokens = " ".join(["<PHONE>"] * min(len(extracted["phones"]), 3))
+        items.append(f"- 전화번호 포함: {tokens}")
 
     money = money_pattern.findall(text)
     if money:
@@ -343,6 +344,9 @@ async def generate_explanation(
     if label_name != "스미싱":
         return NORMAL_EXPLANATION
 
+    if settings.USE_MOCK_MODEL:
+        return "테스트 모드: 스미싱 의심 문자로 탐지되었습니다. 링크나 개인정보 입력 요청에 응하지 마세요."
+
     try:
         model = None if settings.DECODER_ENDPOINT_URL else settings.EXPLAINER_MODEL
         raw_output = await _get_explainer_client().text_generation(
@@ -366,34 +370,16 @@ def _to_static_pattern_rows(
     extracted: dict[str, list[str]],
     reason: str,
 ) -> list[dict]:
+    # 전화번호/이메일은 피해자 정보일 수 있어 URL만 블랙리스트에 저장
     description = reason[:255] if reason else "AI 모델 스미싱 탐지"
-    rows = []
-    rows.extend(
+    return [
         {
             "pattern_type": PatternType.URL,
             "pattern_value": url,
             "description": description,
         }
         for url in extracted["urls"]
-    )
-    rows.extend(
-        {
-            "pattern_type": PatternType.PHONE,
-            "pattern_value": phone,
-            "description": description,
-        }
-        for phone in extracted["phones"]
-    )
-    rows.extend(
-        {
-            "pattern_type": PatternType.KEYWORD,
-            "pattern_value": keyword,
-            "description": description,
-        }
-        for keyword in extracted["keywords"]
-    )
-
-    return rows
+    ]
 
 
 async def predict_smishing(
@@ -403,10 +389,15 @@ async def predict_smishing(
     message = request.message
     extracted, matches = await _find_static_pattern_matches(db, message)
 
+    masked_message = clean_for_model(message)
+
     if matches:
+        await create_smishing_log(
+            db, masked_message, is_smishing=True, detection_type=DetectionType.STATIC_PATTERN
+        )
         return build_static_pattern_response(message, matches)
 
-    encoder_output = await request_encoder_prediction(message)
+    encoder_output = await request_encoder_prediction(masked_message)
     is_smishing = _is_smishing_label(encoder_output.label)
     risk_score = _confidence_to_risk_score(
         encoder_output.label,
@@ -414,11 +405,19 @@ async def predict_smishing(
     )
 
     if not is_smishing:
+        await create_smishing_log(
+            db, masked_message, is_smishing=False,
+            detection_type=DetectionType.ENCODER, ai_score=encoder_output.score
+        )
         return build_safe_response(message, risk_score)
 
-    features = _build_features(message, extracted)
-    reason = await generate_explanation(message, "스미싱", features)
+    features = _build_features(masked_message, extracted)
+    reason = await generate_explanation(masked_message, "스미싱", features)
     await create_static_patterns_if_new(db, _to_static_pattern_rows(extracted, reason))
+    await create_smishing_log(
+        db, masked_message, is_smishing=True,
+        detection_type=DetectionType.RAG_DECODER, ai_score=encoder_output.score, reasoning=reason
+    )
 
     highlighted_terms = [
         *extracted["urls"],

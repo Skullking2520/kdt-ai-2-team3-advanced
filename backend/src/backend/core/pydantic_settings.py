@@ -31,6 +31,7 @@ class Settings(BaseSettings):
     ENCODER_INFERENCE_ENDPOINT: str | None = Field(default=None)
     DECODER_ENDPOINT_URL: str | None = Field(default=None)
     EXPLAINER_MODEL: str = Field(default="Qwen/Qwen3-1.7B")
+    USE_MOCK_MODEL: bool = Field(default=False)
 
     # .env 파일 로드 설정 (pydantic v2 방식)
     model_config = SettingsConfigDict(
