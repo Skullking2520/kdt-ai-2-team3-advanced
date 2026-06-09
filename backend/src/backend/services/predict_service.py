@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import re
+import time
 from typing import Any
 
 from fastapi import HTTPException
@@ -9,7 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..core.pydantic_settings import settings
 from ..models.static_patterns import PatternType, StaticPattern
-from ..models.smishing_log import DetectionType
+from ..models.smishing_log import DetectionType, InputType
 from ..repository.smishing_log_repository import create_smishing_log
 from ..repository.static_pattern_repository import (
     create_static_patterns_if_new,
@@ -31,6 +32,10 @@ from ..utils.preprocessor import (
 )
 
 SMISHING_LABELS = {"phishing", "smishing", "scam", "spam", "fraud"}
+
+# 인코더 단독 판정 임계값: 이 이상이면 인코더가 확실히 스미싱으로 판단한 것으로 기록
+# 미만이면 디코더가 판정에도 참여한 것으로 기록 (DetectionType.RAG_DECODER)
+SMISHING_HIGH_CONFIDENCE = 0.90
 NORMAL_EXPLANATION = (
     "정상적인 일반 문자메시지입니다. "
     "스미싱 의심 요소가 발견되지 않는 안전한 메시지입니다."
@@ -231,6 +236,12 @@ async def request_encoder_prediction(text: str) -> EncoderClassificationOutput:
     if settings.USE_MOCK_MODEL:
         return EncoderClassificationOutput(label="smishing", score=0.85)
 
+    # 인코더 미설정 시 mock fallback (OCR 테스트 등 partial 환경 대응)
+    api_key = settings.ENCODER_API_KEY
+    endpoint = settings.ENCODER_INFERENCE_ENDPOINT or settings.HF_SMISHING_ENCODER_URL
+    if not api_key or not endpoint:
+        return EncoderClassificationOutput(label="smishing", score=0.85)
+
     response = await _get_encoder_client().text_classification(text=text)
 
     return _validate_encoder_response(response)
@@ -347,6 +358,10 @@ async def generate_explanation(
     if settings.USE_MOCK_MODEL:
         return "테스트 모드: 스미싱 의심 문자로 탐지되었습니다. 링크나 개인정보 입력 요청에 응하지 마세요."
 
+    # 디코더 미설정 시 mock fallback (인코더와 동일 패턴)
+    if not settings.HF_TOKEN and not settings.DECODER_ENDPOINT_URL:
+        return "테스트 모드: 스미싱 의심 문자로 탐지되었습니다. 링크나 개인정보 입력 요청에 응하지 마세요."
+
     try:
         model = None if settings.DECODER_ENDPOINT_URL else settings.EXPLAINER_MODEL
         raw_output = await _get_explainer_client().text_generation(
@@ -382,52 +397,128 @@ def _to_static_pattern_rows(
     ]
 
 
+async def _ocr_extract(image_data: str) -> str:
+    # image_data: base64 data URI ("data:image/jpeg;base64,...")
+    if settings.USE_MOCK_MODEL:
+        return "[국외발신] 귀하의 계좌가 정지되었습니다. 확인 → http://fake-ocr-test.com"
+
+    try:
+        from ..ocr.ocr_service import extract_text_from_image
+        return await extract_text_from_image(image_data)
+    except RuntimeError as exc:
+        raise HTTPException(status_code=501, detail=str(exc)) from exc
+
+
+async def _predict_url(
+    db: AsyncSession,
+    request: PredictRequest,
+    start_time: float,
+) -> dict:
+    # URL 직접 분석: 인코더는 URL 단독으로 적합하지 않아 블랙리스트 매칭만 수행
+    # 블랙리스트에 없으면 안전으로 판정 (정적 패턴 외 판단 근거 없음)
+    url = request.content.strip()
+    url_matches = await find_matching_static_patterns(db, {PatternType.URL: [url]})
+
+    if url_matches:
+        log = await create_smishing_log(
+            db, url, is_smishing=True, detection_type=DetectionType.STATIC_PATTERN,
+            input_type=InputType.URL,
+        )
+        result = build_static_pattern_response(url, url_matches)
+    else:
+        log = await create_smishing_log(
+            db, url, is_smishing=False, detection_type=DetectionType.STATIC_PATTERN,
+            input_type=InputType.URL,
+        )
+        result = build_safe_response(url, 10)
+
+    result.update({
+        "id": str(log.id),
+        "type": request.type,
+        "content": request.content,
+        "modelVersion": settings.MODEL_VERSION,
+        "processingTime": int((time.monotonic() - start_time) * 1000),
+        "cacheHit": False,
+        "createdAt": log.created_at.isoformat(),
+    })
+    return result
+
+
 async def predict_smishing(
     db: AsyncSession,
     request: PredictRequest,
 ) -> dict:
-    message = request.message
-    extracted, matches = await _find_static_pattern_matches(db, message)
+    if request.type not in ("sms", "url", "image"):
+        raise HTTPException(status_code=501, detail=f"'{request.type}' 분석은 아직 지원하지 않습니다.")
 
-    masked_message = clean_for_model(message)
+    start_time = time.monotonic()
+
+    if request.type == "url":
+        return await _predict_url(db, request, start_time)
+
+    # 이미지 입력이면 OCR로 텍스트 추출 후 SMS 파이프라인으로 진입
+    if request.type == "image":
+        content = await _ocr_extract(request.content)
+    else:
+        content = request.content
+    extracted, matches = await _find_static_pattern_matches(db, content)
+    masked_content = clean_for_model(content)
+
+    input_type = InputType(request.type.upper())
 
     if matches:
-        await create_smishing_log(
-            db, masked_message, is_smishing=True, detection_type=DetectionType.STATIC_PATTERN
+        log = await create_smishing_log(
+            db, masked_content, is_smishing=True, detection_type=DetectionType.STATIC_PATTERN,
+            input_type=input_type,
         )
-        return build_static_pattern_response(message, matches)
+        result = build_static_pattern_response(content, matches)
 
-    encoder_output = await request_encoder_prediction(masked_message)
-    is_smishing = _is_smishing_label(encoder_output.label)
-    risk_score = _confidence_to_risk_score(
-        encoder_output.label,
-        encoder_output.score,
-    )
-
-    if not is_smishing:
-        await create_smishing_log(
-            db, masked_message, is_smishing=False,
-            detection_type=DetectionType.ENCODER, ai_score=encoder_output.score
+    else:
+        encoder_output = await request_encoder_prediction(masked_content)
+        is_smishing = _is_smishing_label(encoder_output.label)
+        risk_score = _confidence_to_risk_score(
+            encoder_output.label,
+            encoder_output.score,
         )
-        return build_safe_response(message, risk_score)
 
-    features = _build_features(masked_message, extracted)
-    reason = await generate_explanation(masked_message, "스미싱", features)
-    await create_static_patterns_if_new(db, _to_static_pattern_rows(extracted, reason))
-    await create_smishing_log(
-        db, masked_message, is_smishing=True,
-        detection_type=DetectionType.RAG_DECODER, ai_score=encoder_output.score, reasoning=reason
-    )
+        if not is_smishing:
+            log = await create_smishing_log(
+                db, masked_content, is_smishing=False,
+                detection_type=DetectionType.ENCODER, ai_score=encoder_output.score,
+                input_type=input_type,
+            )
+            result = build_safe_response(content, risk_score)
 
-    highlighted_terms = [
-        *extracted["urls"],
-        *extracted["phones"],
-        *extracted["keywords"],
-    ]
+        else:
+            features = _build_features(masked_content, extracted)
+            reason = await generate_explanation(masked_content, "스미싱", features)
+            await create_static_patterns_if_new(db, _to_static_pattern_rows(extracted, reason))
+            # 고신뢰도: 인코더가 판정, 디코더는 설명 생성만 담당
+            # 애매한 신뢰도: 디코더가 판정에도 참여
+            det_type = (
+                DetectionType.ENCODER
+                if encoder_output.score >= SMISHING_HIGH_CONFIDENCE
+                else DetectionType.RAG_DECODER
+            )
+            log = await create_smishing_log(
+                db, masked_content, is_smishing=True,
+                detection_type=det_type, ai_score=encoder_output.score, reasoning=reason,
+                input_type=input_type,
+            )
+            result = build_model_smishing_response(
+                content=content,
+                score=risk_score,
+                reason=reason,
+                extracted=extracted,
+            )
 
-    return build_model_smishing_response(
-        input_text=message,
-        score=risk_score,
-        reason=reason,
-        highlighted_terms=highlighted_terms,
-    )
+    result.update({
+        "id": str(log.id),
+        "type": request.type,
+        "content": content,
+        "modelVersion": settings.MODEL_VERSION,
+        "processingTime": int((time.monotonic() - start_time) * 1000),
+        "cacheHit": False,
+        "createdAt": log.created_at.isoformat(),
+    })
+    return result

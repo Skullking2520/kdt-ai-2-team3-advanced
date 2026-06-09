@@ -1,32 +1,64 @@
 # POST predict api에 대한 스키마
-from typing import List, Optional
+from typing import List, Literal, Optional
 
 from pydantic import BaseModel, ConfigDict, Field
 
+AnalysisType = Literal["sms", "url", "image"]
+RiskLevel = Literal["high", "medium", "low"]
+ActionPriority = Literal["critical", "high", "normal"]
 
-# 요청 바디 스키마 (프론트엔드에서 { message, allowTrainingUse } 전송)
+
 class PredictRequest(BaseModel):
-    message: str
+    type: AnalysisType = "sms"
+    content: str
+    sender: Optional[str] = None
+    receivedAt: Optional[str] = None
     allowTrainingUse: Optional[bool] = False
 
 
-# 응답 스키마 (normalizeApiResult()가 기대하는 구조)
-class FactorScore(BaseModel):
+class DetectionReason(BaseModel):
+    code: str
     label: str
-    score: int
+    severity: RiskLevel
+    matched: bool
+
+
+class ActionGuideItem(BaseModel):
+    priority: ActionPriority
+    action: str
+    detail: Optional[str] = None
+
+
+class SimilarCase(BaseModel):
+    id: str
+    title: str
+    similarity: int
+    year: str
+    category: str
+
+
+class GovernmentCriterion(BaseModel):
+    id: str
+    label: str
+    matched: bool
 
 
 class PredictResponse(BaseModel):
-    inputText: str
+    id: str
+    type: AnalysisType
+    content: str
+    riskLevel: RiskLevel
     riskScore: int
-    riskLevel: str
-    impersonationType: str
-    suspiciousEvidence: List[str]
-    recommendedActions: List[str]
-    familyCheckMessage: str
-    explanation: str
-    highlightedTerms: List[str]
-    factorScores: List[FactorScore]
+    smishingType: str
+    reasons: List[DetectionReason]
+    actionGuide: List[ActionGuideItem]
+    similarCases: List[SimilarCase]
+    governmentCriteria: List[GovernmentCriterion]
+    modelVersion: str
+    processingTime: int
+    cacheHit: bool
+    createdAt: str
+    extractedUrl: Optional[str] = None
 
 
 class EncoderClassificationOutput(BaseModel):

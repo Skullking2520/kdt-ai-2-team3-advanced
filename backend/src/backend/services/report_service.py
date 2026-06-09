@@ -1,15 +1,22 @@
+from datetime import datetime, timezone
+
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..models.static_patterns import PatternType, StaticPattern
 from ..repository.static_pattern_repository import create_static_patterns_if_new
-from ..schemas.report_api import ReportRequest
+from ..schemas.report_api import ReportRequest, ReportResponse
 from ..utils.preprocessor import extract_static_patterns
 
 
-def _to_static_pattern_rows(request: ReportRequest) -> list[dict]:
-    extracted = extract_static_patterns(request.text)
+def _generate_receipt_id() -> str:
+    now = datetime.now(timezone.utc)
+    # NB20260608-143022 형식
+    return f"NB{now.strftime('%Y%m%d-%H%M%S')}"
 
-    description = f"사용자 신고 유형: {request.type}"
+
+def _to_static_pattern_rows(request: ReportRequest) -> list[dict]:
+    extracted = extract_static_patterns(request.content)
+    description = f"사용자 신고 유형: {request.category or request.type}"
 
     rows = []
     rows.extend(
@@ -20,6 +27,13 @@ def _to_static_pattern_rows(request: ReportRequest) -> list[dict]:
         }
         for url in extracted["urls"]
     )
+    # URL 필드에 직접 입력한 값도 블랙리스트에 추가
+    if request.url and request.url not in extracted["urls"]:
+        rows.append({
+            "pattern_type": PatternType.URL,
+            "pattern_value": request.url,
+            "description": description,
+        })
     rows.extend(
         {
             "pattern_type": PatternType.PHONE,
@@ -28,6 +42,12 @@ def _to_static_pattern_rows(request: ReportRequest) -> list[dict]:
         }
         for phone in extracted["phones"]
     )
+    if request.sender and request.sender not in extracted["phones"]:
+        rows.append({
+            "pattern_type": PatternType.PHONE,
+            "pattern_value": request.sender,
+            "description": description,
+        })
 
     return rows
 
@@ -35,7 +55,12 @@ def _to_static_pattern_rows(request: ReportRequest) -> list[dict]:
 async def save_report_static_patterns(
     db: AsyncSession,
     request: ReportRequest,
-) -> list[StaticPattern]:
+) -> ReportResponse:
     rows = _to_static_pattern_rows(request)
+    await create_static_patterns_if_new(db, rows)
 
-    return await create_static_patterns_if_new(db, rows)
+    return ReportResponse(
+        receiptId=_generate_receipt_id(),
+        status="received",
+        createdAt=datetime.now(timezone.utc).isoformat(),
+    )

@@ -5,7 +5,7 @@ from ..db.session import get_db
 from ..schemas.report_api import ReportRequest, ReportResponse
 from ..services.report_service import save_report_static_patterns
 
-router = APIRouter(prefix="/report")
+router = APIRouter(prefix="/api/reports")
 
 
 @router.post("", response_model=ReportResponse)
@@ -17,6 +17,4 @@ async def report_smishing(
     프론트엔드의 "신고"를 받아 db에 저장한다
     """
 
-    await save_report_static_patterns(db, request)
-
-    return {"success": True}
+    return await save_report_static_patterns(db, request)
