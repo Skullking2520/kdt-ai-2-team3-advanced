@@ -33,6 +33,26 @@ class Settings(BaseSettings):
     EXPLAINER_MODEL: str = Field(default="Qwen/Qwen3-1.7B")
     USE_MOCK_MODEL: bool = Field(default=False)
 
+    # VirusTotal URL 후보 검증 worker 설정
+    VIRUSTOTAL_API_KEY: str | None = Field(default=None)
+    VT_TIMEOUT_SECONDS: int = Field(default=15, ge=1)
+    VT_BATCH_SIZE: int = Field(default=100, ge=1)
+    VT_WORKER_INTERVAL_MINUTES: int = Field(default=5, ge=1)
+    VT_RECHECK_DAYS: int = Field(default=7, ge=1)
+    VT_SUBMITTED_RECHECK_MINUTES: int = Field(default=15, ge=1)
+    VT_ERROR_RETRY_HOURS: int = Field(default=6, ge=1)
+    VT_AUTO_APPROVE_MALICIOUS_COUNT: int = Field(default=3, ge=1)
+    VT_SUBMIT_UNKNOWN_URLS: bool = Field(default=True)
+    VT_REQUESTS_PER_MINUTE: int = Field(default=4, ge=1)
+    VT_DAILY_REQUEST_LIMIT: int = Field(default=400, ge=1)
+    VT_RATE_LIMIT_RETRY_SECONDS: int = Field(default=60, ge=1)
+    VT_DAILY_LIMIT_RETRY_SECONDS: int = Field(default=86400, ge=1)
+    VT_WORKER_STARTUP_DELAY_SECONDS: int = Field(default=15, ge=0)
+    VT_CANDIDATE_LEASE_MINUTES: int = Field(default=30, ge=1)
+
+    # URL 후보 검토 API
+    ADMIN_API_KEY: str | None = Field(default=None)
+
     # .env 파일 로드 설정 (pydantic v2 방식)
     model_config = SettingsConfigDict(
         env_file=find_dotenv(),  # 루트 .env까지 찾아 올라감

@@ -12,6 +12,22 @@ services:
       - .env
     networks:
       - monitoring
+
+  url-validator:
+    build:
+      context: .
+      dockerfile: ./backend/Dockerfile
+    container_name: url-validator
+    command: ["python", "-m", "src.backend.workers.virustotal_worker"]
+    env_file:
+      - .env
+    depends_on:
+      - fastapi
+      - mysql
+    networks:
+      - monitoring
+    restart: unless-stopped
+
   mysql:
     image: mysql:8.4
     container_name: mysql_container

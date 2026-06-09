@@ -5,6 +5,14 @@ from ..db.base import Base  # 공통 Base 가져오기
 from .model_info import ModelInfo
 from .smishing_log import SmishingLog
 from .static_patterns import StaticPattern
+from .url_candidate import UrlCandidate, VirusTotalQuota
 
 # 외부(예: main.py)에서 쓸 수 있도록 노출 (선택사항)
-__all__ = ["Base", "ModelInfo", "SmishingLog", "StaticPattern"]
+__all__ = [
+    "Base",
+    "ModelInfo",
+    "SmishingLog",
+    "StaticPattern",
+    "UrlCandidate",
+    "VirusTotalQuota",
+]
