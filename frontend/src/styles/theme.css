@@ -1,5 +1,26 @@
 @custom-variant dark (&:is(.dark *));
 
+/* ============================================
+   접근성 — 키보드 포커스 / 모션 감소
+   ============================================ */
+
+/* 키보드 포커스 시 명확한 outline (마우스 클릭에는 표시 안 함) */
+:focus-visible {
+  outline: 3px solid #2563EB;
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+/* 전정감각 문제 보호 — 어르신/민감 사용자 */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
 :root {
   --font-size: 16px;
   --background: #ffffff;

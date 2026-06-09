@@ -12,6 +12,8 @@ import {
   FileText,
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
+import { EmptyState } from "./EmptyState";
+import { LoadingSkeleton } from "./LoadingSkeleton";
 
 interface HistoryItem {
   id: string;
@@ -340,16 +342,24 @@ export function History() {
       {/* List */}
       <div className="space-y-3">
         <AnimatePresence>
-          {filtered.length === 0 ? (
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              className="text-center py-20"
-            >
-              <FileText size={40} className="mx-auto mb-4 text-white/10" />
-              <p className="text-sm text-white/30">분석 이력이 없습니다.</p>
-              <p className="text-xs text-white/20 mt-1">문자 분석 탭에서 분석을 시작하세요.</p>
-            </motion.div>
+          {loading && items.length === 0 ? (
+            <LoadingSkeleton variant="list" count={5} />
+          ) : filtered.length === 0 ? (
+            items.length === 0 ? (
+              <EmptyState
+                icon="history"
+                title="아직 검사 이력이 없어요"
+                description="문자·URL·이미지를 검사해보시면 여기에 기록이 쌓여요."
+                action={{ label: "검사 시작하기", to: "/analyze" }}
+              />
+            ) : (
+              <EmptyState
+                icon="search"
+                title="검색 결과가 없어요"
+                description="다른 검색어로 시도하거나 필터를 변경해보세요."
+                action={{ label: "필터 초기화", onClick: () => { setSearch(""); setFilter("전체"); } }}
+              />
+            )
           ) : (
             filtered.map((item) => (
               <HistoryCard key={item.id} item={item} onDelete={handleDelete} />

@@ -4,6 +4,7 @@ import { Link2, Search, AlertTriangle, CheckCircle, Shield, RefreshCw, ExternalL
 import { Card } from "./ui/Primitives";
 import { api, ApiException } from "@/lib/api";
 import type { UrlAnalysisResult } from "@/types/api";
+import { ErrorState } from "./ErrorState";
 
 interface URLResult {
   url: string;
@@ -182,6 +183,14 @@ export function URLAnalyzer() {
       </Card>
 
       <AnimatePresence>
+        {error && (
+          <ErrorState
+            type="unknown"
+            title="URL 분석에 실패했어요"
+            description={error}
+            onRetry={() => handleAnalyze()}
+          />
+        )}
         {result && rs && (
           <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-4">
             {/* Risk header */}

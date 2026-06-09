@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { BookOpen, ChevronDown, ChevronUp, AlertTriangle, ShieldCheck, TrendingUp, Users, Radio, ExternalLink, RefreshCw, Building2 } from "lucide-react";
+import { EmptyState } from "./EmptyState";
 
 interface Case {
   id: string;
@@ -324,9 +325,17 @@ export function CaseStudies() {
 
       {/* Cases */}
       <div className="space-y-3">
-        {filtered.map((c) => {
-          const ss = SEV_STYLE[c.severity];
-          const isOpen = expanded === c.id;
+        {filtered.length === 0 ? (
+          <EmptyState
+            icon="cases"
+            title="이 카테고리에 해당하는 사례가 없어요"
+            description="다른 카테고리를 선택하거나 전체 보기를 눌러보세요."
+            action={{ label: "전체 보기로 전환", onClick: () => setCatFilter("전체") }}
+          />
+        ) : (
+          filtered.map((c) => {
+            const ss = SEV_STYLE[c.severity];
+            const isOpen = expanded === c.id;
           return (
             <motion.div key={c.id} layout className={`rounded-2xl border overflow-hidden ${ss.bg} ${ss.border}`}>
               {/* Header */}
@@ -408,12 +417,12 @@ export function CaseStudies() {
                         <p className="text-xs text-white/55 leading-relaxed">{c.outcome}</p>
                       </div>
                     </div>
-                  </motion.div>
+                   </motion.div>
                 )}
               </AnimatePresence>
             </motion.div>
           );
-        })}
+        }))}
       </div>
     </div>
   );

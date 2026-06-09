@@ -92,7 +92,7 @@ function LoginGate() {
             <AnimatePresence>{error && <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="text-xs text-red-400 flex items-center gap-1"><AlertCircle size={11} />비밀번호가 틀렸습니다.</motion.p>}</AnimatePresence>
             <button type="submit" disabled={!pw} className="w-full py-2.5 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 text-white text-sm disabled:opacity-40 hover:opacity-90 transition-all">로그인</button>
           </form>
-          <p className="text-[11px] text-white/20 text-center mt-4">힌트: <span className="font-mono">newbiz2025</span></p>
+          <p className="text-[11px] text-white/20 text-center mt-4">힌트: 관리자에게 문의하세요.</p>
         </div>
       </motion.div>
     </div>

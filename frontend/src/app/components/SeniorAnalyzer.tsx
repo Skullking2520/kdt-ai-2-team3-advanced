@@ -4,7 +4,6 @@ import { useNavigate } from "react-router";
 import {
   ShieldAlert, ShieldCheck, AlertTriangle, ArrowLeft, Home,
   Phone, CheckCircle2, ThumbsUp, ThumbsDown, RotateCcw,
-  ZoomIn, ZoomOut,
 } from "lucide-react";
 import { analyzeSms, toLegacyRiskLevel, toSeniorReasons, toSeniorActions } from "@/lib/smsAnalysis";
 
@@ -37,17 +36,8 @@ export function SeniorAnalyzer() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [feedback, setFeedback] = useState<"up" | "down" | null>(null);
-  const [zoom, setZoom] = useState<number>(() => {
-    if (typeof window === "undefined") return 1;
-    return parseFloat(localStorage.getItem("nb_senior_zoom") || "1");
-  });
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const resultRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    localStorage.setItem("nb_senior_zoom", String(zoom));
-    document.documentElement.style.setProperty("--senior-zoom", String(zoom));
-  }, [zoom]);
 
   useEffect(() => { textareaRef.current?.focus(); }, []);
 
@@ -104,7 +94,7 @@ export function SeniorAnalyzer() {
   const cfg = result ? riskConfig[result.risk_level] : null;
 
   return (
-    <div className="min-h-full" style={{ fontSize: `${zoom}rem` }}>
+    <div className="min-h-full">
       {/* 상단 툴바 */}
       <div className="sticky top-0 z-20 bg-[#0b1120]/95 backdrop-blur border-b-2 border-white/10 px-4 py-3">
         <div className="max-w-3xl mx-auto flex items-center gap-2 flex-wrap">
@@ -123,23 +113,7 @@ export function SeniorAnalyzer() {
             <Home size={22} /> 처음
           </button>
 
-          <div className="ml-auto flex items-center gap-2">
-            <button
-              onClick={() => setZoom((z) => Math.max(0.85, +(z - 0.1).toFixed(2)))}
-              className="w-12 h-12 rounded-xl bg-white/8 border-2 border-white/15 text-white hover:bg-white/15 active:scale-95 flex items-center justify-center"
-            >
-              <ZoomOut size={22} />
-            </button>
-            <span className="text-white/70 px-2" style={{ fontSize: "1rem", fontWeight: 600, minWidth: 50, textAlign: "center" }}>
-              {Math.round(zoom * 100)}%
-            </span>
-            <button
-              onClick={() => setZoom((z) => Math.min(1.4, +(z + 0.1).toFixed(2)))}
-              className="w-12 h-12 rounded-xl bg-white/8 border-2 border-white/15 text-white hover:bg-white/15 active:scale-95 flex items-center justify-center"
-            >
-              <ZoomIn size={22} />
-            </button>
-          </div>
+          <div className="ml-auto" />
         </div>
       </div>
 

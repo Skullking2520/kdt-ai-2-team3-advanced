@@ -1,10 +1,10 @@
 import { useNavigate } from "react-router";
 import { motion } from "motion/react";
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import {
   ShieldAlert, MessageSquareWarning, Link2, Phone, Flag, Heart,
   Trophy, BookMarked, Volume2, VolumeX, ArrowRight, ArrowLeft, Home,
-  ZoomIn, ZoomOut, AlertTriangle, PhoneCall, Users, HelpCircle,
+  AlertTriangle, PhoneCall, Users, HelpCircle,
 } from "lucide-react";
 
 const BIG_ACTIONS = [
@@ -28,16 +28,7 @@ const EMERGENCY = [
 
 export function SeniorHome() {
   const nav = useNavigate();
-  const [zoom, setZoom] = useState<number>(() => {
-    if (typeof window === "undefined") return 1;
-    return parseFloat(localStorage.getItem("nb_senior_zoom") || "1");
-  });
   const [speaking, setSpeaking] = useState(false);
-
-  useEffect(() => {
-    localStorage.setItem("nb_senior_zoom", String(zoom));
-    document.documentElement.style.setProperty("--senior-zoom", String(zoom));
-  }, [zoom]);
 
   const speak = (text: string) => {
     if (typeof window === "undefined" || !("speechSynthesis" in window)) return;
@@ -56,7 +47,7 @@ export function SeniorHome() {
   };
 
   return (
-    <div className="min-h-full" style={{ fontSize: `${zoom}rem` }}>
+    <div className="min-h-full">
       {/* 상단 어르신 전용 툴바 (sticky) */}
       <div className="sticky top-0 z-20 bg-[#0b1120]/95 backdrop-blur border-b-2 border-white/10 px-4 py-3">
         <div className="max-w-3xl mx-auto flex items-center gap-2 flex-wrap">
@@ -78,23 +69,6 @@ export function SeniorHome() {
           </button>
 
           <div className="ml-auto flex items-center gap-2">
-            <button
-              onClick={() => setZoom((z) => Math.max(0.85, +(z - 0.1).toFixed(2)))}
-              className="w-12 h-12 rounded-xl bg-white/8 border-2 border-white/15 text-white hover:bg-white/15 active:scale-95 flex items-center justify-center"
-              aria-label="글씨 작게"
-            >
-              <ZoomOut size={22} />
-            </button>
-            <span className="text-white/70 px-2" style={{ fontSize: "1rem", fontWeight: 600, minWidth: 50, textAlign: "center" }}>
-              {Math.round(zoom * 100)}%
-            </span>
-            <button
-              onClick={() => setZoom((z) => Math.min(1.4, +(z + 0.1).toFixed(2)))}
-              className="w-12 h-12 rounded-xl bg-white/8 border-2 border-white/15 text-white hover:bg-white/15 active:scale-95 flex items-center justify-center"
-              aria-label="글씨 크게"
-            >
-              <ZoomIn size={22} />
-            </button>
             <button
               onClick={() => speak("안녕하세요. 이상한 문자를 받으셨나요? 아래 큰 파란 버튼인 문자 검사하기를 누르시면 받은 문자가 안전한지 확인할 수 있어요. 도움이 필요하시면 화면 아래쪽 빨간 버튼을 눌러 가족이나 경찰에게 연락하세요.")}
               className={`w-12 h-12 rounded-xl border-2 flex items-center justify-center active:scale-95 transition-all ${speaking ? "bg-cyan-500/30 border-cyan-400 text-cyan-300" : "bg-white/8 border-white/15 text-white hover:bg-white/15"}`}
@@ -186,21 +160,6 @@ export function SeniorHome() {
           </div>
         </div>
 
-        {/* 가족 도움 요청 */}
-        <button
-          onClick={() => alert("가족에게 알림을 보내시려면 설정에서 가족 연락처를 먼저 등록해주세요.")}
-          className="w-full mb-10 flex items-center gap-4 p-5 rounded-2xl bg-gradient-to-r from-emerald-600/20 to-teal-600/20 border-2 border-emerald-500/40 hover:bg-emerald-500/15 active:scale-[0.99] transition-all"
-        >
-          <div className="w-14 h-14 rounded-xl bg-emerald-500/20 flex items-center justify-center shrink-0">
-            <Users size={26} className="text-emerald-300" />
-          </div>
-          <div className="flex-1 text-left">
-            <p className="text-emerald-200" style={{ fontWeight: 700, fontSize: "1.2rem" }}>가족에게 도움 요청</p>
-            <p className="text-emerald-200/70" style={{ fontSize: "0.95rem" }}>등록된 가족에게 의심 문자를 즉시 공유합니다</p>
-          </div>
-          <ArrowRight size={22} className="text-emerald-300/60 shrink-0" />
-        </button>
-
         {/* 학습/사례 섹션 */}
         <p className="text-white/60 mb-3 flex items-center gap-2" style={{ fontSize: "1.1rem", fontWeight: 600 }}>
           <HelpCircle size={22} className="text-cyan-400" />
@@ -271,8 +230,9 @@ export function SeniorHome() {
         {/* 일반 모드로 전환 */}
         <button
           onClick={() => {
-            localStorage.removeItem("nb_senior");
-            window.location.reload();
+            document.documentElement.classList.remove("senior-mode");
+            localStorage.setItem("nb-senior", "off");
+            nav("/");
           }}
           className="w-full mb-6 flex items-center justify-center gap-3 p-4 rounded-2xl bg-white/5 border-2 border-white/10 text-white/60 hover:bg-white/10 hover:text-white/80 active:scale-[0.99] transition-all"
           style={{ fontSize: "1rem", fontWeight: 600 }}
@@ -281,7 +241,7 @@ export function SeniorHome() {
         </button>
 
         <p className="text-center text-white/40 mt-6" style={{ fontSize: "0.95rem" }}>
-          화면 위쪽 <b className="text-cyan-400">+/-</b> 버튼으로 글씨 크기를 조절할 수 있어요.
+          도움 필요하시면 우측 상단 <b className="text-cyan-400">🔊</b> 버튼을 눌러보세요.
         </p>
       </div>
     </div>

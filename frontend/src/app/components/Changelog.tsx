@@ -37,7 +37,7 @@ const VERSIONS = [
     type: "minor",
     highlight: "",
     changes: [
-      { type: "feat", icon: Star, text: "관리자 인증 시스템 (AdminContext) 구현 (비밀번호: newbiz2025)" },
+      { type: "feat", icon: Star, text: "관리자 인증 시스템 (AdminContext) 구현 — VITE_ADMIN_PASSWORD 환경변수 사용" },
       { type: "feat", icon: Star, text: "AdminPanel 모델 성능 비교 페이지 추가" },
       { type: "feat", icon: Star, text: "SMS 시뮬레이터 (SMSSimulator) 인터랙티브 받은문자함 추가" },
       { type: "feat", icon: Star, text: "제로데이 탐지 원리 (ZeroDayExplainer) 추가" },

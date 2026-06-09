@@ -327,13 +327,16 @@ export function Layout() {
               <button
                 onClick={() => setSeniorMode((v) => !v)}
                 title={seniorMode ? "큰 글씨 모드 끄기" : "큰 글씨 모드 켜기"}
-                className={`p-2 rounded-lg transition-colors ${
+                aria-label={seniorMode ? "큰 글씨 모드 끄기" : "큰 글씨 모드 켜기"}
+                aria-pressed={seniorMode}
+                className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg transition-colors ${
                   seniorMode
                     ? "bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400"
                     : "text-gray-500 dark:text-white/50 hover:bg-gray-100 dark:hover:bg-white/5"
                 }`}
               >
-                <Type size={16} />
+                <Type size={14} />
+                <span className="text-xs" style={{ fontWeight: 500 }}>큰글씨</span>
               </button>
 
               {/* 다크/라이트 토글 */}

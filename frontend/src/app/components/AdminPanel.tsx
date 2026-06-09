@@ -279,7 +279,7 @@ function LoginGate() {
           </form>
 
           <p className="text-[11px] text-white/20 text-center mt-5">
-            힌트: <span className="font-mono">newbiz2025</span>
+            힌트: <span className="font-mono">관리자에게 문의하세요.</span>
           </p>
         </div>
       </motion.div>

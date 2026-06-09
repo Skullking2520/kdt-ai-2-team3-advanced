@@ -1,66 +1,88 @@
-import { Link, useNavigate } from "react-router";
-import { Home, Search, ArrowLeft, ShieldAlert } from "lucide-react";
+import { useNavigate } from "react-router";
 import { motion } from "motion/react";
+import { Home, Search, ShieldCheck, ArrowLeft, Compass } from "lucide-react";
+
+/* ────────────────────────── 404 페이지 ────────────────────────── */
+
+const POPULAR_LINKS = [
+  { to: "/analyze", icon: ShieldCheck, label: "문자 검사", desc: "스미싱 의심 문자 확인" },
+  { to: "/url", icon: Search, label: "URL 검사", desc: "의심 링크 분석" },
+  { to: "/cases", icon: Compass, label: "피해 사례", desc: "최근 스미싱 사례 보기" },
+  { to: "/guide", icon: Home, label: "안전 가이드", desc: "스미싱 예방법" },
+];
 
 export function NotFound() {
   const nav = useNavigate();
 
   return (
-    <div className="min-h-[calc(100vh-200px)] flex items-center justify-center px-4 sm:px-6 py-12">
+    <div className="min-h-[calc(100vh-200px)] flex items-center justify-center px-4 py-12">
       <motion.div
         initial={{ opacity: 0, y: 12 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.3 }}
-        className="max-w-xl w-full text-center"
+        className="w-full max-w-lg text-center"
       >
-        <div className="inline-flex items-center justify-center w-20 h-20 rounded-2xl bg-amber-50 dark:bg-amber-900/15 border border-amber-200 dark:border-amber-700/30 mb-6">
-          <ShieldAlert size={36} className="text-amber-500 dark:text-amber-400" />
+        {/* 404 일러스트 */}
+        <div className="mb-6">
+          <div className="inline-flex items-center justify-center w-24 h-24 rounded-3xl bg-gradient-to-br from-blue-500/15 to-violet-500/15 border border-white/10 mb-4">
+            <span className="text-4xl text-white/80" style={{ fontWeight: 800, letterSpacing: "-0.04em" }}>
+              404
+            </span>
+          </div>
         </div>
 
-        <p className="text-7xl mb-2 text-amber-500 dark:text-amber-400" style={{ fontWeight: 800 }}>
-          404
-        </p>
-        <h1 className="text-2xl text-gray-900 dark:text-white mb-2" style={{ fontWeight: 700 }}>
+        {/* 메시지 */}
+        <h1 className="text-2xl text-white mb-2" style={{ fontWeight: 700, letterSpacing: "-0.01em" }}>
           페이지를 찾을 수 없어요
         </h1>
-        <p className="text-sm text-gray-600 dark:text-white/60 mb-8 leading-relaxed">
-          요청하신 주소가 잘못되었거나, 더 이상 제공하지 않는 페이지일 수 있어요.
+        <p className="text-sm text-white/50 mb-8 leading-relaxed">
+          요청하신 페이지가 삭제되었거나, 주소가 잘못 입력된 것 같아요.
           <br />
-          스미싱·피싱 분석은 홈에서 다시 시작하실 수 있습니다.
+          아래에서 다른 페이지를 확인해보세요.
         </p>
 
-        <div className="flex flex-col sm:flex-row items-center justify-center gap-2">
+        {/* 액션 버튼 */}
+        <div className="flex items-center justify-center gap-2 mb-10">
           <button
             onClick={() => nav(-1)}
-            className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-lg border border-gray-200 dark:border-white/10 text-sm text-gray-700 dark:text-white/70 hover:bg-gray-50 dark:hover:bg-white/5 transition-colors"
+            className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl text-sm bg-white/5 hover:bg-white/10 text-white/70 border border-white/10 transition-colors"
           >
             <ArrowLeft size={14} />
             이전 페이지
           </button>
-          <Link
-            to="/analyze"
-            className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-lg border border-blue-200 dark:border-blue-500/30 text-sm text-blue-700 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors"
-          >
-            <Search size={14} />
-            문자 검사하기
-          </Link>
-          <Link
-            to="/"
-            className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-lg text-sm text-white transition-opacity hover:opacity-90"
-            style={{ backgroundColor: "#2563EB", fontWeight: 600 }}
+          <button
+            onClick={() => nav("/")}
+            className="flex items-center gap-1.5 px-5 py-2.5 rounded-xl text-sm bg-blue-600 hover:bg-blue-500 text-white transition-colors"
+            style={{ fontWeight: 600 }}
           >
             <Home size={14} />
             홈으로
-          </Link>
+          </button>
         </div>
 
-        <p className="text-xs text-gray-400 dark:text-white/30 mt-8">
-          문제가 계속되면{" "}
-          <Link to="/report" className="underline hover:text-blue-500">
-            신고하기
-          </Link>
-          로 알려주세요.
-        </p>
+        {/* 추천 링크 */}
+        <div className="bg-[#111c30] border border-white/10 rounded-2xl p-5">
+          <p className="text-xs text-white/40 mb-3 uppercase tracking-widest" style={{ fontWeight: 600 }}>
+            추천 페이지
+          </p>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+            {POPULAR_LINKS.map(({ to, icon: Icon, label, desc }) => (
+              <button
+                key={to}
+                onClick={() => nav(to)}
+                className="flex items-center gap-3 p-3 rounded-xl bg-white/5 hover:bg-white/10 border border-white/8 hover:border-white/20 transition-all text-left"
+              >
+                <div className="w-9 h-9 rounded-lg bg-blue-500/15 flex items-center justify-center shrink-0">
+                  <Icon size={15} className="text-blue-400" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm text-white/85" style={{ fontWeight: 600 }}>{label}</p>
+                  <p className="text-[11px] text-white/40 truncate">{desc}</p>
+                </div>
+              </button>
+            ))}
+          </div>
+        </div>
       </motion.div>
     </div>
   );

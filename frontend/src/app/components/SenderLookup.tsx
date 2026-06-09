@@ -2,6 +2,7 @@ import { useState } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { Phone, Search, AlertTriangle, CheckCircle, Clock, Flag, RefreshCw } from "lucide-react";
 import { Card } from "./ui/Primitives";
+import { ErrorState } from "./ErrorState";
 
 interface SenderResult {
   number: string;
@@ -62,13 +63,23 @@ export function SenderLookup() {
   const [input, setInput] = useState("");
   const [result, setResult] = useState<SenderResult | null>(null);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const handleSearch = (val?: string) => {
     const target = (val ?? input).trim();
     if (!target) return;
     setLoading(true);
     setResult(null);
-    setTimeout(() => { setResult(mockLookup(target)); setLoading(false); }, 800);
+    setError(null);
+    setTimeout(() => {
+      try {
+        setResult(mockLookup(target));
+      } catch (e) {
+        setError(e instanceof Error ? e.message : "조회 중 오류가 발생했어요");
+      } finally {
+        setLoading(false);
+      }
+    }, 800);
   };
 
   const ss = result ? STATUS_STYLE[result.status] : null;
@@ -113,6 +124,14 @@ export function SenderLookup() {
       </Card>
 
       <AnimatePresence>
+        {error && (
+          <ErrorState
+            type="unknown"
+            title="발신번호 조회에 실패했어요"
+            description={error}
+            onRetry={() => handleSearch()}
+          />
+        )}
         {result && ss && (
           <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-4">
             {/* Status banner */}

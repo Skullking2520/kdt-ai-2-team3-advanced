@@ -7,6 +7,9 @@ import {
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { analyzeSms, toLegacyRiskLevel, URGENCY_KEYWORDS } from "@/lib/smsAnalysis";
+// 백엔드 연동 준비: 추후 handleAnalyze에서 api.analyze() 결과로 직접 setResult 예정
+// 현재는 즉시 미리보기를 위해 analyzeSms (오프라인) 사용
+import { api } from "@/lib/api";
 
 interface AnalysisResult {
   risk_level: "danger" | "warning" | "normal";
