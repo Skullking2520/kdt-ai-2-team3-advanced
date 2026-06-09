@@ -1,20 +1,22 @@
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from ..models.smishing_log import DetectionType, SmishingLog
+from ..models.smishing_log import DetectionType, InputType, SmishingLog
 
 
 async def create_smishing_log(
     db: AsyncSession,
-    message_content: str,
+    content: str,
     is_smishing: bool,
     detection_type: DetectionType,
+    input_type: InputType | None = None,
     ai_score: float | None = None,
     reasoning: str | None = None,
 ) -> SmishingLog:
     log = SmishingLog(
-        message_content=message_content,
+        content=content,
         is_smishing=is_smishing,
         detection_type=detection_type,
+        input_type=input_type,
         ai_score=ai_score,
         reasoning=reasoning,
     )
