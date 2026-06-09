@@ -1,8 +1,14 @@
 # src/backend/main.py
+import logging
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s %(levelname)-8s %(name)s - %(message)s",
+)
 
 from .core.config import CORS_OPTIONS, configure_app
 from .core.exceptions import exception_handlers

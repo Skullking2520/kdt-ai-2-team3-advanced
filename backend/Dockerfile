@@ -7,6 +7,12 @@ RUN apt-get update && apt-get install -y \
     build-essential \
     default-libmysqlclient-dev \
     pkg-config \
+    libgomp1 \
+    libglib2.0-0 \
+    libgl1 \
+    libsm6 \
+    libxext6 \
+    libxrender1 \
     && rm -rf /var/lib/apt/lists/*
 
 # default-libmysqlclient-dev: MySQL 클라이언트 라이브러리의 개발 헤더와 라이브러리를 설치
