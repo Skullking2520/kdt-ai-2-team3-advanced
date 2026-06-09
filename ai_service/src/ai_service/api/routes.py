@@ -5,7 +5,6 @@ from urllib.request import urlopen
 
 from fastapi import APIRouter, HTTPException
 from langchain_core.messages import HumanMessage
-from chromadb.api.types import Metadata
 
 from ..schema.routes import HealthCheckResponse
 from ..schema.graph import GraphInvokeRequest, GraphInvokeResponse
