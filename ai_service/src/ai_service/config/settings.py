@@ -6,8 +6,7 @@ from dotenv import find_dotenv
 from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
-_AI_SERVICE_ROOT = Path(__file__).resolve().parents[3]
-
+_PARENT_DIRECTORY = Path(__file__).resolve().parents[1]
 
 # 환경변수 읽어오는 설정
 class Settings(BaseSettings):
@@ -18,7 +17,7 @@ class Settings(BaseSettings):
     PINECONE_INDEX: str = Field(default="")  # 파인콘 데이터를 담는 기본 단위
 
     # CHROMA DB
-    CHROMA_DB_DIR: str = Field(default=str(_AI_SERVICE_ROOT / "data" / "chroma_db"))
+    CHROMA_DB_DIR: str = Field(default=str(_PARENT_DIRECTORY / "data" / "chroma_db"))
     CHROMA_COLLECTION_NAME: str = Field(default="zeroday_smishing_patterns")
 
     # 임베딩 설정 (예: "openai", "ollama", "huggingface")
