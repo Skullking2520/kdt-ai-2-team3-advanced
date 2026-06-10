@@ -20,7 +20,11 @@ from datetime import datetime
 from zoneinfo import ZoneInfo
 
 from .config import S3_BUCKET
-from ._clients import get_s3_client
+import boto3
+from .config import S3_REGION
+
+def get_s3_client():
+    return boto3.client("s3", region_name=S3_REGION)
 
 KST = ZoneInfo("Asia/Seoul")
 

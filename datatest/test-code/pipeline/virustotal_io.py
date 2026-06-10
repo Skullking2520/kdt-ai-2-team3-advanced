@@ -128,6 +128,42 @@ def _call_domain(domain: str) -> dict:
 
 
 # ─────────────────────────────────────────────────
+# 퍼블릭 래퍼 (스케줄러용)
+# 할당량 체크 → VT 호출 → 사용량 증가 → raw dict 반환
+# 요약·DB 갱신은 호출자(scheduler)가 담당
+# ─────────────────────────────────────────────────
+
+def check_url(url: str, mode: MODE = "auto") -> dict | None:
+    """URL VT 조회. 실패·할당량 초과 시 None 반환."""
+    ok, reason = can_call(mode)
+    if not ok:
+        print(f"[VT] 호출 불가: {reason}")
+        return None
+    try:
+        raw = _call_url(url)
+    except requests.HTTPError as e:
+        print(f"[VT] API 오류: {e}")
+        return None
+    _increment_quota(date.today(), mode)
+    return raw
+
+
+def check_domain(domain: str, mode: MODE = "auto") -> dict | None:
+    """도메인 VT 조회. 실패·할당량 초과 시 None 반환."""
+    ok, reason = can_call(mode)
+    if not ok:
+        print(f"[VT] 호출 불가: {reason}")
+        return None
+    try:
+        raw = _call_domain(domain)
+    except requests.HTTPError as e:
+        print(f"[VT] API 오류: {e}")
+        return None
+    _increment_quota(date.today(), mode)
+    return raw
+
+
+# ─────────────────────────────────────────────────
 # 요약 (한글화)
 # ─────────────────────────────────────────────────
 
@@ -178,7 +214,6 @@ def summarize_report(raw: dict) -> dict:
         "마지막업데이트": _format_timestamp(attrs.get("last_modification_date")),
         "탐지엔진수":    f"{malicious}개 엔진에서 악성 탐지",
         "탐지엔진":      detected,
-        "원본응답":      raw,
     }
 
 
@@ -214,6 +249,7 @@ def _save_to_s3(
     record = {
         "pattern_value": pattern_value,
         "summary":       summary,
+        "raw":           raw,
         "checked_at":    datetime.now(timezone.utc).isoformat(),
     }
     return append_vt(mode, [record])

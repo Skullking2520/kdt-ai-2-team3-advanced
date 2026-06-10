@@ -8,17 +8,11 @@ dependencies = [
     "ai_service",
     "ai_monitoring",
     "python-dotenv>=1.2.2",
-<<<<<<< HEAD
     "ipykernel>=7.2.0",
     "ragas==0.3.9",
     "langchain-community<0.4.0",
     "rapidfuzz>=3.14.5",
     "ipywidgets>=8.1.8",
-=======
-    "ragas==0.3.9",
-    "langchain-community<0.4.0",
-    "rapidfuzz>=3.14.5",
->>>>>>> 8c62da3375a0a137d435407a196a257263d939fe
 ] # backend를 로컬 편집 가능(editable) 패키지로 등록
 
 [tool.uv.sources]
@@ -57,11 +51,7 @@ addopts = "-v --durations=10"   # 기본 옵션 (상세 출력, 느린 테스트
 members = [
     "backend",
     "ai_service",
-<<<<<<< HEAD
     "ai_monitoring",
-=======
-    "ai_monitoring"
->>>>>>> 8c62da3375a0a137d435407a196a257263d939fe
 ]
 
 [dependency-groups]
