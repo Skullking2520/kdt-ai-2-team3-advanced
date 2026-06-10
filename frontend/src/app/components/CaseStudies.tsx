@@ -346,17 +346,17 @@ export function CaseStudies() {
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 flex-wrap mb-1.5">
                     <span className={`text-[10px] px-2 py-0.5 rounded border ${ss.bg} ${ss.border} ${ss.text} font-mono`}>{ss.label}</span>
-                    <span className="text-[10px] px-2 py-0.5 rounded bg-white/5 border border-white/10 text-white/35">{c.category}</span>
-                    <span className="text-[10px] text-white/25">{c.year}</span>
+                    <span className="text-[10px] px-2 py-0.5 rounded bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 text-slate-700 dark:text-white/35">{c.category}</span>
+                    <span className="text-[10px] text-slate-500 dark:text-white/25">{c.year}</span>
                     {c.arrested && <span className="text-[10px] px-1.5 py-0.5 rounded bg-emerald-500/15 border border-emerald-500/25 text-emerald-400">검거</span>}
                   </div>
-                  <p className="text-sm text-white/80" style={{ fontWeight: 600 }}>{c.title}</p>
+                  <p className="text-sm text-slate-900 dark:text-white/80" style={{ fontWeight: 600 }}>{c.title}</p>
                   <div className="flex gap-4 mt-1.5">
-                    <span className="text-xs text-red-400">피해액 {c.damage}</span>
-                    <span className="text-xs text-white/40">피해자 {c.victims}</span>
+                    <span className="text-xs text-red-600 dark:text-red-400">피해액 {c.damage}</span>
+                    <span className="text-xs text-slate-600 dark:text-white/40">피해자 {c.victims}</span>
                   </div>
                 </div>
-                {isOpen ? <ChevronUp size={14} className="text-white/30 shrink-0 mt-0.5" /> : <ChevronDown size={14} className="text-white/30 shrink-0 mt-0.5" />}
+                {isOpen ? <ChevronUp size={14} className="text-slate-500 dark:text-white/30 shrink-0 mt-0.5" /> : <ChevronDown size={14} className="text-slate-500 dark:text-white/30 shrink-0 mt-0.5" />}
               </button>
 
               <AnimatePresence>

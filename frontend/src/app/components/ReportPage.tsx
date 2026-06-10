@@ -95,11 +95,11 @@ export function ReportPage() {
       {/* Header */}
       <div className="mb-8">
         <div className="flex items-center gap-2 mb-2">
-          <Flag size={14} className="text-rose-400" />
-          <span className="text-xs text-rose-400 tracking-widest uppercase">커뮤니티 기여</span>
+          <Flag size={14} className="text-rose-600 dark:text-rose-400" />
+          <span className="text-xs text-rose-600 dark:text-rose-400 tracking-widest uppercase">커뮤니티 기여</span>
         </div>
-        <h1 className="text-white mb-1" style={{ fontWeight: 700, fontSize: "1.5rem" }}>피싱 문자 신고 & 제보</h1>
-        <p className="text-sm text-white/40">
+        <h1 className="text-slate-900 dark:text-white mb-1" style={{ fontWeight: 700, fontSize: "1.5rem" }}>피싱 문자 신고 & 제보</h1>
+        <p className="text-sm text-slate-600 dark:text-white/40">
           의심 문자를 제보하면 AI 학습 데이터로 활용되어 탐지 성능이 향상됩니다.
         </p>
       </div>
@@ -129,11 +129,11 @@ export function ReportPage() {
                       className="w-full flex items-center justify-between px-3 py-2.5 bg-[#0b1120] border border-white/10 rounded-lg text-sm hover:border-white/20 transition-all"
                     >
                       {selectedCat ? (
-                        <span className="text-white/80">{selectedCat.label}</span>
+                        <span className="text-slate-900 dark:text-white/80">{selectedCat.label}</span>
                       ) : (
-                        <span className="text-white/30">유형을 선택하세요</span>
+                        <span className="text-slate-500 dark:text-white/30">유형을 선택하세요</span>
                       )}
-                      <ChevronDown size={13} className={`text-white/30 transition-transform ${catOpen ? "rotate-180" : ""}`} />
+                      <ChevronDown size={13} className={`text-slate-500 dark:text-white/30 transition-transform ${catOpen ? "rotate-180" : ""}`} />
                     </button>
                     <AnimatePresence>
                       {catOpen && (
@@ -141,17 +141,17 @@ export function ReportPage() {
                           initial={{ opacity: 0, y: -4 }}
                           animate={{ opacity: 1, y: 0 }}
                           exit={{ opacity: 0, y: -4 }}
-                          className="absolute top-full left-0 right-0 mt-1 bg-[#0d1526] border border-white/10 rounded-xl overflow-hidden z-10 shadow-xl"
+                          className="absolute top-full left-0 right-0 mt-1 bg-white dark:bg-[#0d1526] border border-slate-200 dark:border-white/10 rounded-xl overflow-hidden z-10 shadow-xl"
                         >
                           {CATEGORIES.map((cat) => (
                             <button
                               key={cat.value}
                               type="button"
                               onClick={() => { setCategory(cat.value); setCatOpen(false); }}
-                              className={`w-full flex items-center justify-between px-4 py-3 text-sm hover:bg-white/5 transition-all ${category === cat.value ? "bg-rose-500/10 text-rose-300" : "text-white/60"}`}
+                              className={`w-full flex items-center justify-between px-4 py-3 text-sm hover:bg-slate-50 dark:hover:bg-white/5 transition-all ${category === cat.value ? "bg-rose-50 dark:bg-rose-500/10 text-rose-700 dark:text-rose-300" : "text-slate-700 dark:text-white/60"}`}
                             >
                               <span>{cat.label}</span>
-                              <span className="text-[11px] text-white/25">{cat.count}건 등록</span>
+                              <span className="text-[11px] text-slate-400 dark:text-white/25">{cat.count}건 등록</span>
                             </button>
                           ))}
                         </motion.div>
@@ -259,7 +259,7 @@ export function ReportPage() {
                 <button
                   type="submit"
                   disabled={!isValid}
-                  className="w-full py-3 rounded-xl bg-gradient-to-r from-rose-500 to-pink-600 text-white text-sm disabled:opacity-40 disabled:cursor-not-allowed hover:opacity-90 transition-all shadow-lg shadow-rose-500/20 flex items-center justify-center gap-2"
+                  className="w-full py-3 rounded-xl bg-gradient-to-r from-rose-600 to-pink-700 text-white text-sm font-semibold disabled:opacity-50 disabled:cursor-not-allowed hover:opacity-95 transition-all shadow-lg shadow-rose-600/30 flex items-center justify-center gap-2"
                 >
                   <Send size={14} />
                   제보 제출하기

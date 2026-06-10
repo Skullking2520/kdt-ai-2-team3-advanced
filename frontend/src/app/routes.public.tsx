@@ -5,6 +5,7 @@
 import { Landing } from "./components/Landing";
 import { Analyzer } from "./components/Analyzer";
 import { SeniorAnalyzer } from "./components/SeniorAnalyzer";
+import { SeniorHome } from "./components/SeniorHome";
 import { URLAnalyzer } from "./components/URLAnalyzer";
 import { ImageAnalyzer } from "./components/ImageAnalyzer";
 import { SenderLookup } from "./components/SenderLookup";
@@ -28,6 +29,7 @@ export const publicRoutes: RouteObject[] = [
   { path: "analyze", Component: Analyzer },
   { path: "analyze/progress", Component: AnalysisProgress },
   { path: "analyze/result/:id", Component: AnalysisResult },
+  { path: "senior-home", Component: SeniorHome },
   { path: "senior-analyze", Component: SeniorAnalyzer },
   { path: "url", Component: URLAnalyzer },
   { path: "image", Component: ImageAnalyzer },
@@ -42,4 +44,5 @@ export const publicRoutes: RouteObject[] = [
   { path: "changelog", Component: Changelog },
   { path: "easy", Component: EasyCheck },
   { path: "emergency", Component: Emergency },
+  { path: "senior-home", Component: SeniorHome },
 ];

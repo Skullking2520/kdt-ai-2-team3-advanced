@@ -217,7 +217,13 @@ export function History() {
   const [loading, setLoading] = useState(false);
 
   // 백엔드 연동: 페이지 마운트 시 검사 이력 로드
+  // VITE_USE_MOCK=true (기본값) 일 때는 fetch 스킵하고 MOCK_HISTORY 사용 — 백엔드 안 켜도 콘솔 에러 X
   useEffect(() => {
+    const useMock = import.meta.env.VITE_USE_MOCK !== "false";
+    if (useMock) {
+      setItems(MOCK_HISTORY);
+      return;
+    }
     let cancelled = false;
     (async () => {
       setLoading(true);
