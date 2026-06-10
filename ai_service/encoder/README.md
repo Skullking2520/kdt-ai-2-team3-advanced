@@ -95,7 +95,7 @@ python ai_service/encoder/training/run_kcelectra_retrain_experiments.py \
 - 8자리 이상 전화번호 형태는 `<PHONE>`으로 치환
 - 5-6자리 인증번호처럼 짧은 숫자는 유지
 
-서비스 추론 시에는 `deploy/app`의 wrapper가 Encoder Endpoint 호출 전 동일한 모델
+서비스 추론 시에는 `deploy_wrapper/app`의 wrapper가 Encoder Endpoint 호출 전 동일한 모델
 입력 정규화를 적용한다.
 
 ## What Is Not Committed

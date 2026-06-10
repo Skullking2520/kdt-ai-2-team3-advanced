@@ -1,0 +1,317 @@
+@custom-variant dark (&:is(.dark *));
+
+/* ============================================
+   접근성 — 키보드 포커스 / 모션 감소
+   ============================================ */
+
+/* 키보드 포커스 시 명확한 outline (마우스 클릭에는 표시 안 함) */
+:focus-visible {
+  outline: 3px solid #2563EB;
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+/* 전정감각 문제 보호 — 어르신/민감 사용자 */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+:root {
+  --font-size: 16px;
+  --background: #ffffff;
+  --foreground: oklch(0.145 0 0);
+  --card: #ffffff;
+  --card-foreground: oklch(0.145 0 0);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.145 0 0);
+  --primary: #030213;
+  --primary-foreground: oklch(1 0 0);
+  --secondary: oklch(0.95 0.0058 264.53);
+  --secondary-foreground: #030213;
+  --muted: #ececf0;
+  --muted-foreground: #717182;
+  --accent: #e9ebef;
+  --accent-foreground: #030213;
+  --destructive: #d4183d;
+  --destructive-foreground: #ffffff;
+  --border: rgba(0, 0, 0, 0.1);
+  --input: transparent;
+  --input-background: #f3f3f5;
+  --switch-background: #cbced4;
+  --font-weight-medium: 500;
+  --font-weight-normal: 400;
+  --ring: oklch(0.708 0 0);
+  --chart-1: oklch(0.646 0.222 41.116);
+  --chart-2: oklch(0.6 0.118 184.704);
+  --chart-3: oklch(0.398 0.07 227.392);
+  --chart-4: oklch(0.828 0.189 84.429);
+  --chart-5: oklch(0.769 0.188 70.08);
+  --radius: 0.625rem;
+  --sidebar: oklch(0.985 0 0);
+  --sidebar-foreground: oklch(0.145 0 0);
+  --sidebar-primary: #030213;
+  --sidebar-primary-foreground: oklch(0.985 0 0);
+  --sidebar-accent: oklch(0.97 0 0);
+  --sidebar-accent-foreground: oklch(0.205 0 0);
+  --sidebar-border: oklch(0.922 0 0);
+  --sidebar-ring: oklch(0.708 0 0);
+}
+
+.dark {
+  --background: oklch(0.145 0 0);
+  --foreground: oklch(0.985 0 0);
+  --card: oklch(0.145 0 0);
+  --card-foreground: oklch(0.985 0 0);
+  --popover: oklch(0.145 0 0);
+  --popover-foreground: oklch(0.985 0 0);
+  --primary: oklch(0.985 0 0);
+  --primary-foreground: oklch(0.205 0 0);
+  --secondary: oklch(0.269 0 0);
+  --secondary-foreground: oklch(0.985 0 0);
+  --muted: oklch(0.269 0 0);
+  --muted-foreground: oklch(0.708 0 0);
+  --accent: oklch(0.269 0 0);
+  --accent-foreground: oklch(0.985 0 0);
+  --destructive: oklch(0.396 0.141 25.723);
+  --destructive-foreground: oklch(0.637 0.237 25.331);
+  --border: oklch(0.269 0 0);
+  --input: oklch(0.269 0 0);
+  --ring: oklch(0.439 0 0);
+  --font-weight-medium: 500;
+  --font-weight-normal: 400;
+  --chart-1: oklch(0.488 0.243 264.376);
+  --chart-2: oklch(0.696 0.17 162.48);
+  --chart-3: oklch(0.769 0.188 70.08);
+  --chart-4: oklch(0.627 0.265 303.9);
+  --chart-5: oklch(0.645 0.246 16.439);
+  --sidebar: oklch(0.205 0 0);
+  --sidebar-foreground: oklch(0.985 0 0);
+  --sidebar-primary: oklch(0.488 0.243 264.376);
+  --sidebar-primary-foreground: oklch(0.985 0 0);
+  --sidebar-accent: oklch(0.269 0 0);
+  --sidebar-accent-foreground: oklch(0.985 0 0);
+  --sidebar-border: oklch(0.269 0 0);
+  --sidebar-ring: oklch(0.439 0 0);
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-input-background: var(--input-background);
+  --color-switch-background: var(--switch-background);
+  --color-ring: var(--ring);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+  }
+
+  /**
+  * Default typography styles for HTML elements (h1-h4, p, label, button, input).
+  * These are in @layer base, so Tailwind utility classes (like text-sm, text-lg) automatically override them.
+  */
+
+  html {
+    font-size: var(--font-size);
+  }
+
+  h1 {
+    font-size: var(--text-2xl);
+    font-weight: var(--font-weight-medium);
+    line-height: 1.5;
+  }
+
+  h2 {
+    font-size: var(--text-xl);
+    font-weight: var(--font-weight-medium);
+    line-height: 1.5;
+  }
+
+  h3 {
+    font-size: var(--text-lg);
+    font-weight: var(--font-weight-medium);
+    line-height: 1.5;
+  }
+
+  h4 {
+    font-size: var(--text-base);
+    font-weight: var(--font-weight-medium);
+    line-height: 1.5;
+  }
+
+  label {
+    font-size: var(--text-base);
+    font-weight: var(--font-weight-medium);
+    line-height: 1.5;
+  }
+
+  button {
+    font-size: var(--text-base);
+    font-weight: var(--font-weight-medium);
+    line-height: 1.5;
+  }
+
+  input {
+    font-size: var(--text-base);
+    font-weight: var(--font-weight-normal);
+    line-height: 1.5;
+  }
+}
+
+/* ============================================
+   큰 글씨 모드 (어르신 친화 모드)
+   ============================================ */
+html.senior-mode {
+  font-size: 19px;
+}
+html.senior-mode body {
+  line-height: 1.7;
+}
+html.senior-mode .text-xs { font-size: 0.95rem; }
+html.senior-mode .text-sm { font-size: 1.05rem; }
+html.senior-mode .text-base { font-size: 1.15rem; }
+html.senior-mode .text-lg { font-size: 1.3rem; }
+html.senior-mode .text-xl { font-size: 1.5rem; }
+html.senior-mode .text-2xl { font-size: 1.8rem; }
+html.senior-mode .text-\[10px\] { font-size: 0.85rem; }
+html.senior-mode .text-\[11px\] { font-size: 0.9rem; }
+html.senior-mode button,
+html.senior-mode a {
+  letter-spacing: 0;
+}
+html.senior-mode input,
+html.senior-mode textarea {
+  font-size: 1.15rem !important;
+}
+
+/* ============================================================
+   다크/라이트 모드 — 레거시 다크 컴포넌트 → 라이트 변환
+   ============================================================ */
+
+/* 1. 레거시 하드코딩 다크 배경색 → 라이트 */
+html:not(.dark) .bg-\[\#0b1120\] { background-color: #f8fafc; }
+html:not(.dark) .bg-\[\#0d1526\] { background-color: #f1f5f9; }
+html:not(.dark) .bg-\[\#111c30\] { background-color: #ffffff; }
+html:not(.dark) .bg-\[\#0a1628\] { background-color: #f8fafc; }
+html:not(.dark) .bg-\[\#0c1829\] { background-color: #f1f5f9; }
+html:not(.dark) .bg-\[\#0e1f35\] { background-color: #ffffff; }
+html:not(.dark) .bg-\[\#13243d\] { background-color: #f1f5f9; }
+html:not(.dark) .bg-\[\#0b1526\] { background-color: #f8fafc; }
+html:not(.dark) .bg-\[\#1a2d47\] { background-color: #ffffff; }
+
+/* 2. 흰 텍스트 → 다크 텍스트 (라이트 모드) */
+html:not(.dark) .text-white     { color: #1e293b; }
+html:not(.dark) .text-white\/70 { color: #475569; }
+html:not(.dark) .text-white\/60 { color: #64748b; }
+html:not(.dark) .text-white\/55 { color: #64748b; }
+html:not(.dark) .text-white\/50 { color: #94a3b8; }
+html:not(.dark) .text-white\/45 { color: #94a3b8; }
+html:not(.dark) .text-white\/40 { color: #94a3b8; }
+html:not(.dark) .text-white\/35 { color: #94a3b8; }
+html:not(.dark) .text-white\/30 { color: #cbd5e1; }
+html:not(.dark) .text-white\/25 { color: #cbd5e1; }
+html:not(.dark) .text-white\/20 { color: #e2e8f0; }
+
+/* 3. 컬러 배경 위의 흰 텍스트 보호 (파란 버튼 등) */
+html:not(.dark) [class*="bg-blue-"].text-white,
+html:not(.dark) [class*="bg-blue-"] .text-white,
+html:not(.dark) [class*="bg-emerald-"].text-white,
+html:not(.dark) [class*="bg-emerald-"] .text-white,
+html:not(.dark) [class*="bg-red-"].text-white,
+html:not(.dark) [class*="bg-red-"] .text-white,
+html:not(.dark) [class*="bg-amber-"].text-white,
+html:not(.dark) [class*="bg-amber-"] .text-white,
+html:not(.dark) [class*="bg-violet-"].text-white,
+html:not(.dark) [class*="bg-violet-"] .text-white,
+html:not(.dark) [class*="bg-cyan-"].text-white,
+html:not(.dark) [class*="bg-cyan-"] .text-white,
+html:not(.dark) [class*="bg-orange-"].text-white,
+html:not(.dark) [class*="bg-orange-"] .text-white,
+html:not(.dark) [class*="bg-green-"].text-white,
+html:not(.dark) [class*="bg-green-"] .text-white,
+html:not(.dark) [class*="bg-indigo-"].text-white,
+html:not(.dark) [class*="bg-indigo-"] .text-white { color: #ffffff; }
+
+/* 4. 흰 테두리 → 연한 경계선 */
+html:not(.dark) .border-white\/10 { border-color: rgba(0,0,0,0.08); }
+html:not(.dark) .border-white\/8  { border-color: rgba(0,0,0,0.06); }
+html:not(.dark) .border-white\/5  { border-color: rgba(0,0,0,0.04); }
+html:not(.dark) .border-white\/20 { border-color: rgba(0,0,0,0.12); }
+
+/* 5. divide 유틸리티 */
+html:not(.dark) .divide-white\/5 > * + * { border-color: rgba(0,0,0,0.04); }
+html:not(.dark) .divide-white\/8 > * + * { border-color: rgba(0,0,0,0.06); }
+
+/* 6. 흰색 반투명 배경 → 어두운 반투명 배경 */
+html:not(.dark) .bg-white\/5  { background-color: rgba(0,0,0,0.03); }
+html:not(.dark) .bg-white\/10 { background-color: rgba(0,0,0,0.05); }
+html:not(.dark) .bg-white\/2  { background-color: rgba(0,0,0,0.01); }
+html:not(.dark) .hover\:bg-white\/2:hover { background-color: rgba(0,0,0,0.02); }
+html:not(.dark) .hover\:bg-white\/5:hover { background-color: rgba(0,0,0,0.03); }
+
+/* 7. 다크 모드 전용 파스텔 색상 (300번대) → 라이트 모드에서 진한 색상으로 변환 */
+html:not(.dark) .text-blue-300   { color: #1d4ed8; }
+html:not(.dark) .text-red-300    { color: #b91c1c; }
+html:not(.dark) .text-orange-300 { color: #c2410c; }
+html:not(.dark) .text-amber-300  { color: #b45309; }
+html:not(.dark) .text-emerald-300 { color: #047857; }
+html:not(.dark) .text-cyan-300   { color: #0e7490; }
+html:not(.dark) .text-rose-300   { color: #be185d; }
+html:not(.dark) .text-violet-300 { color: #6d28d9; }
+html:not(.dark) .text-green-300  { color: #15803d; }
+html:not(.dark) .text-pink-300   { color: #be185d; }
+html:not(.dark) .text-sky-300    { color: #0369a1; }
+html:not(.dark) .text-indigo-300 { color: #4338ca; }
+
+/* 400번대 중간 색상 (다크 모드용) → 라이트 모드에서 더 진하게 */
+html:not(.dark) .text-blue-400   { color: #1d4ed8; }
+html:not(.dark) .text-emerald-400 { color: #047857; }
+html:not(.dark) .text-cyan-400   { color: #0e7490; }
+html:not(.dark) .text-rose-400   { color: #be185d; }
+html:not(.dark) .text-violet-400 { color: #6d28d9; }
+html:not(.dark) .text-amber-400  { color: #b45309; }
+html:not(.dark) .text-orange-400 { color: #c2410c; }
+
