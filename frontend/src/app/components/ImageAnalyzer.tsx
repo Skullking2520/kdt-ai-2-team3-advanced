@@ -11,12 +11,6 @@ const OCR_STEPS = [
   "완료",
 ];
 
-const MOCK_OCR_RESULTS = [
-  "【CJ대한통운】배송 주소 확인이 필요합니다. 주소 오류로 반송 예정입니다. 확인: http://cj-delivery-check.com/re123",
-  "고객님 본인인증이 만료되었습니다. 즉시 재인증하지 않으면 계좌가 정지됩니다. http://kb-secure-verify.net/auth",
-  "【국민건강보험】미납 보험료 안내. 3일 이내 미납 시 급여 정지됩니다. 납부: http://nhis-pay-kr.com/check",
-  "안녕 엄마 나야 폰이 고장났어 새 번호로 바꿨어 급하게 상품권 50만원어치 필요해 010-9382-7461",
-];
 
 export function ImageAnalyzer() {
   const [file, setFile] = useState<File | null>(null);
@@ -65,9 +59,6 @@ export function ImageAnalyzer() {
     setOcrText(null);
     setOcrError(false);
 
-    // 5% 확률로 OCR 실패 시뮬레이션
-    const willFail = Math.random() < 0.05;
-
     let step = 0;
     const interval = setInterval(() => {
       step += 1;
@@ -75,12 +66,6 @@ export function ImageAnalyzer() {
       if (step >= OCR_STEPS.length - 1) {
         clearInterval(interval);
         setTimeout(async () => {
-          if (willFail) {
-            setOcrError(true);
-            setOcrRunning(false);
-            return;
-          }
-          // 백엔드 연동: VITE_USE_MOCK=true 면 mock OCR, false 면 실제 OCR API
           try {
             const dataUri = await new Promise<string>((resolve, reject) => {
               const reader = new FileReader();
@@ -97,10 +82,7 @@ export function ImageAnalyzer() {
             if (e instanceof ApiException) {
               console.error("[ImageAnalyzer] OCR 실패:", e.message);
             }
-            // OCR 실패 시 fallback으로 mock 사용 (기존 UX 보존)
-            const mockText = MOCK_OCR_RESULTS[Math.floor(Math.random() * MOCK_OCR_RESULTS.length)];
-            setOcrText(mockText);
-            setEditedText(mockText);
+            setOcrError(true);
             setOcrRunning(false);
           }
         }, 400);

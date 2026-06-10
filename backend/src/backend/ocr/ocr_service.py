@@ -224,6 +224,17 @@ def _count_korean(text: str) -> int:
 
 
 def _typo_suspicion_score(text: str) -> float:
+    """
+    OCR 오인식 의심 토큰 비율을 0.0~1.0으로 반환한다.
+
+    PaddleOCR 한국어 인식 시 자주 발생하는 오인식 유형 3가지를 감지한다.
+      1. 한글+특수문자 혼재 토큰: 'ㄷ[', '않았디면' 처럼 한글 사이에 기호가 섞임
+         → OCR이 유사한 모양의 글자를 특수문자로 잘못 인식한 경우
+      2. 한글+영문 혼재 토큰: '사O용', '확인lnk' 처럼 한글 단어 안에 영문자가 섞임
+         → 한글 획과 영문 알파벳 모양이 유사해 혼동 (예: 'ㅇ'↔'O', 'ㅣ'↔'l'·'I')
+      3. 낱자(자음/모음 단독) 출현: 'ㄷ', 'ㅏ' 처럼 완성형 음절이 아닌 낱자
+         → 인식 실패로 음절이 분리된 경우
+    """
     tokens = re.findall(r"[가-힣A-Za-z0-9\[\]\{\}\|\^\~•ㄱ-ㅎㅏ-ㅣ\-−]+", text)
     if not tokens:
         return 1.0
@@ -263,6 +274,20 @@ def _has_repeated_text(text: str) -> bool:
 
 
 def _has_broken_smishing_pattern(text: str) -> bool:
+    """
+    스미싱 핵심 패턴(URL·전화번호)이 OCR에 의해 끊겨 있는지 감지한다.
+
+    해상도가 낮거나 문자 간격이 넓은 이미지에서 PaddleOCR은 연속된 문자열을
+    분리해 읽는다. 예: "http://..." → "h t t p : / / ...", "010-1234" → "0 1 0 - 1 2 3 4"
+    이 상태로는 URL/전화번호 정규식 추출이 실패하므로 CLOVA로 재처리해야 한다.
+
+    탐지 패턴:
+      - h(공백*)t(공백*)t(공백*)p : URL 프로토콜이 끊긴 경우
+      - w(공백*)w(공백*)w         : www 도메인이 끊긴 경우
+      - .(공백*)(kr|com|...)      : 도메인 확장자 앞 점이 분리된 경우
+      - 0(공백*)1(공백*)0         : 전화번호 앞자리가 끊긴 경우
+      - 숫자[OoIl]숫자            : 숫자 0↔O, 1↔l·I 혼동 (예: '0l0' → '010')
+    """
     if re.search(r"h\s*t\s*t\s*p", text, re.IGNORECASE):
         return True
     if re.search(r"w\s*w\s*w", text, re.IGNORECASE):
@@ -277,6 +302,21 @@ def _has_broken_smishing_pattern(text: str) -> bool:
 
 
 def _ocr_quality_score(text: str) -> float:
+    """
+    추출된 텍스트의 한국어 SMS로서의 품질을 1.0(완벽)~0.0(판독 불가)으로 점수화한다.
+
+    한국어 SMS는 대부분 한글로 구성되므로 아래 기준으로 감점한다.
+
+    감점 항목:
+      - 텍스트 길이 < 10자  (-0.5): 텍스트 추출 자체가 거의 실패한 경우
+      - 한글 비율 < 0.45    (-0.5): 한국어 SMS인데 한글이 절반 미만 → 전면 오인식
+      - 한글 비율 < 0.65    (-0.25): 한글 비율이 낮음 → 부분 오인식
+      - 특수문자 출현       (-0.2): {}[]|^~■□ 등은 OCR이 한글을 기호로 잘못 읽은 흔적
+      - 특수문자 비율 > 5%  (-0.2): 광범위한 오인식
+      - 반복 텍스트         (-0.4): 같은 영역을 이중 인식한 경우
+      - 오타 의심 토큰 존재 (-0.2~0.6): _typo_suspicion_score 비율에 따라 단계 감점
+      - broken smishing 패턴(-0.3): URL·전화번호가 끊겨 있어 스미싱 탐지 불가 우려
+    """
     compact = _compact(text)
     if not compact:
         return 0.0
@@ -324,6 +364,21 @@ def _need_clova_fallback(
     avg_conf_threshold: float = 0.95,
     min_conf_threshold: float = 0.85,
 ) -> bool:
+    """
+    PaddleOCR 결과를 그대로 사용할지, CLOVA로 재처리할지 판단한다.
+    하나라도 해당되면 CLOVA fallback을 수행한다.
+
+    판단 기준:
+      - 빈 텍스트: 이미지에서 텍스트를 전혀 못 읽은 경우
+      - avg_confidence < 0.95: 인식된 문자의 평균 신뢰도.
+          한국어 인쇄체 SMS는 선명하면 0.99 이상이 일반적.
+          0.95 미만이면 여러 문자가 불확실하게 읽혔다는 의미.
+      - min_confidence < 0.85: 가장 낮은 신뢰도.
+          0.85 미만이면 핵심 단어 하나가 통째로 잘못 읽혔을 수 있음.
+      - OCR 노이즈(_has_ocr_noise): 한글+기호 혼재, 낱자 출현 등 명백한 오인식 흔적
+      - broken smishing 패턴: URL·전화번호가 끊겨 스미싱 탐지 정확도가 저하될 수 있음
+      - quality_score < 0.9: 위 항목들을 종합한 품질 점수가 기준 미달
+    """
     if not text.strip():
         return True
     if avg_confidence < avg_conf_threshold:
@@ -368,7 +423,10 @@ async def extract_text_from_image(data_uri: str) -> str:
             logger.info("[OCR] CLOVA 성공 → CLOVA 결과 사용 | text=%r", clova_text[:80])
             return clova_text
         logger.warning("[OCR] CLOVA 빈 결과 → PaddleOCR 결과 유지")
-        return paddle_text
     except Exception as e:
         logger.warning("[OCR] CLOVA 호출 실패(%s) → PaddleOCR 결과 유지", e)
-        return paddle_text
+
+    if not paddle_text.strip():
+        raise RuntimeError("이미지에서 텍스트를 추출할 수 없습니다. 더 선명한 이미지를 사용해 주세요.")
+
+    return paddle_text

@@ -235,7 +235,7 @@ async def _ocr_extract(image_data: str) -> str:
         from ..ocr.ocr_service import extract_text_from_image
         return await extract_text_from_image(image_data)
     except RuntimeError as exc:
-        raise HTTPException(status_code=501, detail=str(exc)) from exc
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
 
 
 async def _predict_url(
