@@ -39,9 +39,10 @@ class Settings(BaseSettings):
     DECODER_ENDPOINT_URL: str | None = Field(default=None)
     EXPLAINER_MODEL: str = Field(default="Qwen/Qwen3-1.7B")
     USE_MOCK_MODEL: bool = Field(default=False)
+    USE_MOCK_OCR: bool = Field(default=False)
     MODEL_VERSION: str = Field(default="unknown")
 
-    # CLOVA OCR 설정 (USE_MOCK_MODEL=False 시 필요)
+    # CLOVA OCR 설정 (USE_MOCK_OCR=False 시 필요)
     CLOVA_OCR_URL: str | None = Field(default=None)
     CLOVA_OCR_SECRET: str | None = Field(default=None)
 

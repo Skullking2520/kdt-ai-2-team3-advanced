@@ -228,7 +228,7 @@ def _to_static_pattern_rows(
 
 async def _ocr_extract(image_data: str) -> str:
     # image_data: base64 data URI ("data:image/jpeg;base64,...")
-    if settings.USE_MOCK_MODEL:
+    if settings.USE_MOCK_OCR:
         return "[국외발신] 귀하의 계좌가 정지되었습니다. 확인 → http://fake-ocr-test.com"
 
     try:
