@@ -3,7 +3,7 @@ from datetime import datetime, timezone
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..models.static_patterns import PatternType, StaticPattern
-from ..repository.static_pattern_repository import create_static_patterns_if_new
+from ..repository.static_pattern_repository import upsert_static_patterns
 from ..schemas.report_api import ReportRequest, ReportResponse
 from ..utils.preprocessor import extract_static_patterns
 
@@ -57,7 +57,7 @@ async def save_report_static_patterns(
     request: ReportRequest,
 ) -> ReportResponse:
     rows = _to_static_pattern_rows(request)
-    await create_static_patterns_if_new(db, rows)
+    await upsert_static_patterns(db, rows)
 
     return ReportResponse(
         receiptId=_generate_receipt_id(),

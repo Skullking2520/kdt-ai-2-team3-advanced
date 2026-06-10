@@ -1,21 +1,25 @@
-from sqlalchemy import func, select, tuple_
+import hashlib
+
+from sqlalchemy import select, tuple_, update
+from sqlalchemy.dialects.mysql import insert as mysql_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..models.static_patterns import PatternType, StaticPattern
+
+
+def _hash_value(value: str) -> str:
+    return hashlib.sha256(value.strip().lower().encode()).hexdigest()
 
 
 async def find_matching_static_patterns(
     db: AsyncSession,
     extracted_patterns: dict[PatternType, list[str]],
 ) -> list[StaticPattern]:
-    # 데이터베이스(DB)에 이미 존재하는지 한 번에 대량 조회(Bulk Lookup)
     lookup_pairs = []
     for pattern_type, values in extracted_patterns.items():
-        lookup_pairs.extend(
-            (pattern_type, value.strip().lower())
-            for value in values
-            if value and value.strip()
-        )
+        for value in values:
+            if value and value.strip():
+                lookup_pairs.append((pattern_type, _hash_value(value)))
 
     if not lookup_pairs:
         return []
@@ -24,69 +28,60 @@ async def find_matching_static_patterns(
         select(StaticPattern).where(
             tuple_(
                 StaticPattern.pattern_type,
-                func.lower(StaticPattern.pattern_value),
+                StaticPattern.pattern_hash,
             ).in_(set(lookup_pairs))
         )
     )
-
     return list(rows.scalars().all())
 
 
-async def create_static_patterns_if_new(
+async def increment_pattern_counts(
     db: AsyncSession,
-    patterns: list[dict],
-) -> list[StaticPattern]:
+    patterns: list[StaticPattern],
+) -> None:
     if not patterns:
-        return []
-
-    normalized_patterns = []
-    seen = set()
-    for pattern in patterns:
-        pattern_type = pattern["pattern_type"]
-        pattern_value = pattern["pattern_value"].strip()[:255]
-        description = pattern.get("description")
-        key = (pattern_type, pattern_value.lower())
-
-        if not pattern_value or key in seen:
-            continue
-
-        seen.add(key)
-        normalized_patterns.append(
-            {
-                "pattern_type": pattern_type,
-                "pattern_value": pattern_value,
-                "description": description[:255] if description else None,
-            }
-        )
-
-    if not normalized_patterns:
-        return []
-
-    pattern_types = {pattern["pattern_type"] for pattern in normalized_patterns}
-    lower_values = {pattern["pattern_value"].lower() for pattern in normalized_patterns}
-    existing_rows = await db.execute(
-        select(StaticPattern.pattern_type, StaticPattern.pattern_value)
-        .where(StaticPattern.pattern_type.in_(pattern_types))
-        .where(func.lower(StaticPattern.pattern_value).in_(lower_values))
+        return
+    ids = [p.id for p in patterns]
+    await db.execute(
+        update(StaticPattern)
+        .where(StaticPattern.id.in_(ids))
+        .values(report_count=StaticPattern.report_count + 1)
     )
-    existing = {
-        (pattern_type, pattern_value.lower())
-        for pattern_type, pattern_value in existing_rows.all()
-    }
-
-    new_patterns = [
-        StaticPattern(**pattern)
-        for pattern in normalized_patterns
-        if (pattern["pattern_type"], pattern["pattern_value"].lower()) not in existing
-    ]
-
-    if not new_patterns:
-        return []
-
-    db.add_all(new_patterns)
     await db.commit()
 
-    for pattern in new_patterns:
-        await db.refresh(pattern)
 
-    return new_patterns
+async def upsert_static_patterns(
+    db: AsyncSession,
+    patterns: list[dict],
+) -> None:
+    if not patterns:
+        return
+
+    seen = set()
+    for pattern in patterns:
+        value = pattern["pattern_value"].strip()
+        if not value:
+            continue
+
+        pattern_hash = _hash_value(value)
+        if pattern_hash in seen:
+            continue
+        seen.add(pattern_hash)
+
+        await db.execute(
+            mysql_insert(StaticPattern)
+            .values(
+                pattern_type=pattern["pattern_type"],
+                pattern_value=value[:500],
+                pattern_hash=pattern_hash,
+                description=pattern.get("description", "")[:255] if pattern.get("description") else None,
+                source=pattern.get("source"),
+                is_active=True,
+                report_count=1,
+            )
+            .on_duplicate_key_update(
+                report_count=StaticPattern.report_count + 1,
+            )
+        )
+
+    await db.commit()

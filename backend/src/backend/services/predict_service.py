@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import re
 import time
 from typing import Any
 
@@ -13,8 +12,9 @@ from ..models.static_patterns import PatternType, StaticPattern
 from ..models.smishing_log import DetectionType, InputType
 from ..repository.smishing_log_repository import create_smishing_log
 from ..repository.static_pattern_repository import (
-    create_static_patterns_if_new,
     find_matching_static_patterns,
+    increment_pattern_counts,
+    upsert_static_patterns,
 )
 from ..schemas.predict_api import EncoderClassificationOutput, PredictRequest
 from ..templates.predict_templates import (
@@ -45,71 +45,8 @@ EXPLAINER_UNAVAILABLE_EXPLANATION = (
     "링크나 개인정보 입력 요청에 응하지 마세요."
 )
 
-_think_pattern = re.compile(r"<think>.*?</think>", re.DOTALL)
 _encoder_output_adapter = TypeAdapter(list[EncoderClassificationOutput])
 _encoder_client = None
-_explainer_client = None
-
-_SYSTEM_PROMPT = (
-    "/no_think\n"
-    "당신은 스미싱(SMS 피싱) 탐지 전문가입니다."
-    "주어진 문자 내용과 감지된 특징을 근거로, "
-    "해당 문자가 스미싱으로 의심되는 이유를 한글로 설명하세요."
-    "70자 미만의 한문장으로 설명해야되며 인사말과 추가 질문이 들어가서는 안됩니다."
-)
-
-_FEW_SHOT_EXAMPLES = [
-    {
-        "text": "[국민건강보험] 건강보험료 환급금 32만원 발생. 당일 신청 마감.",
-        "features": "- 위험 키워드 감지: 환급, 당일입금",
-        "answer": (
-            "공공기관을 사칭해 환급금을 미끼로 긴급 신청을 유도하므로 "
-            "스미싱 가능성이 높습니다."
-        ),
-    },
-    {
-        "text": "[대법원] 귀하의 민사소송 접수 완료. 확인 → http://supcourt-kr.com",
-        "features": "- 외부 링크 포함: http://supcourt-kr.com",
-        "answer": (
-            "공식 기관을 사칭하며 의심스러운 URL 접속을 유도하므로 "
-            "스미싱 가능성이 높습니다."
-        ),
-    },
-    {
-        "text": "토론토에서 온 작가입니다. whatsapp: bookworm_jim canada.net",
-        "features": "- 외부 연락처 유도: whatsapp: bookworm_jim canada.net",
-        "answer": (
-            "외국인을 사칭해 외부 메신저 접촉을 유도하므로 스미싱 가능성이 높습니다."
-        ),
-    },
-    {
-        "text": (
-            "[국민은행] 고객님 계좌가 이상거래로 정지되었습니다. 고객센터: 1588-0000"
-        ),
-        "features": "- 전화번호 포함: 1588-0000",
-        "answer": (
-            "금융기관을 사칭해 전화 연결과 개인정보 제공을 유도하므로 "
-            "스미싱 가능성이 높습니다."
-        ),
-    },
-    {
-        "text": "네 딸 지금 우리가 데리고 있다. 2시간 안에 500만원 송금해라.",
-        "features": "- 금전 관련 내용: 500만원",
-        "answer": (
-            "납치를 빙자한 협박으로 긴급 송금을 요구하므로 스미싱 가능성이 높습니다."
-        ),
-    },
-    {
-        "text": (
-            "[국외발신] 귀하의 소포가 세관에 보류되었습니다. "
-            "통관료 결제 후 수령 가능합니다."
-        ),
-        "features": "- 해외 발신 문자",
-        "answer": (
-            "해외 발신 문자로 세관 통관료 결제를 요구하므로 스미싱 가능성이 높습니다."
-        ),
-    },
-]
 
 
 def _to_pattern_lookup(extracted: dict[str, list[str]]) -> dict[PatternType, list[str]]:
@@ -163,28 +100,6 @@ def _get_encoder_client():
 
     return _encoder_client
 
-
-def _get_explainer_client():
-    global _explainer_client
-    if _explainer_client is None:
-        try:
-            from huggingface_hub import AsyncInferenceClient
-        except ImportError as exc:
-            raise HTTPException(
-                status_code=500,
-                detail="huggingface_hub 패키지가 설치되어 있지 않습니다.",
-            ) from exc
-
-        kwargs: dict[str, Any] = {
-            "api_key": settings.HF_TOKEN,
-            "timeout": settings.HF_TIMEOUT_SECONDS,
-        }
-        if settings.DECODER_ENDPOINT_URL:
-            kwargs["base_url"] = settings.DECODER_ENDPOINT_URL
-
-        _explainer_client = AsyncInferenceClient(**kwargs)
-
-    return _explainer_client
 
 
 def _normalize_encoder_response(response: Any) -> list[Any]:
@@ -276,81 +191,10 @@ def _build_features(text: str, extracted: dict[str, list[str]]) -> str:
     return "\n".join(items) if items else "- 특이 사항 없음"
 
 
-def _build_raw_prompt(text: str, features: str) -> str:
-    prompt = f"<|im_start|>system\n{_SYSTEM_PROMPT}<|im_end|>\n"
-
-    for example in _FEW_SHOT_EXAMPLES:
-        prompt += (
-            "<|im_start|>user\n"
-            f"문자 내용: {example['text']}\n"
-            f"감지된 특징:\n{example['features']}\n"
-            "이유:<|im_end|>\n"
-            "<|im_start|>assistant\n"
-            f"{example['answer']}<|im_end|>\n"
-        )
-
-    prompt += (
-        "<|im_start|>user\n"
-        f"문자 내용: {text[:300]}\n"
-        f"감지된 특징:\n{features}\n"
-        "이유:<|im_end|>\n"
-        "<|im_start|>assistant\n"
-    )
-
-    return prompt
-
-
-def _normalize_generation_output(raw_output: Any) -> str:
-    if not isinstance(raw_output, str):
-        raw_output = getattr(raw_output, "generated_text", str(raw_output))
-
-    if "이유:" in raw_output:
-        raw_output = raw_output.split("이유:")[-1].strip()
-
-    raw_output = _think_pattern.sub("", raw_output).strip()
-    raw_output = raw_output.replace("<think>", "").replace("</think>", "").strip()
-
-    for remove_word in ["<|im_start|>", "assistant", "<|im_end|>"]:
-        raw_output = raw_output.replace(remove_word, "")
-
-    lines = [line.strip() for line in raw_output.split("\n") if line.strip()]
-
-    return lines[0] if lines else ""
-
-
-def _extract_status_code(exc: Exception) -> int | None:
-    response = getattr(exc, "response", None)
-    status_code = getattr(response, "status_code", None)
-    if isinstance(status_code, int):
-        return status_code
-
-    status_code = getattr(exc, "status_code", None)
-    if isinstance(status_code, int):
-        return status_code
-
-    return None
-
-
-def _is_explainer_unavailable(exc: Exception) -> bool:
-    status_code = _extract_status_code(exc)
-    if status_code in {400, 404, 422, 503, 504, 529}:
-        return True
-
-    message = str(exc).lower()
-    return (
-        "timeout" in message
-        or "timed out" in message
-        or "service unavailable" in message
-        or "not supported" in message
-        or "unsupported" in message
-        or "provider" in message
-    )
-
-
 async def generate_explanation(
-    text: str,
+    text: str,  # noqa: ARG001 — ai_service 연동 후 body에 사용 예정
     label_name: str,
-    features: str,
+    features: str,  # noqa: ARG001 — ai_service 연동 후 body에 사용 예정
 ) -> str:
     if label_name != "스미싱":
         return NORMAL_EXPLANATION
@@ -358,27 +202,11 @@ async def generate_explanation(
     if settings.USE_MOCK_MODEL:
         return "테스트 모드: 스미싱 의심 문자로 탐지되었습니다. 링크나 개인정보 입력 요청에 응하지 마세요."
 
-    # 디코더 미설정 시 mock fallback (인코더와 동일 패턴)
-    if not settings.HF_TOKEN and not settings.DECODER_ENDPOINT_URL:
-        return "테스트 모드: 스미싱 의심 문자로 탐지되었습니다. 링크나 개인정보 입력 요청에 응하지 마세요."
-
-    try:
-        model = None if settings.DECODER_ENDPOINT_URL else settings.EXPLAINER_MODEL
-        raw_output = await _get_explainer_client().text_generation(
-            prompt=_build_raw_prompt(text, features),
-            model=model,
-            max_new_tokens=settings.HF_DECODER_MAX_NEW_TOKENS,
-            temperature=0.01,
-            return_full_text=False,
-        )
-        explanation = _normalize_generation_output(raw_output)
-
-        return explanation or EXPLAINER_UNAVAILABLE_EXPLANATION
-    except Exception as exc:
-        if _is_explainer_unavailable(exc):
-            return EXPLAINER_UNAVAILABLE_EXPLANATION
-
-        return f"설명을 생성할 수 없습니다. ({exc})"
+    # TODO: ai_service 엔드포인트 확정 후 아래 형태로 교체
+    # POST {AI_SERVICE_URL}/api/v1/graph/invoke
+    # body: {"text": text}
+    # response: {"is_smishing": bool, "reason": str}
+    return EXPLAINER_UNAVAILABLE_EXPLANATION
 
 
 def _to_static_pattern_rows(
@@ -392,6 +220,7 @@ def _to_static_pattern_rows(
             "pattern_type": PatternType.URL,
             "pattern_value": url,
             "description": description,
+            "source": "model_detection",
         }
         for url in extracted["urls"]
     ]
@@ -420,6 +249,7 @@ async def _predict_url(
     url_matches = await find_matching_static_patterns(db, {PatternType.URL: [url]})
 
     if url_matches:
+        await increment_pattern_counts(db, url_matches)
         log = await create_smishing_log(
             db, url, is_smishing=True, detection_type=DetectionType.STATIC_PATTERN,
             input_type=InputType.URL,
@@ -467,6 +297,7 @@ async def predict_smishing(
     input_type = InputType(request.type.upper())
 
     if matches:
+        await increment_pattern_counts(db, matches)
         log = await create_smishing_log(
             db, masked_content, is_smishing=True, detection_type=DetectionType.STATIC_PATTERN,
             input_type=input_type,
@@ -492,7 +323,7 @@ async def predict_smishing(
         else:
             features = _build_features(masked_content, extracted)
             reason = await generate_explanation(masked_content, "스미싱", features)
-            await create_static_patterns_if_new(db, _to_static_pattern_rows(extracted, reason))
+            await upsert_static_patterns(db, _to_static_pattern_rows(extracted, reason))
             # 고신뢰도: 인코더가 판정, 디코더는 설명 생성만 담당
             # 애매한 신뢰도: 디코더가 판정에도 참여
             det_type = (
