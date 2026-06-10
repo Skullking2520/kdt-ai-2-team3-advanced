@@ -4,11 +4,8 @@ import { useNavigate } from "react-router";
 import {
   ShieldAlert, ShieldCheck, AlertTriangle, ArrowLeft, Home,
   Phone, CheckCircle2, ThumbsUp, ThumbsDown, RotateCcw,
-  ZoomIn, ZoomOut,
 } from "lucide-react";
-import type { AnalysisResult as ApiAnalysisResult } from "@/types/api";
 import { analyzeSms, toLegacyRiskLevel, toSeniorReasons, toSeniorActions } from "@/lib/smsAnalysis";
-import { api } from "@/lib/api";
 
 interface AnalysisResult {
   risk_level: "danger" | "warning" | "normal";
@@ -30,23 +27,6 @@ const riskConfig = {
   normal:  { label: "안전", desc: "안전한 문자입니다.", color: "text-emerald-200", bg: "bg-emerald-500/15", border: "border-emerald-500/40", trafficLight: "bg-emerald-400" },
 };
 
-// 백엔드 응답(camelCase)을 시니어 UI용 로컬 인터페이스(snake_case)로 변환
-// toSeniorReasons/Actions로 어투 변환 적용 (사전 미등록 문자열은 원문 그대로)
-function adaptApiResult(apiRes: ApiAnalysisResult): AnalysisResult {
-  const riskMap: Record<string, "danger" | "warning" | "normal"> = {
-    high: "danger",
-    medium: "warning",
-    low: "normal",
-  };
-  return {
-    risk_level: riskMap[apiRes.riskLevel] ?? "normal",
-    risk_score: apiRes.riskScore,
-    smishing_type: apiRes.smishingType,
-    reasons: toSeniorReasons(apiRes.reasons.map((r) => r.label)),
-    action_guide: toSeniorActions(apiRes.actionGuide.map((a) => a.action)),
-  };
-}
-
 const MAX_LEN = 500;
 
 export function SeniorAnalyzer() {
@@ -56,21 +36,13 @@ export function SeniorAnalyzer() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [feedback, setFeedback] = useState<"up" | "down" | null>(null);
-  const [zoom, setZoom] = useState<number>(() => {
-    if (typeof window === "undefined") return 1;
-    return parseFloat(localStorage.getItem("nb_senior_zoom") || "1");
-  });
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const resultRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
-    localStorage.setItem("nb_senior_zoom", String(zoom));
-    document.documentElement.style.setProperty("--senior-zoom", String(zoom));
-  }, [zoom]);
-
   useEffect(() => { textareaRef.current?.focus(); }, []);
 
-  // 입력 중 오프라인 즉시 미리보기 — "검사하기" 클릭 시 백엔드 응답으로 덮어씀
+  // 입력 중 빠른 미리보기 분석 (실제 분석은 별도 플로우에서)
+  // smsAnalysis.ts 의 analyzeSms 결과를 시니어 어투로 변환해서 setResult
   useEffect(() => {
     if (!textInput.trim()) { setResult(null); return; }
     const sms = analyzeSms(textInput);
@@ -83,8 +55,7 @@ export function SeniorAnalyzer() {
     });
   }, [textInput]);
 
-  // "검사하기" 클릭 → 백엔드 POST /predict 호출 → adaptApiResult로 시니어 어투 변환 → setResult
-  const handleAnalyze = async () => {
+  const handleAnalyze = () => {
     setError("");
     if (!textInput.trim()) { setError("문자 내용을 입력해주세요."); return; }
     if (textInput.trim().length < 5) { setError("문자를 조금 더 입력해주세요."); return; }
@@ -93,15 +64,23 @@ export function SeniorAnalyzer() {
     setResult(null);
     setFeedback(null);
 
-    try {
-      const apiResult = await api.analyze({ type: "sms", content: textInput });
-      setResult(adaptApiResult(apiResult));
-      setTimeout(() => resultRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 100);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "분석 중 오류가 발생했습니다. 다시 시도해주세요.");
-    } finally {
-      setLoading(false);
-    }
+    setTimeout(() => {
+      try {
+        const sms = analyzeSms(textInput);
+        setResult({
+          risk_level: toLegacyRiskLevel(sms.risk_level),
+          risk_score: sms.risk_score,
+          smishing_type: sms.smishing_type,
+          reasons: toSeniorReasons(sms.reasons),
+          action_guide: toSeniorActions(sms.action_guide),
+        });
+        setLoading(false);
+        setTimeout(() => resultRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 100);
+      } catch (err) {
+        setError("분석 중 오류가 발생했습니다. 다시 시도해주세요.");
+        setLoading(false);
+      }
+    }, 1500);
   };
 
   const handleReset = () => {
@@ -115,7 +94,7 @@ export function SeniorAnalyzer() {
   const cfg = result ? riskConfig[result.risk_level] : null;
 
   return (
-    <div className="min-h-full" style={{ fontSize: `${zoom}rem` }}>
+    <div className="min-h-full">
       {/* 상단 툴바 */}
       <div className="sticky top-0 z-20 bg-[#0b1120]/95 backdrop-blur border-b-2 border-white/10 px-4 py-3">
         <div className="max-w-3xl mx-auto flex items-center gap-2 flex-wrap">
@@ -134,23 +113,7 @@ export function SeniorAnalyzer() {
             <Home size={22} /> 처음
           </button>
 
-          <div className="ml-auto flex items-center gap-2">
-            <button
-              onClick={() => setZoom((z) => Math.max(0.85, +(z - 0.1).toFixed(2)))}
-              className="w-12 h-12 rounded-xl bg-white/8 border-2 border-white/15 text-white hover:bg-white/15 active:scale-95 flex items-center justify-center"
-            >
-              <ZoomOut size={22} />
-            </button>
-            <span className="text-white/70 px-2" style={{ fontSize: "1rem", fontWeight: 600, minWidth: 50, textAlign: "center" }}>
-              {Math.round(zoom * 100)}%
-            </span>
-            <button
-              onClick={() => setZoom((z) => Math.min(1.4, +(z + 0.1).toFixed(2)))}
-              className="w-12 h-12 rounded-xl bg-white/8 border-2 border-white/15 text-white hover:bg-white/15 active:scale-95 flex items-center justify-center"
-            >
-              <ZoomIn size={22} />
-            </button>
-          </div>
+          <div className="ml-auto" />
         </div>
       </div>
 
@@ -489,15 +452,37 @@ export function SeniorAnalyzer() {
                   )}
                 </div>
 
-                {/* 다시 검사 버튼 */}
-                <button
-                  onClick={handleReset}
-                  className="w-full flex items-center justify-center gap-3 px-6 py-5 rounded-2xl bg-gradient-to-r from-cyan-500/20 to-blue-600/20 border-2 border-cyan-500/40 text-cyan-200 hover:bg-cyan-500/30 active:scale-[0.98] transition-all"
-                  style={{ fontWeight: 700, fontSize: "1.3rem" }}
-                >
-                  <RotateCcw size={24} />
-                  다른 문자 검사하기
-                </button>
+                {/* 3버튼 — 사용자 합의: 신고 / 가족 / 다시검사 */}
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <button
+                    onClick={() => nav("/report")}
+                    className="flex items-center justify-center gap-2 px-4 py-4 rounded-2xl bg-red-500/20 border-2 border-red-500/50 text-red-100 hover:bg-red-500/30 active:scale-95 transition-all"
+                    style={{ fontWeight: 700, fontSize: "1.2rem" }}
+                  >
+                    🚨 이 사이트에 신고
+                  </button>
+                  <button
+                    onClick={() => {
+                      if (navigator.share) {
+                        navigator.share({ title: "의심 문자 검사 결과", text: "내가 검사한 문자 — 위험" }).catch(() => {});
+                      } else {
+                        alert("공유 기능은 모바일에서 사용 가능합니다.");
+                      }
+                    }}
+                    className="flex items-center justify-center gap-2 px-4 py-4 rounded-2xl bg-emerald-500/20 border-2 border-emerald-500/50 text-emerald-100 hover:bg-emerald-500/30 active:scale-95 transition-all"
+                    style={{ fontWeight: 700, fontSize: "1.2rem" }}
+                  >
+                    👨‍👩‍👧 가족에게 보여주기
+                  </button>
+                  <button
+                    onClick={handleReset}
+                    className="flex items-center justify-center gap-2 px-4 py-4 rounded-2xl bg-cyan-500/20 border-2 border-cyan-500/50 text-cyan-100 hover:bg-cyan-500/30 active:scale-95 transition-all"
+                    style={{ fontWeight: 700, fontSize: "1.2rem" }}
+                  >
+                    <RotateCcw size={20} />
+                    다시 검사
+                  </button>
+                </div>
               </motion.div>
             )}
           </AnimatePresence>

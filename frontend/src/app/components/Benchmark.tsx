@@ -1,6 +1,6 @@
-import { useState } from "react";
-import { motion } from "motion/react";
-import { BarChart2, Target, Info } from "lucide-react";
+import {useState} from "react";
+import {motion} from "motion/react";
+import {Target, Info} from "lucide-react"
 
 const MODELS = [
   {
@@ -37,7 +37,6 @@ const CATEGORIES = [
 
 /* Confusion Matrix */
 function ConfusionMatrix({ model }: { model: typeof MODELS[0] }) {
-  const total = model.tp + model.fp + model.fn + model.tn;
   const cells = [
     { label: "TP", value: model.tp, color: "bg-emerald-500/25", text: "text-emerald-400", desc: "정확히 탐지한 피싱" },
     { label: "FP", value: model.fp, color: "bg-red-500/15", text: "text-red-400", desc: "정상을 피싱으로 오탐" },

@@ -6,7 +6,7 @@
 
 ---
 
-## 🛠 개발 환경
+##  개발 환경
 
 | | |
 |---|---|
@@ -21,7 +21,7 @@
 
 ---
 
-## 🚀 실행
+##  실행
 
 ```bash
 npm install
@@ -36,7 +36,7 @@ npm run dev               # → http://localhost:5173
 
 ---
 
-## 📁 폴더 구조 (프론트 핵심만)
+##  폴더 구조 (프론트 핵심만)
 
 ```
 src/
@@ -57,7 +57,7 @@ src/
 │   └── mock/             VITE_USE_MOCK=true일 때 응답
 │
 ├── types/
-│   └── api.ts            ⭐ API 명세 (TypeScript 타입)
+│   └── api.ts             API 명세 (TypeScript 타입)
 │
 ├── styles/               CSS (Tailwind 등)
 └── main.tsx              엔트리
@@ -78,7 +78,7 @@ src/
 
 ---
 
-## 🔌 백엔드 연동 흐름
+##  백엔드 연동 흐름
 
 ```
 [페이지 컴포넌트]
@@ -98,7 +98,7 @@ src/
 
 ---
 
-## ✍️ 코딩 컨벤션
+## ️ 코딩 컨벤션
 
 ### 파일/함수
 - 컴포넌트: PascalCase (`Analyzer.tsx`, `RiskLevelCard.tsx`)
@@ -119,7 +119,7 @@ src/
 - 새 라이브러리 추가 없이 시작
 
 ### API 호출
-- 직접 `fetch` ❌ → `api.xxx()` ✅ (인터셉터/에러 일관성)
+- 직접 `fetch`  → `api.xxx()`  (인터셉터/에러 일관성)
 - 새 endpoint 추가: `src/types/api.ts` 에 타입 먼저 → `src/lib/api.ts` 에 함수
 
 ### TypeScript
@@ -129,7 +129,7 @@ src/
 
 ---
 
-## 🧪 자주 하는 작업
+##  자주 하는 작업
 
 ### 1) 새 페이지 추가
 
@@ -174,7 +174,7 @@ const result = await api.myEndpoint({ foo: 'hello' });
 
 ---
 
-## 🐛 디버깅 팁
+##  디버깅 팁
 
 | 증상 | 확인 |
 |---|---|
@@ -186,7 +186,7 @@ const result = await api.myEndpoint({ foo: 'hello' });
 
 ---
 
-## 📋 컨벤션 체크리스트 (PR 전)
+##  컨벤션 체크리스트 (PR 전)
 
 - [ ] TypeScript 에러 0건 (`npm run typecheck`)
 - [ ] 빌드 성공 (`npm run build`)
@@ -194,3 +194,17 @@ const result = await api.myEndpoint({ foo: 'hello' });
 - [ ] console.log 디버그 코드 제거
 - [ ] 다크모드/큰글씨 모드 깨지지 않음
 - [ ] 모바일 (375px 폭) 깨지지 않음
+
+---
+
+## 웹 MVP (참고)
+
+`web_mvp/` 폴더에 React/Vite/Tailwind 기반 스미싱 문자 판별 웹 MVP가 있습니다 (초기 프로토타입). 정식 프론트엔드는 `src/` (Figma export 기반) 사용을 권장합니다.
+
+```bash
+cd frontend/web_mvp
+npm install
+npm run dev
+```
+
+> 정리 권장: web_mvp/는 별도 PR로 삭제하는 게 깔끔합니다 (이 PR에서는 보존).

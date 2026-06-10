@@ -9,7 +9,6 @@
 
 import type {
   AnalysisRequest,
-  AnalysisResult,
   SmsAnalysisResult,
   UrlAnalysisResult,
   ImageAnalysisResult,
@@ -19,7 +18,6 @@ import type {
   Paginated,
   ReportRequest,
   ReportResponse,
-  FeedbackRequest,
   ShareRequest,
   ShareResponse,
   CaseStudy,
@@ -441,7 +439,7 @@ mockHandle.register('POST', '/api/analyze', (body) => {
 
 // OCR
 mockHandle.register('POST', '/api/ocr', (body) => {
-  const req = body as { image: string };
+  const __req = body as { image: string };
   return {
     imageId: `img_${Date.now()}`,
     text: '【CJ대한통운】배송 주소 확인이 필요합니다. 주소 오류로 반송 예정입니다. 확인: http://cj-delivery-check.com/re123',
@@ -470,7 +468,7 @@ mockHandle.register('GET', '/api/history/h4', () => buildUrlResult({ type: 'url'
 
 // 신고
 mockHandle.register('POST', '/api/reports', (body) => {
-  const req = body as ReportRequest;
+  const __req = body as ReportRequest;
   const id = receiptId();
   // (실제로는 DB에 저장)
   return {
@@ -491,7 +489,6 @@ mockHandle.register('POST', '/api/feedback', () => ({ ok: true as const }));
 
 // 공유
 mockHandle.register('POST', '/api/share', (body) => {
-  const req = body as ShareRequest;
   return {
     shareId: `shr_${Date.now()}`,
     shortUrl: `https://nb.shield/r/${Date.now().toString(36)}`,

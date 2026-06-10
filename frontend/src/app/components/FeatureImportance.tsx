@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { motion } from "motion/react";
-import { Microscope, Info, ChevronRight } from "lucide-react";
+import { Microscope, Info } from "lucide-react"
 
 /* ─── SHAP 데이터 ────────────────────────────────── */
 const EXAMPLES = [
@@ -220,7 +220,7 @@ export function FeatureImportance() {
         <p className="text-sm text-white/70 mb-4" style={{ fontWeight: 500 }}>피처 분포 요약 (Beeswarm 스타일)</p>
         <div className="space-y-3">
           {GLOBAL_FEATURES.slice(0, 6).map((f, fi) => {
-            const dots = Array.from({ length: 20 }, (_, i) => ({
+            const dots = Array.from({ length: 20 }, (_, _i) => ({
               x: Math.random() * 200 - 100,
               color: Math.random() > 0.5 ? f.color : "#22c55e",
               size: 2 + Math.random() * 3,

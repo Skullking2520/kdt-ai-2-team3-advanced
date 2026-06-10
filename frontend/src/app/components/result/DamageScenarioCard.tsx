@@ -1,5 +1,5 @@
 import { motion } from "motion/react";
-import { TrendingDown, ArrowDown } from "lucide-react";
+import { TrendingDown } from "lucide-react"
 
 interface DamageScenarioCardProps {
   riskLevel: "danger" | "warning" | "normal";

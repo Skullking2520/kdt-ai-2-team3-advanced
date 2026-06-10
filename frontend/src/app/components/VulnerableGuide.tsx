@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "motion/react";
-import { Heart, ChevronDown, CheckCircle2, XCircle, Phone, MessageSquare, Shield, AlertTriangle, HelpCircle, Link2, Clock, CreditCard } from "lucide-react";
+import { Heart, ChevronDown, CheckCircle2, XCircle, Phone, MessageSquare, Shield, HelpCircle, Link2, Clock, CreditCard } from "lucide-react"
 
 const STEPS = [
   {

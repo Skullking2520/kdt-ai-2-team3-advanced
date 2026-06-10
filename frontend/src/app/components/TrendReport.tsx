@@ -1,6 +1,6 @@
-import { useState } from "react";
-import { motion } from "motion/react";
-import { BarChart2, TrendingUp, TrendingDown, MapPin, CalendarDays, AlertCircle } from "lucide-react";
+import {useState} from "react";
+import {motion} from "motion/react";
+import {BarChart2, TrendingUp, TrendingDown, MapPin, CalendarDays, AlertCircle} from "lucide-react";
 
 /* ── Data ─────────────────────────────────────────────── */
 const MONTHLY = [
@@ -62,7 +62,6 @@ function StackedBarChart({ data }: { data: typeof MONTHLY }) {
         ))}
         {data.map((d, i) => {
           const x = i * (bw + gap);
-          const total = d.high + d.medium + d.low;
           const lowH = (d.low / maxVal) * iH;
           const medH = (d.medium / maxVal) * iH;
           const highH = (d.high / maxVal) * iH;

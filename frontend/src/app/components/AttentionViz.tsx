@@ -116,7 +116,7 @@ export function AttentionViz() {
                 <span className="ml-auto text-xs text-fuchsia-400">{LAYER_NAMES[activeLayer]}</span>
               </div>
               <div className="flex gap-1.5 flex-wrap">
-                {LAYER_NAMES.map((name, i) => (
+                {LAYER_NAMES.map((_name, i) => (
                   <button key={i} onClick={() => setActiveLayer(i)}
                     className={`px-2.5 py-1.5 rounded-lg text-[11px] border transition-all ${
                       activeLayer === i

@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { motion } from "motion/react";
-import { ClipboardList, Lock, Search, Filter, Download } from "lucide-react";
+import { ClipboardList, Lock, Search, Download } from "lucide-react"
 import { useAdmin } from "../context/AdminContext";
 
 interface LogEntry {
@@ -91,8 +91,12 @@ export function AuditLog() {
     ].join("\n");
     const blob = new Blob([csv], { type: "text/csv" });
     const a = document.createElement("a");
-    a.href = URL.createObjectURL(blob);
-    a.download = "audit_log.csv"; a.click();
+    const url = URL.createObjectURL(blob);
+    a.href = url;
+    a.download = "audit_log.csv";
+    a.click();
+    // 클릭 후 blob URL 해제 (메모리 누수 방지)
+    setTimeout(() => URL.revokeObjectURL(url), 0);
   };
 
   return (

@@ -1,6 +1,6 @@
-import { useState, useEffect } from "react";
-import { motion } from "motion/react";
-import { Activity, Server, Cpu, Database, Wifi, CheckCircle, AlertTriangle, XCircle, RefreshCw, Clock } from "lucide-react";
+import {useState, useEffect} from "react";
+import {motion} from "motion/react";
+import {Activity, Server, Cpu, Database, CheckCircle, AlertTriangle, XCircle, RefreshCw, Clock} from "lucide-react"
 
 interface ServiceStatus {
   name: string;
@@ -22,7 +22,7 @@ function useAnimatedMetric(base: number, variance: number): number {
   return Math.max(0, Math.min(100, val));
 }
 
-function Sparkline({ points, color, height = 32 }: { points: number[]; color: string; height?: number }) {
+function _Sparkline({ points, color, height = 32 }: { points: number[]; color: string; height?: number }) {
   const w = 120, h = height, p = 2;
   const min = Math.min(...points), max = Math.max(...points);
   const range = max - min || 1;
@@ -36,7 +36,7 @@ function Sparkline({ points, color, height = 32 }: { points: number[]; color: st
 
 function GaugeArc({ value, color, size = 80 }: { value: number; color: string; size?: number }) {
   const r = (size - 10) / 2;
-  const cx = size / 2, cy = size / 2;
+  const cx = size / 2, _cy = size / 2;
   const circumference = Math.PI * r;
   const dash = (value / 100) * circumference;
   return (

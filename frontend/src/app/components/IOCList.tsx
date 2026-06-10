@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { motion } from "motion/react";
-import { ShieldOff, Search, Plus, Download, Trash2, Filter, RefreshCw, Lock } from "lucide-react";
+import { ShieldOff, Search, Plus, Download, Trash2, RefreshCw, Lock } from "lucide-react"
 import { useAdmin } from "../context/AdminContext";
 
 type IOCType = "URL" | "Domain" | "Phone" | "IP";
@@ -85,8 +85,12 @@ export function IOCList() {
       ...filtered.map((i) => `${i.id},${i.type},"${i.value}",${i.category},${i.addedAt},${i.reportCount},${i.status},${i.source}`)
     ].join("\n");
     const a = document.createElement("a");
-    a.href = URL.createObjectURL(new Blob([csv], { type: "text/csv" }));
-    a.download = "ioc_list.csv"; a.click();
+    const url = URL.createObjectURL(new Blob([csv], { type: "text/csv" }));
+    a.href = url;
+    a.download = "ioc_list.csv";
+    a.click();
+    // 클릭 후 blob URL 해제 (메모리 누수 방지)
+    setTimeout(() => URL.revokeObjectURL(url), 0);
   };
 
   return (

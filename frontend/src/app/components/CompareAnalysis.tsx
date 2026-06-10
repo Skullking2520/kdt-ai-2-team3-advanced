@@ -77,7 +77,7 @@ export function CompareAnalysis() {
 
       {/* Input grid */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4">
-        {([{ val: textA, set: setTextA, label: "문자 A" }, { val: textB, set: setTextB, label: "문자 B" }] as const).map((f, fi) => (
+        {([{ val: textA, set: setTextA, label: "문자 A" }, { val: textB, set: setTextB, label: "문자 B" }] as const).map((f, _fi) => (
           <div key={f.label} className="bg-[#111c30] border border-white/10 rounded-xl p-4">
             <p className="text-xs text-white/35 mb-2">{f.label}</p>
             <textarea value={f.val} onChange={(e) => f.set(e.target.value)} rows={4}

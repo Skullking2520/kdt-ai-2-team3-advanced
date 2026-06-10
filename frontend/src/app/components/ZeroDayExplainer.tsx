@@ -1,27 +1,25 @@
-import { useState, useEffect } from "react";
-import { motion, AnimatePresence } from "motion/react";
+import {useState} from "react"
+import {motion, AnimatePresence} from "motion/react";
 import {
-  Cpu,
-  ArrowRight,
-  Sparkles,
-  Eye,
-  Brain,
-  MessageSquare,
-  ChevronRight,
-  Play,
-  RotateCcw,
-  Layers,
-  Zap,
+Cpu,
+ArrowRight,
+Sparkles,
+Eye,
+Brain,
+MessageSquare,
+ChevronRight,
+Play,
+RotateCcw,
+Layers,
+Zap,
 } from "lucide-react";
 
 /* ── 토큰화 시뮬레이션 ──────────────────────────────────── */
 function tokenize(text: string): { token: string; type: string }[] {
   const tokens: { token: string; type: string }[] = [];
-  const urlRegex = /https?:\/\/[^\s]+/g;
   const urgentWords = ["즉시", "긴급", "정지", "동결", "납부", "미납", "경고", "차단", "만료"];
   const govWords = ["국민건강보험", "국세청", "KB국민은행", "CJ대한통운", "경찰청"];
 
-  let remaining = text;
   let cursor = 0;
 
   while (cursor < text.length) {
@@ -168,7 +166,7 @@ function TokenizerDemo() {
   const [inputText, setInputText] = useState(EXAMPLE_TEXT);
   const [tokens, setTokens] = useState<{ token: string; type: string }[]>([]);
   const [running, setRunning] = useState(false);
-  const [step, setStep] = useState(0);
+  const [_step, setStep] = useState(0);
 
   const runTokenizer = () => {
     if (running) return;

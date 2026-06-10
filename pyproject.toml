@@ -6,13 +6,17 @@ requires-python = ">=3.12,<3.13"
 dependencies = [
     "backend", # 워크스페이스 내의 backend 패키지를 등록
     "ai_service",
+    "ai_monitoring",
     "python-dotenv>=1.2.2",
+    "ragas==0.3.9",
+    "langchain-community<0.4.0",
+    "rapidfuzz>=3.14.5",
 ] # backend를 로컬 편집 가능(editable) 패키지로 등록
 
 [tool.uv.sources]
 backend = { workspace = true }
-frontend_python = { workspace = true }
 ai_service = { workspace = true }
+ai_monitoring = { workspace = true }
 
 [project.optional-dependencies]
 dev = [
@@ -44,7 +48,8 @@ addopts = "-v --durations=10"   # 기본 옵션 (상세 출력, 느린 테스트
 [tool.uv.workspace]
 members = [
     "backend",
-    "ai_service"
+    "ai_service",
+    "ai_monitoring"
 ]
 
 [dependency-groups]

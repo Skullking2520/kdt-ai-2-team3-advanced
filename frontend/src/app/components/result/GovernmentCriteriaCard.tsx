@@ -1,5 +1,5 @@
-import { motion } from "motion/react";
-import { Shield, CheckCircle2, XCircle } from "lucide-react";
+import {motion} from "motion/react";
+import {Shield, CheckCircle2, XCircle} from "lucide-react";
 
 interface Criterion {
   label: string;

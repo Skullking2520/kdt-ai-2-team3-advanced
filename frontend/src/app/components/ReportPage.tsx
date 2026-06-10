@@ -43,7 +43,7 @@ export function ReportPage() {
   const [catOpen, setCatOpen] = useState(false);
   const [agreeShare, setAgreeShare] = useState(false);
   const [submitting, setSubmitting] = useState(false);
-  const [receipt, setReceipt] = useState<ReportResponse | null>(null);
+  const [_receipt, setReceipt] = useState<ReportResponse | null>(null);
 
   const selectedCat = CATEGORIES.find((c) => c.value === category);
   const isValid = category && messageText.trim().length >= 10 && agreeShare;

@@ -1,13 +1,15 @@
-import { Outlet, NavLink, useLocation, useNavigate } from "react-router";
+import {Outlet, NavLink, useLocation, useNavigate} from "react-router";
 import {
-  ShieldCheck, Menu, X, MessageSquareWarning, Link2, ImageIcon,
-  Flag, ChevronDown, Bell, Search, Sun, Moon, BookOpen,
-  History, TrendingUp, Phone, HelpCircle, Zap, Type,
-  AlertTriangle, FileText,
+ShieldCheck, Menu, X, MessageSquareWarning, Link2, ImageIcon,
+Flag, ChevronDown, Bell, Search, Sun, Moon, BookOpen,
+History, TrendingUp, Phone, HelpCircle, Zap, Type,
+AlertTriangle, 
 } from "lucide-react";
-import { useState, useEffect, useRef } from "react";
-import { useAdmin } from "../context/AdminContext";
-import { motion, AnimatePresence } from "motion/react";
+import {useState, useEffect, useRef} from "react";
+import {useAdmin} from "../context/AdminContext";
+import {useSenior} from "../context/SeniorContext";
+import {SeniorBottomBar} from "./senior/SeniorBottomBar";
+import {motion, AnimatePresence} from "motion/react";
 
 const TREND_ALERT = "이번 주 택배·공공기관 사칭 스미싱 급증 — 링크 클릭 전 꼭 확인하세요";
 
@@ -213,21 +215,16 @@ export function Layout() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [alertVisible, setAlertVisible] = useState(true);
   const [isDark, setIsDark] = useState(() => localStorage.getItem("nb-theme") === "dark");
-  const [seniorMode, setSeniorMode] = useState(() => localStorage.getItem("nb-senior") === "on");
 
   const location = useLocation();
   const navigate = useNavigate();
   const { isAdmin } = useAdmin();
+  const { senior: seniorMode, toggle: setSeniorMode } = useSenior();
 
   useEffect(() => {
     document.documentElement.classList.toggle("dark", isDark);
     localStorage.setItem("nb-theme", isDark ? "dark" : "light");
   }, [isDark]);
-
-  useEffect(() => {
-    document.documentElement.classList.toggle("senior-mode", seniorMode);
-    localStorage.setItem("nb-senior", seniorMode ? "on" : "off");
-  }, [seniorMode]);
 
   useEffect(() => {
     setMobileOpen(false);
@@ -284,29 +281,48 @@ export function Layout() {
               </div>
             </button>
 
-            {/* 데스크톱 GNB */}
+            {/* 데스크톱 GNB — 시니어 ON 시 메뉴 압축 (검사/신고/도움 4개) */}
             <nav className="hidden lg:flex items-center gap-0.5 flex-1">
 
               <NavLink to="/" end className={({ isActive }) => navCls(isActive)}>홈</NavLink>
 
-              <NavDropdown
-                label="실시간 검사"
-                items={SCAN_ITEMS}
-                isActive={isScanActive}
-                triggerIcon={Zap}
-              />
+              {seniorMode ? (
+                <>
+                  <NavLink to="/analyze" className={({ isActive }) => navCls(isActive)}>
+                    <MessageSquareWarning size={14} />
+                    문자 검사
+                  </NavLink>
+                  <NavLink to="/report" className={({ isActive }) => navCls(isActive)}>
+                    <Flag size={14} />
+                    신고하기
+                  </NavLink>
+                  <NavLink to="/guide" className={({ isActive }) => navCls(isActive)}>
+                    <BookOpen size={14} />
+                    도움말
+                  </NavLink>
+                </>
+              ) : (
+                <>
+                  <NavDropdown
+                    label="실시간 검사"
+                    items={SCAN_ITEMS}
+                    isActive={isScanActive}
+                    triggerIcon={Zap}
+                  />
 
-              <NavDropdown
-                label="피해 사례"
-                items={CASES_ITEMS}
-                isActive={isCasesActive}
-              />
+                  <NavDropdown
+                    label="피해 사례"
+                    items={CASES_ITEMS}
+                    isActive={isCasesActive}
+                  />
 
-              <NavDropdown
-                label="안전 가이드"
-                items={GUIDE_ITEMS}
-                isActive={isGuideActive}
-              />
+                  <NavDropdown
+                    label="안전 가이드"
+                    items={GUIDE_ITEMS}
+                    isActive={isGuideActive}
+                  />
+                </>
+              )}
 
               <NavLink to="/report" className={({ isActive }) => navCls(isActive)}>
                 <Flag size={14} />
@@ -325,7 +341,7 @@ export function Layout() {
 
               {/* 큰 글씨 모드 토글 */}
               <button
-                onClick={() => setSeniorMode((v) => !v)}
+                onClick={() => setSeniorMode()}
                 title={seniorMode ? "큰 글씨 모드 끄기" : "큰 글씨 모드 켜기"}
                 aria-label={seniorMode ? "큰 글씨 모드 끄기" : "큰 글씨 모드 켜기"}
                 aria-pressed={seniorMode}
@@ -387,49 +403,65 @@ export function Layout() {
                   홈
                 </NavLink>
 
-                {/* 실시간 검사 */}
-                <div className="px-3 pt-3">
-                  <p className="text-[10px] text-gray-400 dark:text-white/30 uppercase tracking-widest mb-1.5" style={{ fontWeight: 600 }}>실시간 검사</p>
-                </div>
-                {SCAN_ITEMS.map(({ to, icon: Icon, label, color, bg }) => (
-                  <NavLink key={to} to={to} className={({ isActive }) => `flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm transition-colors ${isActive ? "bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400 font-semibold" : "text-gray-700 dark:text-white/60 hover:bg-gray-50 dark:hover:bg-white/5"}`}>
-                    <div className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 ${bg}`}>
-                      <Icon size={13} className={color} />
+                {seniorMode ? (
+                  <>
+                    {/* 시니어 모드: 4개 메뉴만 */}
+                    <NavLink to="/analyze" className={({ isActive }) => `flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm transition-colors ${isActive ? "bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400 font-semibold" : "text-gray-700 dark:text-white/60 hover:bg-gray-50 dark:hover:bg-white/5"}`}>
+                      <MessageSquareWarning size={14} className="shrink-0" />
+                      문자 검사
+                    </NavLink>
+                    <NavLink to="/report" className={({ isActive }) => `flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm transition-colors ${isActive ? "bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400 font-semibold" : "text-gray-700 dark:text-white/60 hover:bg-gray-50 dark:hover:bg-white/5"}`}>
+                      <Flag size={14} className="shrink-0" />
+                      신고하기
+                    </NavLink>
+                    <NavLink to="/guide" className={({ isActive }) => `flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm transition-colors ${isActive ? "bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400 font-semibold" : "text-gray-700 dark:text-white/60 hover:bg-gray-50 dark:hover:bg-white/5"}`}>
+                      <BookOpen size={14} className="shrink-0" />
+                      도움말
+                    </NavLink>
+                  </>
+                ) : (
+                  <>
+                    {/* 실시간 검사 */}
+                    <div className="px-3 pt-3">
+                      <p className="text-[10px] text-gray-400 dark:text-white/30 uppercase tracking-widest mb-1.5" style={{ fontWeight: 600 }}>실시간 검사</p>
                     </div>
-                    {label}
-                  </NavLink>
-                ))}
+                    {SCAN_ITEMS.map(({ to, icon: Icon, label, color, bg }) => (
+                      <NavLink key={to} to={to} className={({ isActive }) => `flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm transition-colors ${isActive ? "bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400 font-semibold" : "text-gray-700 dark:text-white/60 hover:bg-gray-50 dark:hover:bg-white/5"}`}>
+                        <div className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 ${bg}`}>
+                          <Icon size={13} className={color} />
+                        </div>
+                        {label}
+                      </NavLink>
+                    ))}
 
-                {/* 피해 사례 */}
-                <div className="px-3 pt-3">
-                  <p className="text-[10px] text-gray-400 dark:text-white/30 uppercase tracking-widest mb-1.5" style={{ fontWeight: 600 }}>피해 사례</p>
-                </div>
-                {CASES_ITEMS.map(({ to, icon: Icon, label }) => (
-                  <NavLink key={to} to={to} className={({ isActive }) => `flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm transition-colors ${isActive ? "bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400 font-semibold" : "text-gray-700 dark:text-white/60 hover:bg-gray-50 dark:hover:bg-white/5"}`}>
-                    <Icon size={14} className="text-gray-400 dark:text-white/35 shrink-0" />
-                    {label}
-                  </NavLink>
-                ))}
+                    {/* 피해 사례 */}
+                    <div className="px-3 pt-3">
+                      <p className="text-[10px] text-gray-400 dark:text-white/30 uppercase tracking-widest mb-1.5" style={{ fontWeight: 600 }}>피해 사례</p>
+                    </div>
+                    {CASES_ITEMS.map(({ to, icon: Icon, label }) => (
+                      <NavLink key={to} to={to} className={({ isActive }) => `flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm transition-colors ${isActive ? "bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400 font-semibold" : "text-gray-700 dark:text-white/60 hover:bg-gray-50 dark:hover:bg-white/5"}`}>
+                        <Icon size={14} className="text-gray-400 dark:text-white/35 shrink-0" />
+                        {label}
+                      </NavLink>
+                    ))}
 
-                {/* 안전 가이드 */}
-                <div className="px-3 pt-3">
-                  <p className="text-[10px] text-gray-400 dark:text-white/30 uppercase tracking-widest mb-1.5" style={{ fontWeight: 600 }}>안전 가이드</p>
-                </div>
-                {GUIDE_ITEMS.map(({ to, icon: Icon, label }) => (
-                  <NavLink key={to} to={to} className={({ isActive }) => `flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm transition-colors ${isActive ? "bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400 font-semibold" : "text-gray-700 dark:text-white/60 hover:bg-gray-50 dark:hover:bg-white/5"}`}>
-                    <Icon size={14} className="text-gray-400 dark:text-white/35 shrink-0" />
-                    {label}
-                  </NavLink>
-                ))}
+                    {/* 안전 가이드 */}
+                    <div className="px-3 pt-3">
+                      <p className="text-[10px] text-gray-400 dark:text-white/30 uppercase tracking-widest mb-1.5" style={{ fontWeight: 600 }}>안전 가이드</p>
+                    </div>
+                    {GUIDE_ITEMS.map(({ to, icon: Icon, label }) => (
+                      <NavLink key={to} to={to} className={({ isActive }) => `flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm transition-colors ${isActive ? "bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400 font-semibold" : "text-gray-700 dark:text-white/60 hover:bg-gray-50 dark:hover:bg-white/5"}`}>
+                        <Icon size={14} className="text-gray-400 dark:text-white/35 shrink-0" />
+                        {label}
+                      </NavLink>
+                    ))}
+                  </>
+                )}
 
-                {/* 신고하기 + 큰글씨 */}
+                {/* 시니어 모드 + 큰글씨 토글 (항상) */}
                 <div className="pt-1 border-t border-gray-100 dark:border-white/8 mt-2 space-y-0.5">
-                  <NavLink to="/report" className={({ isActive }) => `flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm transition-colors ${isActive ? "bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400 font-semibold" : "text-gray-700 dark:text-white/60 hover:bg-gray-50 dark:hover:bg-white/5"}`}>
-                    <Flag size={14} className="text-gray-400 dark:text-white/35 shrink-0" />
-                    신고하기
-                  </NavLink>
                   <button
-                    onClick={() => setSeniorMode((v) => !v)}
+                    onClick={() => setSeniorMode()}
                     className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm transition-colors ${seniorMode ? "bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400 font-semibold" : "text-gray-700 dark:text-white/60 hover:bg-gray-50 dark:hover:bg-white/5"}`}
                   >
                     <Type size={14} className="shrink-0" />
@@ -454,7 +486,10 @@ export function Layout() {
       </header>
 
       {/* 콘텐츠 */}
-      <main className="flex-1"><Outlet /></main>
+      <main className="flex-1" style={seniorMode ? { paddingBottom: "84px" } : undefined}><Outlet /></main>
+
+      {/* 시니어 모드 고정 바 (어디서든 뒤로/처음/도움) */}
+      {seniorMode && <SeniorBottomBar />}
 
       {/* 푸터 */}
       <footer className="border-t border-gray-200 dark:border-white/10 bg-white dark:bg-[#0d1526] mt-auto">

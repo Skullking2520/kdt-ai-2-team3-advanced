@@ -18,6 +18,8 @@ import { ReportPage } from "./components/ReportPage";
 import { AnalysisProgress } from "./components/AnalysisProgress";
 import { AnalysisResult } from "./components/AnalysisResult";
 import { Changelog } from "./components/Changelog";
+import { EasyCheck } from "./components/EasyCheck";
+import { Emergency } from "./components/Emergency";
 
 import type { RouteObject } from "react-router";
 
@@ -38,4 +40,6 @@ export const publicRoutes: RouteObject[] = [
   { path: "gallery", Component: PhishingGallery },
   { path: "report", Component: ReportPage },
   { path: "changelog", Component: Changelog },
+  { path: "easy", Component: EasyCheck },
+  { path: "emergency", Component: Emergency },
 ];

@@ -1,6 +1,6 @@
-import { useState } from "react";
-import { motion, AnimatePresence } from "motion/react";
-import { Code2, Play, ChevronDown, ChevronRight, Copy, Check, Terminal, Globe } from "lucide-react";
+import {useState} from "react";
+import {motion, AnimatePresence} from "motion/react";
+import {Code2, Play, ChevronDown, Copy, Check, Terminal, Globe} from "lucide-react"
 
 type Method = "POST" | "GET" | "DELETE";
 
@@ -121,7 +121,6 @@ function CodeSnippet({ endpoint }: { endpoint: Endpoint }) {
   const [copied, setCopied] = useState(false);
 
   const BASE = "https://api.newbiz-shield.kr";
-  const body = endpoint.requestBody ? JSON.stringify(endpoint.requestBody, null, 2) : null;
 
   const snippets = {
     curl: endpoint.method === "GET"

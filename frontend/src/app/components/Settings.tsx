@@ -1,6 +1,6 @@
-import { useState, useEffect } from "react";
+import { useState } from "react"
 import { motion, AnimatePresence } from "motion/react";
-import { Settings2, Bell, Shield, Cpu, Download, RefreshCw, Check, Moon, Sun, Globe, SlidersHorizontal } from "lucide-react";
+import { Settings2, Bell, Shield, Download, RefreshCw, Check, Moon, SlidersHorizontal } from "lucide-react"
 
 interface SettingsState {
   threshold: number;

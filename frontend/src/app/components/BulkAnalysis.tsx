@@ -1,5 +1,5 @@
 import { useState, useRef } from "react";
-import { motion, AnimatePresence } from "motion/react";
+import { motion } from "motion/react"
 import { Upload, FileText, Download, BarChart2, RefreshCw, CheckCircle, AlertTriangle, Minus } from "lucide-react";
 
 interface SMSRow {

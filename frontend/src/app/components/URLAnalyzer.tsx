@@ -1,10 +1,10 @@
-import { useState } from "react";
-import { motion, AnimatePresence } from "motion/react";
-import { Link2, Search, AlertTriangle, CheckCircle, Shield, RefreshCw, ExternalLink, Clock, Lock, Globe } from "lucide-react";
-import { Card } from "./ui/Primitives";
-import { api, ApiException } from "@/lib/api";
+import {useState} from "react";
+import {motion, AnimatePresence} from "motion/react";
+import {Link2, Search, AlertTriangle, CheckCircle, Shield, RefreshCw, ExternalLink, Clock, Lock, Globe} from "lucide-react";
+import {Card} from "./ui/Primitives";
+import {api, ApiException} from "@/lib/api";
 import type { UrlAnalysisResult } from "@/types/api";
-import { ErrorState } from "./ErrorState";
+import {ErrorState} from "./ErrorState";
 
 interface URLResult {
   url: string;
@@ -19,24 +19,21 @@ interface URLResult {
   flags: { type: string; desc: string; severity: "high" | "medium" | "low" }[];
 }
 
-/** api.analyze() UrlAnalysisResult → 컴포넌트 내부 URLResult 어댑터
- *  백엔드가 urlDetails를 미제공 시 로컬 analyzeURL() 결과로 보완 */
+/** api.analyze() UrlAnalysisResult → 컴포넌트 내부 URLResult 어댑터 */
 function adaptUrlResult(r: UrlAnalysisResult): URLResult {
   const upper = (s: "high" | "medium" | "low") =>
     s.toUpperCase() as "HIGH" | "MEDIUM" | "LOW";
-  const local = analyzeURL(r.content);
-  const d = r.urlDetails;
   return {
     url: r.content,
-    domain: d?.domain ?? local.domain,
+    domain: r.urlDetails.domain,
     riskScore: r.riskScore,
     riskLevel: upper(r.riskLevel),
-    ssl: d?.ssl ?? local.ssl,
-    domainAge: d?.domainAge ?? local.domainAge,
-    redirects: d?.redirects ?? local.redirects,
-    ipCountry: d?.ipCountry ?? local.ipCountry,
-    similarDomains: d?.similarDomains ?? local.similarDomains,
-    flags: d?.flags ?? local.flags,
+    ssl: r.urlDetails.ssl,
+    domainAge: r.urlDetails.domainAge,
+    redirects: r.urlDetails.redirects,
+    ipCountry: r.urlDetails.ipCountry,
+    similarDomains: r.urlDetails.similarDomains,
+    flags: r.urlDetails.flags,
   };
 }
 
@@ -44,7 +41,7 @@ const SUSPICIOUS_INDICATORS = [
   "pay", "secure", "login", "update", "verify", "confirm", "bank", "nhis", "hometax", "refund", "prize", "win", "free",
 ];
 
-function analyzeURL(raw: string): URLResult {
+function _analyzeURL(raw: string): URLResult {
   const url = raw.startsWith("http") ? raw : `http://${raw}`;
   let domain = "";
   try { domain = new URL(url).hostname; } catch { domain = raw; }
@@ -166,7 +163,7 @@ export function URLAnalyzer() {
             <input value={input} onChange={(e) => setInput(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && handleAnalyze()}
               placeholder="https://example.com 또는 의심 URL 입력..."
-              className="flex-1 bg-transparent text-sm text-gray-900 placeholder:text-white/20 outline-none" />
+              className="flex-1 bg-transparent text-sm text-white/80 placeholder:text-white/20 outline-none" />
           </div>
           <button onClick={() => handleAnalyze()} disabled={!input.trim() || loading}
             className="px-4 py-2 rounded-lg bg-sky-500/20 border border-sky-500/30 text-sky-400 text-sm hover:bg-sky-500/25 transition-all disabled:opacity-40 flex items-center gap-1.5">

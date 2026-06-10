@@ -1,19 +1,19 @@
-import { useState, useEffect } from "react";
-import { api, ApiException } from "@/lib/api";
+import {useState, useEffect} from "react";
+import {api, ApiException} from "@/lib/api";
 import {
-  Clock,
-  ShieldAlert,
-  ShieldCheck,
-  AlertTriangle,
-  Trash2,
-  Search,
-  ChevronDown,
-  ChevronUp,
-  FileText,
+Clock,
+ShieldAlert,
+ShieldCheck,
+AlertTriangle,
+Trash2,
+Search,
+ChevronDown,
+ChevronUp,
+
 } from "lucide-react";
-import { motion, AnimatePresence } from "motion/react";
-import { EmptyState } from "./EmptyState";
-import { LoadingSkeleton } from "./LoadingSkeleton";
+import {motion, AnimatePresence} from "motion/react";
+import {EmptyState} from "./EmptyState";
+import {LoadingSkeleton} from "./LoadingSkeleton";
 
 interface HistoryItem {
   id: string;

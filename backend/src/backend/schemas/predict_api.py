@@ -43,6 +43,28 @@ class GovernmentCriterion(BaseModel):
     matched: bool
 
 
+class SslInfo(BaseModel):
+    valid: bool
+    issuer: str
+    expiry: str
+
+
+class UrlFlag(BaseModel):
+    type: str
+    desc: str
+    severity: RiskLevel
+
+
+class UrlDetails(BaseModel):
+    domain: str
+    ssl: SslInfo
+    domainAge: int
+    redirects: List[dict]
+    ipCountry: str
+    similarDomains: List[str]
+    flags: List[UrlFlag]
+
+
 class PredictResponse(BaseModel):
     id: str
     type: AnalysisType
@@ -59,6 +81,7 @@ class PredictResponse(BaseModel):
     cacheHit: bool
     createdAt: str
     extractedUrl: Optional[str] = None
+    urlDetails: Optional[UrlDetails] = None
 
 
 class EncoderClassificationOutput(BaseModel):

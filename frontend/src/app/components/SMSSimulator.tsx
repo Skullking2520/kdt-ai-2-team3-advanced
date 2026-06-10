@@ -1,18 +1,18 @@
-import { useState } from "react";
-import { motion, AnimatePresence } from "motion/react";
+import {useState} from "react";
+import {motion, AnimatePresence} from "motion/react";
 import {
-  Smartphone,
-  ShieldAlert,
-  ShieldCheck,
-  AlertTriangle,
-  Scan,
-  ChevronLeft,
-  Phone,
-  MessageSquare,
-  Wifi,
-  Battery,
-  Signal,
-  ArrowRight,
+Smartphone,
+ShieldAlert,
+ShieldCheck,
+AlertTriangle,
+Scan,
+ChevronLeft,
+Phone,
+MessageSquare,
+Wifi,
+Battery,
+Signal,
+
 } from "lucide-react";
 
 type RiskLevel = "HIGH" | "MEDIUM" | "LOW";

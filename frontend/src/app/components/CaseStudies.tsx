@@ -245,18 +245,18 @@ export function CaseStudies() {
       </div>
 
       {/* Official Feed Section */}
-      <div className="mb-8 bg-gradient-to-br from-cyan-500/8 to-blue-500/5 border border-cyan-500/20 rounded-2xl p-5">
+      <div className="mb-8 bg-cyan-50 dark:bg-cyan-500/5 border border-cyan-200 dark:border-cyan-500/20 rounded-2xl p-5">
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-2">
-            <Radio size={14} className="text-cyan-400" />
-            <h2 className="text-sm text-white/80" style={{ fontWeight: 600 }}>정부·경찰 공식 피싱 주의보</h2>
-            <div className="flex items-center gap-1 text-[10px] text-cyan-400">
-              <div className="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-pulse" />
+            <Radio size={14} className="text-cyan-600 dark:text-cyan-400" />
+            <h2 className="text-sm text-cyan-900 dark:text-white/80" style={{ fontWeight: 600 }}>정부·경찰 공식 피싱 주의보</h2>
+            <div className="flex items-center gap-1 text-[10px] text-cyan-600 dark:text-cyan-400">
+              <div className="w-1.5 h-1.5 rounded-full bg-cyan-500 dark:bg-cyan-400 animate-pulse" />
               실시간 연동
             </div>
           </div>
           <button onClick={handleRefresh} disabled={isRefreshing}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-cyan-500/20 text-cyan-400 text-xs hover:bg-cyan-500/10 transition-all disabled:opacity-50">
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-cyan-300 dark:border-cyan-500/20 text-cyan-700 dark:text-cyan-400 text-xs hover:bg-cyan-100 dark:hover:bg-cyan-500/10 transition-all disabled:opacity-50">
             <RefreshCw size={11} className={isRefreshing ? "animate-spin" : ""} />
             새로고침
           </button>
@@ -310,12 +310,14 @@ export function CaseStudies() {
 
       {/* Filter */}
       <div className="mb-3">
-        <h2 className="text-sm text-white/70 mb-3" style={{ fontWeight: 600 }}>과거 주요 피해 사례 아카이브</h2>
+        <h2 className="text-sm text-gray-700 dark:text-white/70 mb-3" style={{ fontWeight: 600 }}>과거 주요 피해 사례 아카이브</h2>
         <div className="flex gap-2 flex-wrap">
           {categories.map((c) => (
             <button key={c} onClick={() => setCatFilter(c)}
               className={`px-3 py-1.5 rounded-xl text-xs border transition-all ${
-                catFilter === c ? "bg-orange-500/15 border-orange-500/30 text-orange-400" : "border-white/10 text-white/35 hover:text-white/55"
+                catFilter === c
+                  ? "bg-blue-50 dark:bg-blue-500/15 border-blue-500 text-blue-700 dark:text-blue-400"
+                  : "border-gray-200 dark:border-white/10 text-gray-600 dark:text-white/35 hover:bg-gray-50 dark:hover:text-white/55"
               }`}>
               {c}
             </button>

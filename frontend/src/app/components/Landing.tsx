@@ -134,6 +134,20 @@ export function Landing() {
               스미싱 여부뿐만 아니라 공격 유형, 위험 근거, 예상 피해, 대응 방법까지<br className="hidden sm:block" />
               한 번에 확인할 수 있습니다.
             </p>
+            {/* 3-in-1 입력 시각화 (차별점 #1) */}
+            <div className="flex items-center justify-center gap-2 mb-6 flex-wrap">
+              <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400 border border-blue-100 dark:border-blue-700/30" style={{ fontWeight: 600 }}>
+                <MessageSquareWarning size={13} /> 문자
+              </span>
+              <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm bg-violet-50 dark:bg-violet-900/20 text-violet-700 dark:text-violet-400 border border-violet-100 dark:border-violet-700/30" style={{ fontWeight: 600 }}>
+                <Link2 size={13} /> URL
+              </span>
+              <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-400 border border-emerald-100 dark:border-emerald-700/30" style={{ fontWeight: 600 }}>
+                <ImageIcon size={13} /> 이미지
+              </span>
+              <span className="text-xs text-gray-500 dark:text-white/40">3가지 한 번에 분석</span>
+            </div>
+
             <div className="flex flex-col sm:flex-row gap-3 justify-center">
               <button
                 onClick={() => navigate("/analyze")}
