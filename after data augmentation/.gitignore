@@ -1,0 +1,13 @@
+# Raw or generated datasets
+*.jsonl
+data/generated/
+
+# Generated model/checkpoint outputs
+results*/
+final_model*/
+outputs/
+
+# Local experiment artifacts
+wandb/
+__pycache__/
+*.pyc
