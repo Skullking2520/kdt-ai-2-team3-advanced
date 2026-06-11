@@ -1,4 +1,5 @@
 # prometheus/prometheus.yml
+# docker-compose.yml에서 참고할 프로메테우스의 설정 파일
 
 global:
   scrape_interval: 15s # 15초마다 메트릭 수집
