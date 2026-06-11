@@ -7,6 +7,7 @@
 ## 사전 준비
 
 - [Docker Desktop](https://www.docker.com/products/docker-desktop/) 설치
+- [uv](https://docs.astral.sh/uv/getting-started/installation/) 설치 (Python 패키지 매니저)
 - Node.js 18 이상 (프론트엔드 실행 시)
 
 ---
@@ -40,7 +41,11 @@ DATABASE_URL=mysql+asyncmy://${MYSQL_USER}:${MYSQL_PASSWORD}@mysql:3306/${MYSQL_
 루트 디렉토리에서 실행합니다.
 
 ```bash
-docker compose -f docker-compose.dev.yml up -d --build
+# MySQL + 모니터링 실행
+docker compose -f docker-compose.dev.yml up -d mysql prometheus grafana node-exporter
+
+# FastAPI 로컬 실행 (별도 터미널)
+cd backend && uv run uvicorn src.backend.main:app --reload
 ```
 
 - 백엔드: `http://localhost:8000`
@@ -149,11 +154,10 @@ docker exec -it mysql_container mysql --default-character-set=utf8mb4 \
 
 `USE_MOCK_MODEL=true` (기본값) 시 동작:
 
-| 기능 | Mock 동작 |
-|------|-----------|
-| 인코더 | `label=smishing, score=0.85` 고정 반환 |
-| 디코더 | 고정 설명 텍스트 반환 |
-| OCR | 고정 스미싱 문자 텍스트 반환 |
+| 환경변수 | 기본값 | Mock 동작 |
+|----------|--------|-----------|
+| `USE_MOCK_MODEL` | `true` | 인코더: `label=smishing, score=0.85` 고정 반환 |
+| `USE_MOCK_OCR` | `false` | OCR: 고정 스미싱 문자 텍스트 반환 |
 
 실제 모델 연동 시 `.env`에 아래 값을 채웁니다.
 
