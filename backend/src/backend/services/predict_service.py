@@ -1,7 +1,10 @@
 from __future__ import annotations
 
+import logging
 import time
 from typing import Any
+
+logger = logging.getLogger(__name__)
 
 from fastapi import HTTPException
 from pydantic import TypeAdapter, ValidationError
@@ -149,17 +152,24 @@ def _confidence_to_risk_score(label: str, confidence: float) -> int:
 
 async def request_encoder_prediction(text: str) -> EncoderClassificationOutput:
     if settings.USE_MOCK_MODEL:
+        logger.info("[encoder] MOCK 모드 — label=smishing score=0.85")
         return EncoderClassificationOutput(label="smishing", score=0.85)
 
-    # 인코더 미설정 시 mock fallback (OCR 테스트 등 partial 환경 대응)
     api_key = settings.ENCODER_API_KEY
     endpoint = settings.ENCODER_INFERENCE_ENDPOINT or settings.HF_SMISHING_ENCODER_URL
     if not api_key or not endpoint:
+        logger.warning("[encoder] API 키 또는 엔드포인트 미설정 → mock fallback")
         return EncoderClassificationOutput(label="smishing", score=0.85)
 
-    response = await _get_encoder_client().text_classification(text=text)
-
-    return _validate_encoder_response(response)
+    logger.info("[encoder] 호출 시작 | endpoint=%s | text=%r", endpoint, text[:60])
+    try:
+        response = await _get_encoder_client().text_classification(text=text)
+    except Exception as exc:
+        logger.error("[encoder] 호출 실패 | %s: %s", type(exc).__name__, exc)
+        raise HTTPException(status_code=502, detail=f"인코더 서비스 응답 오류: {type(exc).__name__}") from exc
+    result = _validate_encoder_response(response)
+    logger.info("[encoder] 응답 완료 | label=%s | score=%.4f", result.label, result.score)
+    return result
 
 
 def _build_features(text: str, extracted: dict[str, list[str]]) -> str:

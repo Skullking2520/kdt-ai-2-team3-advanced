@@ -48,8 +48,12 @@ export class ApiException extends Error {
 // Mock 가드
 // ───────────────────────────────────────────
 
+const ALWAYS_MOCK_PREFIXES = ['/api/history', '/api/feedback'];
+
 function isMockPath(path: string, method: string): boolean {
-  if (!env.USE_MOCK) return false;
+  if (!env.USE_MOCK) {
+    return ALWAYS_MOCK_PREFIXES.some(p => path.startsWith(p)) && mockHandle.has(path, method);
+  }
   return mockHandle.has(path, method);
 }
 
