@@ -63,9 +63,7 @@ export function ImageAnalyzer() {
     setOcrText(null);
     setOcrError(false);
 
-    // 5% 확률로 OCR 실패 시뮬레이션
-    const willFail = Math.random() < 0.05;
-
+    // BUG-5: 5% 랜덤 실패 제거 (시뮬레이션 전용, 마이그레이션 후 정리)
     let step = 0;
     const interval = setInterval(() => {
       step += 1;
@@ -73,15 +71,10 @@ export function ImageAnalyzer() {
       if (step >= OCR_STEPS.length - 1) {
         clearInterval(interval);
         setTimeout(() => {
-          if (willFail) {
-            setOcrError(true);
-            setOcrRunning(false);
-          } else {
-            const mockText = MOCK_OCR_RESULTS[Math.floor(Math.random() * MOCK_OCR_RESULTS.length)];
-            setOcrText(mockText);
-            setEditedText(mockText);
-            setOcrRunning(false);
-          }
+          const mockText = MOCK_OCR_RESULTS[Math.floor(Math.random() * MOCK_OCR_RESULTS.length)];
+          setOcrText(mockText);
+          setEditedText(mockText);
+          setOcrRunning(false);
         }, 400);
       }
     }, 650);

@@ -41,62 +41,6 @@ const SUSPICIOUS_INDICATORS = [
   "pay", "secure", "login", "update", "verify", "confirm", "bank", "nhis", "hometax", "refund", "prize", "win", "free",
 ];
 
-function _analyzeURL(raw: string): URLResult {
-  const url = raw.startsWith("http") ? raw : `http://${raw}`;
-  let domain = "";
-  try { domain = new URL(url).hostname; } catch { domain = raw; }
-
-  const suspiciousCount = SUSPICIOUS_INDICATORS.filter((w) => domain.toLowerCase().includes(w)).length;
-  const hasSuspiciousTLD = /\.(xyz|tk|ml|ga|cf|top|click|loan|win|work|buzz|info)$/i.test(domain);
-  const hasDash = (domain.match(/-/g) || []).length > 1;
-  const isLong = domain.length > 30;
-  const isIP = /^\d{1,3}(\.\d{1,3}){3}$/.test(domain.replace(/:\d+$/, ""));
-  const hasKrLike = /kr|korea|nhis|hometax|kb|kia|samsung/i.test(domain) && !/\.go\.kr|\.or\.kr|\.co\.kr/.test(domain);
-
-  let risk = 10;
-  risk += suspiciousCount * 15;
-  if (hasSuspiciousTLD) risk += 30;
-  if (hasDash) risk += 10;
-  if (isLong) risk += 10;
-  if (isIP) risk += 40;
-  if (hasKrLike) risk += 25;
-  const riskScore = Math.min(10, Math.round(risk / 15));
-
-  const flags: URLResult["flags"] = [];
-  if (hasSuspiciousTLD) flags.push({ type: "의심 TLD", desc: `'.${domain.split(".").pop()}' 도메인은 피싱에 자주 사용됩니다.`, severity: "high" });
-  if (hasKrLike) flags.push({ type: "유사 도메인", desc: "한국 공공기관·기업명을 포함하지만 공식 도메인이 아닙니다.", severity: "high" });
-  if (suspiciousCount > 0) flags.push({ type: "키워드 감지", desc: `피싱 관련 키워드 ${suspiciousCount}개 포함 (${SUSPICIOUS_INDICATORS.filter((w) => domain.includes(w)).join(", ")})`, severity: "medium" });
-  if (hasDash) flags.push({ type: "다중 하이픈", desc: "공식 도메인은 보통 하이픈을 많이 사용하지 않습니다.", severity: "medium" });
-  if (isIP) flags.push({ type: "IP 직접 접근", desc: "도메인 대신 IP 주소를 사용하는 것은 매우 의심스럽습니다.", severity: "high" });
-  if (isLong) flags.push({ type: "비정상 긴 도메인", desc: "30자 이상의 도메인은 신뢰하기 어렵습니다.", severity: "low" });
-  if (flags.length === 0) flags.push({ type: "이상 없음", desc: "명시적인 위험 징후가 발견되지 않았습니다.", severity: "low" });
-
-  const domainAge = riskScore >= 7 ? Math.floor(Math.random() * 30) + 1 : Math.floor(Math.random() * 1000) + 180;
-  const redirectCount = riskScore >= 6 ? Math.floor(Math.random() * 3) + 1 : 0;
-  const redirects = Array.from({ length: redirectCount }, (_, i) => ({
-    url: i === 0 ? url : `http://redir${i}.${domain}`,
-    status: i < redirectCount - 1 ? 301 : 200,
-  }));
-
-  return {
-    url, domain,
-    riskScore,
-    riskLevel: riskScore >= 7 ? "HIGH" : riskScore >= 4 ? "MEDIUM" : "LOW",
-    ssl: {
-      valid: riskScore < 5,
-      issuer: riskScore < 5 ? "Let's Encrypt Authority X3" : "Unknown / Self-signed",
-      expiry: riskScore < 5 ? "2025.12.31" : "만료됨",
-    },
-    domainAge,
-    redirects,
-    ipCountry: riskScore >= 7 ? ["CN", "RU", "PH", "VN"][Math.floor(Math.random() * 4)] : "KR",
-    similarDomains: riskScore >= 6
-      ? [`${domain.split(".")[0]}.go.kr`, `${domain.split(".")[0]}.or.kr`, `www.${domain.split(".")[0]}.co.kr`]
-      : [],
-    flags,
-  };
-}
-
 const SAMPLE_URLS = [
   "http://nhis-pay.kr/login",
   "http://prize-samsung.xyz/claim",
@@ -147,9 +91,9 @@ export function URLAnalyzer() {
     <div className="px-4 sm:px-6 py-8 max-w-3xl mx-auto">
       {/* Page header — 배지 필 스타일로 통일 */}
       <div className="mb-8">
-        <div className="inline-flex items-center gap-2 mb-3 px-3 py-1 rounded-full bg-sky-500/10 border border-sky-500/20">
-          <Link2 size={12} className="text-sky-400" />
-          <span className="text-[11px] text-sky-400 tracking-wider uppercase">URL 분석</span>
+        <div className="inline-flex items-center gap-2 mb-3 px-3 py-1 rounded-full bg-blue-500/10 border border-blue-500/20">
+          <Link2 size={12} className="text-blue-400" />
+          <span className="text-[11px] text-blue-400 tracking-wider uppercase">URL 분석</span>
         </div>
         <h1 className="text-white mb-2" style={{ fontWeight: 800, fontSize: "1.9rem", letterSpacing: "-0.02em" }}>URL 심층 분석기</h1>
         <p className="text-sm text-white/50">의심 URL의 도메인 나이·SSL·리다이렉션·유사 도메인 탐지</p>
@@ -158,7 +102,7 @@ export function URLAnalyzer() {
       {/* Input */}
       <Card padding="p-4" className="mb-5">
         <div className="flex gap-2">
-          <div className="flex-1 flex items-center gap-2 bg-[#0b1120] border border-white/10 rounded-lg px-3 py-2 focus-within:border-sky-500/30 transition-all">
+          <div className="flex-1 flex items-center gap-2 bg-[#0b1120] border border-white/10 rounded-lg px-3 py-2 focus-within:border-blue-500/30 transition-all">
             <Globe size={13} className="text-white/25 shrink-0" />
             <input value={input} onChange={(e) => setInput(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && handleAnalyze()}
@@ -166,8 +110,8 @@ export function URLAnalyzer() {
               className="flex-1 bg-transparent text-sm text-white/80 placeholder:text-white/20 outline-none" />
           </div>
           <button onClick={() => handleAnalyze()} disabled={!input.trim() || loading}
-            className="px-4 py-2 rounded-lg bg-sky-500/20 border border-sky-500/30 text-sky-400 text-sm hover:bg-sky-500/25 transition-all disabled:opacity-40 flex items-center gap-1.5">
-            {loading ? <div className="w-3.5 h-3.5 border border-sky-400/30 border-t-sky-400 rounded-full animate-spin" /> : <Search size={13} />}
+            className="px-4 py-2 rounded-lg bg-blue-500/20 border border-blue-500/30 text-blue-400 text-sm hover:bg-blue-500/25 transition-all disabled:opacity-40 flex items-center gap-1.5">
+            {loading ? <div className="w-3.5 h-3.5 border border-blue-400/30 border-t-sky-400 rounded-full animate-spin" /> : <Search size={13} />}
             분석
           </button>
         </div>
@@ -175,7 +119,7 @@ export function URLAnalyzer() {
           <p className="text-[10px] text-white/25">샘플:</p>
           {SAMPLE_URLS.map((u) => (
             <button key={u} onClick={() => { setInput(u); handleAnalyze(u); }}
-              className="text-[10px] px-2 py-0.5 rounded bg-white/5 border border-white/10 text-white/35 hover:text-sky-400 hover:border-sky-500/30 transition-all font-mono truncate max-w-[180px]">
+              className="text-[10px] px-2 py-0.5 rounded bg-white/5 border border-white/10 text-white/35 hover:text-blue-400 hover:border-blue-500/30 transition-all font-mono truncate max-w-[180px]">
               {u}
             </button>
           ))}

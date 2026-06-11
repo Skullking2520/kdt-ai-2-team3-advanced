@@ -39,13 +39,13 @@ npm run dev               # → http://localhost:5173
 ##  폴더 구조 (프론트 핵심만)
 
 ```
-src/
+ src/
 ├── app/                  ← 라우트 + 페이지 (Figma export)
 │   ├── App.tsx
-│   ├── routes.tsx         38개 라우트 정의
-│   ├── components/        44개 페이지 컴포넌트
-│   │   ├── ui/            shadcn UI 프리미티브 (50+)
-│   │   ├── result/        결과 카드 6개
+│   ├── routes.tsx         주요 라우트 정의
+│   ├── components/        페이지 컴포넌트
+│   │   ├── ui/            공통 UI 컴포넌트 (shadcn-style 프리미티브)
+│   │   ├── result/        결과 카드
 │   │   └── figma/         Figma 헬퍼
 │   └── context/
 │       └── AdminContext.tsx
@@ -53,7 +53,7 @@ src/
 ├── lib/                  ← 백엔드 연동 레이어 (직접 추가)
 │   ├── api.ts            API 클라이언트
 │   ├── env.ts            환경변수
-│   ├── smsAnalysis.ts    클라이언트 사이드 분석 (폴백)
+│   ├── smsAnalysis.ts    클라이언트 사이드 분석 (일부 페이지에서 사용 중, API 마이그레이션 예정)
 │   └── mock/             VITE_USE_MOCK=true일 때 응답
 │
 ├── types/
@@ -88,13 +88,13 @@ src/
                    └─ src/types/api.ts 의 AnalysisResult 로 파싱
 ```
 
-**현재 상태**: 백엔드/AI 미연동 → `VITE_USE_MOCK=true` 로 mock 응답 사용.
+**현재 상태**: 백엔드 연동 진행 중.
+현재는 Mock 응답을 기본 사용하며,
+일부 페이지는 API 마이그레이션이 진행 중이다.
 
-**연동 시**: `.env` 에서 `VITE_USE_MOCK=false`, `VITE_API_BASE_URL=...` 설정만 바꾸면 됨.
-
-**핵심 작업 (P0)**:
-- `Analyzer.tsx`, `AnalysisResult.tsx`, `SeniorAnalyzer.tsx` 의 로컬 `analyzeText()` → `api.analyze()` 로 교체
-- 8개 파일에 중복된 분석 로직 → 1개의 API 호출로 통일
+**연동 시**: `.env` 에서 `VITE_USE_MOCK=false`, `VITE_API_BASE_URL=...` 설정.
+각 페이지의 API 마이그레이션 완료 시
+실 백엔드 호출이 동작한다.
 
 ---
 
@@ -170,7 +170,7 @@ const result = await api.myEndpoint({ foo: 'hello' });
 ### 3) 새 shadcn UI 컴포넌트 추가
 
 `src/app/components/ui/` 에 shadcn 형식 파일 추가 (Radix UI 기반).
-기존 50+ 컴포넌트 참고: `button.tsx`, `card.tsx`, `dialog.tsx` 등.
+기존 컴포넌트 참고: `button.tsx`, `card.tsx`, `dialog.tsx` 등.
 
 ---
 
@@ -206,5 +206,3 @@ cd frontend/web_mvp
 npm install
 npm run dev
 ```
-
-> 정리 권장: web_mvp/는 별도 PR로 삭제하는 게 깔끔합니다 (이 PR에서는 보존).

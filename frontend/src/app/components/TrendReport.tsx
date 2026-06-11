@@ -1,6 +1,6 @@
 import {useState} from "react";
 import {motion} from "motion/react";
-import {BarChart2, TrendingUp, TrendingDown, MapPin, CalendarDays, AlertCircle} from "lucide-react";
+import {BarChart2, TrendingUp, TrendingDown, CalendarDays, AlertCircle} from "lucide-react";
 
 /* ── Data ─────────────────────────────────────────────── */
 const MONTHLY = [
@@ -36,12 +36,12 @@ const REGIONS = [
 ];
 
 const TIMELINE = [
-  { date: "2025.04", title: "AI 합성 발신번호 피싱", tag: "신규", color: "text-red-400", border: "border-red-500/20", bg: "bg-red-500/8", desc: "AI로 생성된 가짜 공공기관 발신번호 사용. 기존 패턴으로 탐지 어려움." },
-  { date: "2025.03", title: "단축URL 이중 리다이렉션", tag: "진화", color: "text-orange-400", border: "border-orange-500/20", bg: "bg-orange-500/8", desc: "bit.ly → 중간 정상 도메인 → 최종 피싱 도메인으로 2단계 리다이렉션하여 URL 검사 우회." },
-  { date: "2025.02", title: "전화 유도형 피싱 증가", tag: "증가", color: "text-amber-400", border: "border-amber-500/20", bg: "bg-amber-500/8", desc: "URL 없이 전화번호만 포함해 AI 탐지 회피. 보이스피싱과 연계." },
-  { date: "2025.01", title: "QR코드 피싱 (큐싱)", tag: "신규", color: "text-purple-400", border: "border-purple-500/20", bg: "bg-purple-500/8", desc: "문자 내 QR코드 이미지 삽입. 텍스트 기반 탐지 완전 우회. 모델 확장 필요." },
-  { date: "2024.12", title: "명절 택배 사기 급증", tag: "시즌형", color: "text-blue-400", border: "border-blue-500/20", bg: "bg-blue-500/8", desc: "설·추석 전후 택배 위장 스미싱 400% 급증. 계절성 패턴 확인." },
-  { date: "2024.11", title: "정부지원금 사칭 캠페인", tag: "대규모", color: "text-cyan-400", border: "border-cyan-500/20", bg: "bg-cyan-500/8", desc: "동일 인프라에서 3,200건 동시 발송된 조직적 피싱 캠페인 탐지." },
+  { date: "2025.04", title: "AI 합성 발신번호 피싱", tag: "신규", color: "text-red-600 dark:text-red-400", border: "border-red-200 dark:border-red-500/20", bg: "bg-red-50 dark:bg-red-500/8", desc: "AI로 생성된 가짜 공공기관 발신번호 사용. 기존 패턴으로 탐지 어려움." },
+  { date: "2025.03", title: "단축URL 이중 리다이렉션", tag: "진화", color: "text-orange-600 dark:text-orange-400", border: "border-orange-200 dark:border-orange-500/20", bg: "bg-orange-50 dark:bg-orange-500/8", desc: "bit.ly → 중간 정상 도메인 → 최종 피싱 도메인으로 2단계 리다이렉션하여 URL 검사 우회." },
+  { date: "2025.02", title: "전화 유도형 피싱 증가", tag: "증가", color: "text-amber-700 dark:text-amber-400", border: "border-amber-200 dark:border-amber-500/20", bg: "bg-amber-50 dark:bg-amber-500/8", desc: "URL 없이 전화번호만 포함해 AI 탐지 회피. 보이스피싱과 연계." },
+  { date: "2025.01", title: "QR코드 피싱 (큐싱)", tag: "신규", color: "text-purple-600 dark:text-purple-400", border: "border-purple-200 dark:border-purple-500/20", bg: "bg-purple-50 dark:bg-purple-500/8", desc: "문자 내 QR코드 이미지 삽입. 텍스트 기반 탐지 완전 우회. 모델 확장 필요." },
+  { date: "2024.12", title: "명절 택배 사기 급증", tag: "시즌형", color: "text-blue-600 dark:text-blue-400", border: "border-blue-200 dark:border-blue-500/20", bg: "bg-blue-50 dark:bg-blue-500/8", desc: "설·추석 전후 택배 위장 스미싱 400% 급증. 계절성 패턴 확인." },
+  { date: "2024.11", title: "정부지원금 사칭 캠페인", tag: "대규모", color: "text-cyan-600 dark:text-cyan-400", border: "border-cyan-200 dark:border-cyan-500/20", bg: "bg-cyan-50 dark:bg-cyan-500/8", desc: "동일 인프라에서 3,200건 동시 발송된 조직적 피싱 캠페인 탐지." },
 ];
 
 /* ── Custom Chart Components ──────────────────────────── */
@@ -126,157 +126,73 @@ export function TrendReport() {
       {/* Header */}
       <div>
         <div className="flex items-center gap-2 mb-2">
-          <BarChart2 size={14} className="text-indigo-400" />
-          <span className="text-xs text-indigo-400 tracking-widest uppercase">트렌드 분석</span>
+          <BarChart2 size={14} className="text-indigo-500 dark:text-indigo-400" />
+          <span className="text-xs text-indigo-600 dark:text-indigo-400 tracking-widest uppercase">트렌드 분석</span>
         </div>
         <div className="flex items-start justify-between flex-wrap gap-3">
           <div>
-            <h1 className="text-white mb-1" style={{ fontWeight: 700, fontSize: "1.5rem" }}>피싱 트렌드 리포트</h1>
-            <p className="text-sm text-white/40">2024.07 ~ 2025.04 스미싱 탐지 동향 분석</p>
-          </div>
-          <div className="flex gap-1.5">
-            {(["3m", "6m", "all"] as const).map((p) => (
-              <button key={p} onClick={() => setPeriod(p)}
-                className={`px-3 py-1.5 rounded-lg text-xs border transition-all ${
-                  period === p ? "bg-indigo-500/20 border-indigo-500/30 text-indigo-400" : "border-white/10 text-white/35 hover:text-white/55"
-                }`}>
-                {p === "all" ? "전체" : p === "6m" ? "6개월" : "3개월"}
-              </button>
-            ))}
+            <h1 className="text-gray-900 dark:text-white mb-1" style={{ fontWeight: 700, fontSize: "1.5rem" }}>피싱 트렌드 리포트</h1>
+            <p className="text-sm text-gray-500 dark:text-white/40">신규 공격 패턴과 탐지 모델 인사이트</p>
           </div>
         </div>
       </div>
 
-      {/* KPI cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-        {[
-          { label: "이번 달 총 탐지", value: thisTotal.toLocaleString(), trend: `+${growthPct}%`, up: true },
-          { label: "HIGH 위험 탐지", value: totalThisMonth.high.toLocaleString(), trend: `+${highGrowth}%`, up: true },
-          { label: "신규 패턴 등록", value: "14", trend: "+4 전월 대비", up: true },
-          { label: "평균 위험 점수", value: "7.2", trend: "▲ 0.3", up: false },
-        ].map((k) => (
-          <div key={k.label} className="bg-[#111c30] border border-white/10 rounded-xl p-4">
-            <p className="text-[11px] text-white/35 mb-1">{k.label}</p>
-            <p className="text-white" style={{ fontWeight: 700, fontSize: "1.4rem" }}>{k.value}</p>
-            <p className={`text-[11px] mt-0.5 flex items-center gap-1 ${k.up ? "text-red-400" : "text-emerald-400"}`}>
-              {k.up ? <TrendingUp size={10} /> : <TrendingDown size={10} />}{k.trend}
-            </p>
-          </div>
-        ))}
-      </div>
-
-      {/* Monthly stacked bar */}
-      <div className="bg-[#111c30] border border-white/10 rounded-xl p-5">
-        <div className="flex items-center justify-between mb-4">
-          <div>
-            <p className="text-sm text-white/80" style={{ fontWeight: 500 }}>월별 탐지 건수 추이</p>
-            <p className="text-xs text-white/30">위험도별 누적 막대 차트</p>
-          </div>
-          <div className="flex gap-3 text-[11px] text-white/40">
-            <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-sm bg-red-500/75" />HIGH</span>
-            <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-sm bg-orange-500/60" />MED</span>
-            <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-sm bg-emerald-500/50" />LOW</span>
-          </div>
-        </div>
-        <StackedBarChart data={filteredData} />
-      </div>
-
-      {/* Category line chart */}
-      <div className="bg-[#111c30] border border-white/10 rounded-xl p-5">
-        <div className="flex items-center justify-between mb-4">
-          <div>
-            <p className="text-sm text-white/80" style={{ fontWeight: 500 }}>피싱 유형별 비중 변화</p>
-            <p className="text-xs text-white/30">전체 대비 % 기준</p>
-          </div>
-          <div className="flex flex-wrap gap-2">
-            {CATEGORY_TRENDS.map((s) => (
-              <span key={s.name} className="flex items-center gap-1 text-[10px] text-white/40">
-                <span className="w-2 h-0.5 rounded" style={{ backgroundColor: s.color }} />{s.name}
-              </span>
-            ))}
-          </div>
-        </div>
-        <LineChart data={CATEGORY_TRENDS} />
-      </div>
-
-      {/* Regional distribution */}
+      {/* 차트 섹션 — 백엔드 연동 전. KPI/monthly/category/region/YoY는 모두 mock 데이터
+          (실제 분석 DB 응답이 없으면 사용자 입장에서 "고장난 화면"으로 보임).
+          사용자에게 실질적으로 필요한 정보(신규 공격 패턴 타임라인 + 인사이트)만 남기고
+          나머지는 백엔드 연동 안내 카드로 통합. (P2-8 단순화) */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        <div className="bg-[#111c30] border border-white/10 rounded-xl p-5">
-          <div className="flex items-center gap-2 mb-4">
-            <MapPin size={13} className="text-white/40" />
-            <p className="text-sm text-white/70" style={{ fontWeight: 500 }}>지역별 탐지 분포</p>
-          </div>
-          <div className="space-y-2.5">
-            {REGIONS.map((r, i) => (
-              <div key={r.name} className="flex items-center gap-3">
-                <span className="text-[11px] text-white/30 w-4 shrink-0">{i + 1}</span>
-                <span className="text-xs text-white/60 w-12 shrink-0">{r.name}</span>
-                <div className="flex-1 h-2 rounded-full bg-white/5 overflow-hidden">
-                  <motion.div initial={{ width: 0 }} animate={{ width: `${r.pct}%` }} transition={{ delay: i * 0.05, duration: 0.6 }}
-                    className="h-full rounded-full bg-gradient-to-r from-indigo-500 to-blue-500" />
-                </div>
-                <span className="text-[11px] text-white/40 w-8 text-right">{r.pct}%</span>
-                <span className="text-[11px] text-white/25 w-14 text-right">{r.count.toLocaleString()}건</span>
-              </div>
-            ))}
+        <div className="bg-indigo-50 border border-indigo-200 dark:bg-indigo-500/10 dark:border-indigo-500/25 rounded-xl p-5">
+          <div className="flex items-start gap-2.5">
+            <BarChart2 size={16} className="text-indigo-500 dark:text-indigo-400 shrink-0 mt-0.5" />
+            <div>
+              <p className="text-sm text-indigo-800 dark:text-indigo-200 mb-1" style={{ fontWeight: 600 }}>
+                탐지 통계 · 백엔드 연동 예정
+              </p>
+              <p className="text-xs text-indigo-700 dark:text-indigo-300/80 leading-relaxed">
+                월별 탐지 건수, 유형별 비중, 지역 분포, 전년 대비 추이 차트는
+                분석 DB 연동 후 자동으로 표시됩니다.
+              </p>
+            </div>
           </div>
         </div>
 
-        {/* YoY comparison */}
-        <div className="bg-[#111c30] border border-white/10 rounded-xl p-5">
-          <p className="text-sm text-white/70 mb-4" style={{ fontWeight: 500 }}>전년 동기 대비</p>
-          <div className="space-y-3">
-            {[
-              { label: "총 탐지 건수", this: 1692, last: 1287, color: "bg-red-500" },
-              { label: "HIGH 위험", this: 501, last: 341, color: "bg-red-500" },
-              { label: "신규 공격 패턴", this: 14, last: 7, color: "bg-orange-500" },
-              { label: "평균 위험 점수", this: 72, last: 65, color: "bg-amber-500" },
-            ].map((s) => {
-              const growth = Math.round(((s.this - s.last) / s.last) * 100);
-              return (
-                <div key={s.label} className="p-3 rounded-xl bg-white/3 border border-white/5">
-                  <div className="flex items-center justify-between mb-1.5">
-                    <span className="text-xs text-white/55">{s.label}</span>
-                    <span className="text-xs text-red-400" style={{ fontWeight: 600 }}>+{growth}%</span>
-                  </div>
-                  <div className="flex gap-2 items-center">
-                    <div className="flex-1 h-1.5 rounded-full bg-white/5">
-                      <div className={`h-full rounded-full ${s.color}`} style={{ width: "100%", opacity: 0.8 }} />
-                    </div>
-                    <div className="flex-1 h-1.5 rounded-full bg-white/5">
-                      <div className={`h-full rounded-full ${s.color}`} style={{ width: `${(s.last / s.this) * 100}%`, opacity: 0.35 }} />
-                    </div>
-                  </div>
-                  <div className="flex justify-between mt-1">
-                    <span className="text-[10px] text-white/50">2025: {s.this.toLocaleString()}</span>
-                    <span className="text-[10px] text-white/25">2024: {s.last.toLocaleString()}</span>
-                  </div>
-                </div>
-              );
-            })}
+        <div className="bg-amber-50 border border-amber-200 dark:bg-amber-500/10 dark:border-amber-500/25 rounded-xl p-5">
+          <div className="flex items-start gap-2.5">
+            <TrendingUp size={16} className="text-amber-500 dark:text-amber-400 shrink-0 mt-0.5" />
+            <div>
+              <p className="text-sm text-amber-800 dark:text-amber-200 mb-1" style={{ fontWeight: 600 }}>
+                지금 당장 확인 가능한 정보
+              </p>
+              <ul className="text-xs text-amber-700 dark:text-amber-300/80 leading-relaxed list-disc list-inside space-y-0.5">
+                <li>최근 발견된 신규 공격 패턴 (아래 타임라인)</li>
+                <li>탐지 모델 개선 권고 사항 (인사이트)</li>
+                <li>단기 트렌드 분석은 곧 제공 예정</li>
+              </ul>
+            </div>
           </div>
         </div>
       </div>
 
       {/* Attack pattern timeline */}
-      <div className="bg-[#111c30] border border-white/10 rounded-xl p-5">
+      <div className="bg-white border border-gray-200 dark:bg-[#111c30] dark:border-white/10 rounded-xl p-5">
         <div className="flex items-center gap-2 mb-5">
-          <CalendarDays size={13} className="text-white/40" />
-          <p className="text-sm text-white/70" style={{ fontWeight: 500 }}>신규 공격 패턴 타임라인</p>
+          <CalendarDays size={13} className="text-gray-400 dark:text-white/40" />
+          <p className="text-sm text-gray-700 dark:text-white/70" style={{ fontWeight: 500 }}>신규 공격 패턴 타임라인</p>
         </div>
         <div className="space-y-3 relative">
-          <div className="absolute left-[72px] top-2 bottom-2 w-px bg-white/8" />
+          <div className="absolute left-[72px] top-2 bottom-2 w-px bg-gray-200 dark:bg-white/8" />
           {TIMELINE.map((t, i) => (
             <motion.div key={i} initial={{ opacity: 0, x: -8 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.07 }}
               className="flex gap-4 items-start">
-              <span className="text-[11px] text-white/25 w-14 shrink-0 pt-2 text-right">{t.date}</span>
-              <div className="relative z-10 w-2 h-2 rounded-full mt-2.5 shrink-0" style={{ backgroundColor: t.color.replace("text-", "").includes("red") ? "#ef4444" : t.color.includes("orange") ? "#f97316" : t.color.includes("amber") ? "#f59e0b" : t.color.includes("purple") ? "#a78bfa" : t.color.includes("blue") ? "#3b82f6" : "#22d3ee" }} />
+              <span className="text-[11px] text-gray-500 dark:text-white/25 w-14 shrink-0 pt-2 text-right">{t.date}</span>
+              <div className="relative z-10 w-2 h-2 rounded-full mt-2.5 shrink-0" style={{ backgroundColor: t.color.includes("red") ? "#ef4444" : t.color.includes("orange") ? "#f97316" : t.color.includes("amber") ? "#f59e0b" : t.color.includes("purple") ? "#a78bfa" : t.color.includes("blue") ? "#3b82f6" : "#22d3ee" }} />
               <div className={`flex-1 p-3 rounded-xl border ${t.bg} ${t.border}`}>
                 <div className="flex items-center gap-2 mb-1">
                   <p className={`text-xs ${t.color}`} style={{ fontWeight: 500 }}>{t.title}</p>
                   <span className={`text-[9px] px-1.5 py-0.5 rounded border ${t.border} ${t.color}`}>{t.tag}</span>
                 </div>
-                <p className="text-[11px] text-white/45 leading-relaxed">{t.desc}</p>
+                <p className="text-[11px] text-gray-700 dark:text-white/45 leading-relaxed">{t.desc}</p>
               </div>
             </motion.div>
           ))}
@@ -284,10 +200,10 @@ export function TrendReport() {
       </div>
 
       {/* Insight banner */}
-      <div className="p-4 rounded-xl bg-indigo-500/5 border border-indigo-500/15 flex gap-3">
-        <AlertCircle size={14} className="text-indigo-400 shrink-0 mt-0.5" />
-        <p className="text-xs text-white/50 leading-relaxed">
-          <strong className="text-indigo-300/80">분석 인사이트:</strong> 2025년 들어 URL을 포함하지 않는 전화 유도형 및 QR코드 피싱이 증가하고 있습니다.
+      <div className="p-4 rounded-xl bg-indigo-50 border border-indigo-200 dark:bg-indigo-500/5 dark:border-indigo-500/15 flex gap-3">
+        <AlertCircle size={14} className="text-indigo-500 dark:text-indigo-400 shrink-0 mt-0.5" />
+        <p className="text-xs text-gray-700 dark:text-white/50 leading-relaxed">
+          <strong className="text-indigo-700 dark:text-indigo-300/80">분석 인사이트:</strong> 2025년 들어 URL을 포함하지 않는 전화 유도형 및 QR코드 피싱이 증가하고 있습니다.
           현재 텍스트 기반 탐지 모델의 보완을 위해 멀티모달 입력(이미지 + 텍스트) 확장이 권고됩니다.
         </p>
       </div>

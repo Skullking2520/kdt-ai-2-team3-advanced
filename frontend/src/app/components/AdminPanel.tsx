@@ -75,7 +75,7 @@ function CustomRadarChart() {
             y={p.y}
             textAnchor="middle"
             dominantBaseline="middle"
-            fill="rgba(255,255,255,0.4)"
+            className="fill-gray-700 dark:fill-white/40"
             fontSize={9}
           >
             {label}
@@ -86,7 +86,7 @@ function CustomRadarChart() {
       {RADAR_MODELS.map((model, i) => (
         <g key={`legend-${model.name}`} transform={`translate(4, ${210 + i * 12})`}>
           <rect width={8} height={8} rx={2} fill={model.color} fillOpacity={0.8} />
-          <text x={12} y={7} fill="rgba(255,255,255,0.5)" fontSize={9}>{model.name}</text>
+          <text x={12} y={7} className="fill-gray-700 dark:fill-white/50" fontSize={9}>{model.name}</text>
         </g>
       ))}
     </svg>
@@ -319,15 +319,15 @@ function AdminDashboard() {
           { label: "최고 속도", value: "12ms", model: "LSTM", icon: Zap, color: "text-yellow-400", bg: "bg-yellow-500/10" },
           { label: "Zero-day 최고", value: "--%", model: "분석 모델", icon: ShieldAlert, color: "text-red-400", bg: "bg-red-500/10" },
         ].map((c) => (
-          <div key={c.label} className="bg-[#111c30] border border-white/10 rounded-xl p-4">
+          <div key={c.label} className="bg-[#111c30] dark:bg-[#111c30] border border-white/10 rounded-xl p-4">
             <div className="flex items-center justify-between mb-3">
-              <p className="text-xs text-white/40">{c.label}</p>
+              <p className="text-white/40" style={{ fontSize: "0.75rem" }}>{c.label}</p>
               <div className={`w-7 h-7 rounded-lg ${c.bg} flex items-center justify-center`}>
                 <c.icon size={13} className={c.color} />
               </div>
             </div>
             <p className={`${c.color} mb-0.5`} style={{ fontWeight: 700, fontSize: "1.4rem" }}>{c.value}</p>
-            <p className="text-[11px] text-white/30">{c.model}</p>
+            <p className="text-white/30" style={{ fontSize: "0.6875rem" }}>{c.model}</p>
           </div>
         ))}
       </div>

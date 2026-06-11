@@ -7,31 +7,35 @@
  *
  * 단, 정적 import 자체는 build 에 남을 수 있으므로, 본 라우트에
  * 민감 정보(키, 비밀번호 등)를 두지 말 것.
+ *
+ * 각 Admin 페이지는 React.lazy 로 동적 import → 첫 페이지 로드 시
+ * prod 번들에서 제외되어 초기 번들 크기 감소.
  */
-import { AdminPanel } from "./components/AdminPanel";
-import { Dashboard } from "./components/Dashboard";
-import { SMSSimulator } from "./components/SMSSimulator";
-import { LiveFeed } from "./components/LiveFeed";
-import { ReportExport } from "./components/ReportExport";
-import { AttentionViz } from "./components/AttentionViz";
-import { ModelArchitecture } from "./components/ModelArchitecture";
-import { APIExplorer } from "./components/APIExplorer";
-import { Settings } from "./components/Settings";
-import { Benchmark } from "./components/Benchmark";
-import { DatasetStats } from "./components/DatasetStats";
-import { PatternDB } from "./components/PatternDB";
-import { ZeroDayExplainer } from "./components/ZeroDayExplainer";
-import { ErrorAnalysis } from "./components/ErrorAnalysis";
-import { RedTeam } from "./components/RedTeam";
-import { BulkAnalysis } from "./components/BulkAnalysis";
-import { CompareAnalysis } from "./components/CompareAnalysis";
-import { AuditLog } from "./components/AuditLog";
-import { ABTest } from "./components/ABTest";
-import { FeatureImportance } from "./components/FeatureImportance";
-import { IOCList } from "./components/IOCList";
-import { SystemHealth } from "./components/SystemHealth";
-
+import { lazy } from "react";
 import type { RouteObject } from "react-router";
+
+const AdminPanel = lazy(() => import("./components/AdminPanel").then((m) => ({ default: m.AdminPanel })));
+const Dashboard = lazy(() => import("./components/Dashboard").then((m) => ({ default: m.Dashboard })));
+const SMSSimulator = lazy(() => import("./components/SMSSimulator").then((m) => ({ default: m.SMSSimulator })));
+const LiveFeed = lazy(() => import("./components/LiveFeed").then((m) => ({ default: m.LiveFeed })));
+const ReportExport = lazy(() => import("./components/ReportExport").then((m) => ({ default: m.ReportExport })));
+const AttentionViz = lazy(() => import("./components/AttentionViz").then((m) => ({ default: m.AttentionViz })));
+const ModelArchitecture = lazy(() => import("./components/ModelArchitecture").then((m) => ({ default: m.ModelArchitecture })));
+const APIExplorer = lazy(() => import("./components/APIExplorer").then((m) => ({ default: m.APIExplorer })));
+const Settings = lazy(() => import("./components/Settings").then((m) => ({ default: m.Settings })));
+const Benchmark = lazy(() => import("./components/Benchmark").then((m) => ({ default: m.Benchmark })));
+const DatasetStats = lazy(() => import("./components/DatasetStats").then((m) => ({ default: m.DatasetStats })));
+const PatternDB = lazy(() => import("./components/PatternDB").then((m) => ({ default: m.PatternDB })));
+const ZeroDayExplainer = lazy(() => import("./components/ZeroDayExplainer").then((m) => ({ default: m.ZeroDayExplainer })));
+const ErrorAnalysis = lazy(() => import("./components/ErrorAnalysis").then((m) => ({ default: m.ErrorAnalysis })));
+const RedTeam = lazy(() => import("./components/RedTeam").then((m) => ({ default: m.RedTeam })));
+const BulkAnalysis = lazy(() => import("./components/BulkAnalysis").then((m) => ({ default: m.BulkAnalysis })));
+const CompareAnalysis = lazy(() => import("./components/CompareAnalysis").then((m) => ({ default: m.CompareAnalysis })));
+const AuditLog = lazy(() => import("./components/AuditLog").then((m) => ({ default: m.AuditLog })));
+const ABTest = lazy(() => import("./components/ABTest").then((m) => ({ default: m.ABTest })));
+const FeatureImportance = lazy(() => import("./components/FeatureImportance").then((m) => ({ default: m.FeatureImportance })));
+const IOCList = lazy(() => import("./components/IOCList").then((m) => ({ default: m.IOCList })));
+const SystemHealth = lazy(() => import("./components/SystemHealth").then((m) => ({ default: m.SystemHealth })));
 
 /**
  * DEV-only 라우트. vite build 시 import.meta.env.DEV === false 로

@@ -170,7 +170,7 @@ const catColors: Record<string, string> = {
   "금융 피싱": "bg-emerald-500/15 text-emerald-400 border-emerald-500/20",
   "택배 사기": "bg-amber-500/15 text-amber-400 border-amber-500/20",
   "이벤트 사기": "bg-purple-500/15 text-purple-400 border-purple-500/20",
-  "대출 사기": "bg-rose-500/15 text-rose-400 border-rose-500/20",
+  "대출 사기": "bg-red-500/15 text-red-400 border-red-500/20",
 };
 
 export function PhishingGallery() {

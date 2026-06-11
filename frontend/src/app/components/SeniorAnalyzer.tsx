@@ -6,6 +6,7 @@ import {
   Phone, CheckCircle2, ThumbsUp, ThumbsDown, RotateCcw,
 } from "lucide-react";
 import { analyzeSms, toLegacyRiskLevel, toSeniorReasons, toSeniorActions } from "@/lib/smsAnalysis";
+import { useSenior } from "@/app/context/SeniorContext";
 
 interface AnalysisResult {
   risk_level: "danger" | "warning" | "normal";
@@ -38,6 +39,7 @@ export function SeniorAnalyzer() {
   const [feedback, setFeedback] = useState<"up" | "down" | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const resultRef = useRef<HTMLDivElement>(null);
+  const { senior: seniorMode } = useSenior();
 
   useEffect(() => { textareaRef.current?.focus(); }, []);
 
@@ -95,19 +97,20 @@ export function SeniorAnalyzer() {
 
   return (
     <div className="min-h-full">
-      {/* 상단 툴바 */}
-      <div className="sticky top-0 z-20 bg-[#0b1120]/95 backdrop-blur border-b-2 border-white/10 px-4 py-3">
+      {/* 상단 툴바 — 시니어 모드에서는 숨김 (Layout GNB + SeniorBottomBar가 제공) */}
+      {!seniorMode && (
+      <div className="sticky top-0 z-20 bg-white dark:bg-[#0b1120]/95 backdrop-blur border-b-2 border-slate-200 dark:border-white/10 px-4 py-3">
         <div className="max-w-3xl mx-auto flex items-center gap-2 flex-wrap">
           <button
             onClick={() => window.history.length > 1 ? window.history.back() : nav("/")}
-            className="flex items-center gap-2 px-4 py-3 rounded-xl bg-white/8 border-2 border-white/15 text-white hover:bg-white/15 active:scale-95 transition-all"
+            className="flex items-center gap-2 px-4 py-3 rounded-xl bg-slate-200 dark:bg-white/8 border-2 border-slate-300 dark:border-white/15 text-white hover:bg-slate-300 dark:bg-white/15 active:scale-95 transition-all"
             style={{ fontSize: "1.05rem", fontWeight: 600 }}
           >
             <ArrowLeft size={22} /> 뒤로
           </button>
           <button
             onClick={() => nav("/")}
-            className="flex items-center gap-2 px-4 py-3 rounded-xl bg-white/8 border-2 border-white/15 text-white hover:bg-white/15 active:scale-95 transition-all"
+            className="flex items-center gap-2 px-4 py-3 rounded-xl bg-slate-200 dark:bg-white/8 border-2 border-slate-300 dark:border-white/15 text-white hover:bg-slate-300 dark:bg-white/15 active:scale-95 transition-all"
             style={{ fontSize: "1.05rem", fontWeight: 600 }}
           >
             <Home size={22} /> 처음
@@ -116,24 +119,25 @@ export function SeniorAnalyzer() {
           <div className="ml-auto" />
         </div>
       </div>
+      )}
 
-      <div className="max-w-3xl mx-auto px-6 py-8">
+      <div className="max-w-3xl mx-auto px-6 py-8 pb-32">
         {/* 헤더 */}
         <div className="text-center mb-8">
-          <div className="inline-flex w-16 h-16 rounded-2xl bg-gradient-to-br from-cyan-500 to-blue-600 items-center justify-center shadow-xl shadow-cyan-500/30 mb-4">
-            <ShieldAlert size={32} className="text-white" />
+          <div className="inline-flex w-16 h-16 rounded-2xl bg-blue-600 items-center justify-center shadow-lg mb-4">
+            <ShieldAlert size={32} className="text-slate-900 dark:text-white" />
           </div>
-          <h1 className="text-white mb-2" style={{ fontWeight: 800, fontSize: "2rem", letterSpacing: "-0.02em" }}>
+          <h1 className="text-slate-900 dark:text-white mb-2 text-4xl" style={{ fontWeight: 700, lineHeight: 1.2 }}>
             문자 검사하기
           </h1>
-          <p className="text-white/75" style={{ fontSize: "1.2rem", lineHeight: 1.6 }}>
+          <p className="text-slate-600 dark:text-white/75 text-lg" style={{ lineHeight: 1.5 }}>
             받은 문자를 아래 칸에 붙여넣으세요
           </p>
         </div>
 
         {/* 예시 버튼 */}
         <div className="mb-5">
-          <p className="text-white/60 mb-3" style={{ fontSize: "1.05rem", fontWeight: 600 }}>
+          <p className="text-slate-500 dark:text-white/60 mb-3 text-base" style={{ fontWeight: 600 }}>
             예시 문자로 테스트해보기
           </p>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
@@ -141,8 +145,7 @@ export function SeniorAnalyzer() {
               <button
                 key={s.label}
                 onClick={() => { setTextInput(s.text); setError(""); }}
-                className="px-4 py-3 rounded-xl bg-white/8 border-2 border-white/15 text-white/80 hover:bg-white/15 hover:text-white transition-all"
-                style={{ fontSize: "1.05rem", fontWeight: 600 }}
+                className="px-4 py-3 rounded-xl bg-slate-100 dark:bg-white/10 border-2 border-slate-200 dark:border-white/15 text-slate-900 dark:text-white hover:bg-slate-200 dark:hover:bg-white/15 transition-all text-base" style={{ fontWeight: 600 }}
               >
                 {s.label}
               </button>
@@ -151,8 +154,8 @@ export function SeniorAnalyzer() {
         </div>
 
         {/* 입력 영역 */}
-        <div className="rounded-3xl bg-[#111c30] border-2 border-white/15 p-6 mb-5">
-          <p className="text-white/60 mb-3" style={{ fontSize: "1.1rem", fontWeight: 600 }}>
+        <div className="rounded-3xl bg-slate-50 dark:bg-[#111c30] border-2 border-slate-300 dark:border-white/15 p-6 mb-5">
+          <p className="text-slate-500 dark:text-white/60 mb-3 text-base" style={{ fontWeight: 600 }}>
             문자 내용을 여기에 붙여넣으세요
           </p>
           <textarea
@@ -162,17 +165,17 @@ export function SeniorAnalyzer() {
             placeholder="받은 문자를 길게 눌러 복사한 뒤 여기에 붙여넣으세요..."
             rows={10}
             maxLength={MAX_LEN}
-            className="w-full bg-black/30 rounded-xl p-4 text-white/90 placeholder:text-white/25 outline-none resize-none border-2 border-white/10 focus:border-cyan-500/50 transition-all"
-            style={{ fontSize: "1.15rem", lineHeight: 1.7 }}
+            className="w-full bg-slate-100 dark:bg-black/30 rounded-xl p-4 text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-white/40 outline-none resize-none border-2 border-slate-200 dark:border-white/10 focus:border-blue-500 dark:focus:border-blue-400 transition-all text-base"
+            style={{ lineHeight: 1.6 }}
           />
           <div className="flex items-center justify-between mt-3">
-            <span className="text-white/40" style={{ fontSize: "1rem" }}>
+            <span className="text-slate-500 dark:text-white/40 text-sm">
               {textInput.length} / {MAX_LEN}자
             </span>
             {textInput && (
               <button
                 onClick={() => { setTextInput(""); setError(""); }}
-                className="px-4 py-2 rounded-lg bg-white/10 text-white/60 hover:bg-white/15 hover:text-white transition-all"
+                className="px-4 py-2 rounded-lg bg-slate-300 dark:bg-white/10 text-slate-500 dark:text-white/60 hover:bg-slate-300 dark:bg-white/15 hover:text-slate-900 dark:hover:text-white transition-all"
                 style={{ fontSize: "1rem", fontWeight: 600 }}
               >
                 지우기
@@ -188,7 +191,7 @@ export function SeniorAnalyzer() {
             animate={{ opacity: 1, y: 0 }}
             className="rounded-2xl bg-red-500/15 border-2 border-red-500/40 p-5 mb-5"
           >
-            <p className="text-red-200 flex items-center gap-3" style={{ fontSize: "1.15rem", fontWeight: 600 }}>
+            <p className="text-red-600 dark:text-red-200 flex items-center gap-3 text-base" style={{ fontWeight: 600 }}>
               <AlertTriangle size={22} />
               {error}
             </p>
@@ -200,8 +203,8 @@ export function SeniorAnalyzer() {
           <button
             onClick={handleAnalyze}
             disabled={!textInput.trim() || loading}
-            className="flex-1 flex items-center justify-center gap-3 px-6 py-5 rounded-2xl bg-gradient-to-r from-cyan-500 to-blue-600 text-white disabled:opacity-40 hover:opacity-90 active:scale-[0.98] transition-all shadow-2xl shadow-cyan-500/30"
-            style={{ fontWeight: 800, fontSize: "1.4rem" }}
+            className="flex-1 flex items-center justify-center gap-3 px-6 py-5 rounded-2xl bg-blue-600 text-white disabled:opacity-40 hover:bg-blue-700 active:scale-[0.98] transition-all shadow-lg"
+            className="text-2xl" style={{ fontWeight: 700, lineHeight: 1.2 }}
           >
             {loading ? (
               <>
@@ -217,7 +220,7 @@ export function SeniorAnalyzer() {
           </button>
           <button
             onClick={handleReset}
-            className="px-5 py-5 rounded-2xl border-2 border-white/15 text-white/60 hover:text-white hover:bg-white/10 active:scale-95 transition-all"
+            className="px-5 py-5 rounded-2xl border-2 border-slate-300 dark:border-white/15 text-slate-500 dark:text-white/60 hover:text-slate-900 dark:hover:text-white hover:bg-slate-300 dark:bg-white/10 active:scale-95 transition-all"
           >
             <RotateCcw size={24} />
           </button>
@@ -225,7 +228,7 @@ export function SeniorAnalyzer() {
 
         {/* 안내 문구 */}
         <div className="rounded-2xl bg-blue-500/10 border-2 border-blue-500/25 p-5 mb-8">
-          <p className="text-blue-200" style={{ fontSize: "1.05rem", lineHeight: 1.7 }}>
+          <p className="text-blue-600 dark:text-blue-200 text-base" style={{ lineHeight: 1.5 }}>
             <strong>개인정보 보호:</strong> 입력한 문자는 분석 후 바로 삭제되며 저장하지 않습니다.
           </p>
         </div>
@@ -235,19 +238,19 @@ export function SeniorAnalyzer() {
           <AnimatePresence mode="wait">
             {loading && (
               <motion.div key="loading" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-                <div className="rounded-3xl bg-[#111c30] border-2 border-cyan-500/30 p-10 flex flex-col items-center justify-center gap-6 min-h-[350px]">
+                <div className="rounded-3xl bg-slate-50 dark:bg-[#111c30] border-2 border-blue-500/30 p-10 flex flex-col items-center justify-center gap-6 min-h-[350px]">
                   <div className="relative w-24 h-24">
-                    <div className="absolute inset-0 rounded-full border-3 border-cyan-500/20 animate-ping" />
-                    <div className="absolute inset-3 rounded-full border-3 border-cyan-500/40 animate-ping" style={{ animationDelay: "0.3s" }} />
-                    <div className="absolute inset-6 rounded-full bg-cyan-500/25 flex items-center justify-center">
-                      <ShieldAlert size={24} className="text-cyan-400 animate-pulse" />
+                    <div className="absolute inset-0 rounded-full border-3 border-blue-500/20 animate-ping" />
+                    <div className="absolute inset-3 rounded-full border-3 border-blue-500/40 animate-ping" style={{ animationDelay: "0.3s" }} />
+                    <div className="absolute inset-6 rounded-full bg-blue-500/25 flex items-center justify-center">
+                      <ShieldAlert size={24} className="text-blue-500 animate-pulse" />
                     </div>
                   </div>
                   <div className="text-center">
-                    <p className="text-white mb-2" style={{ fontWeight: 700, fontSize: "1.6rem" }}>
+                    <p className="text-slate-900 dark:text-white mb-2 text-2xl" style={{ fontWeight: 700, lineHeight: 1.3 }}>
                       분석 중입니다...
                     </p>
-                    <p className="text-white/60" style={{ fontSize: "1.15rem" }}>
+                    <p className="text-slate-500 dark:text-white/60" style={{ fontSize: "1.15rem" }}>
                       잠시만 기다려주세요
                     </p>
                   </div>
@@ -262,7 +265,7 @@ export function SeniorAnalyzer() {
                 <div className={`rounded-3xl border-3 ${cfg.bg} ${cfg.border} p-8`}>
                   <div className="flex items-center gap-6 mb-6">
                     {/* 신호등 */}
-                    <div className="flex flex-col gap-3 p-4 rounded-2xl bg-black/40 shrink-0">
+                    <div className="flex flex-col gap-3 p-4 rounded-2xl bg-slate-200 dark:bg-black/40 shrink-0">
                       {(["danger", "warning", "normal"] as const).map((lv) => {
                         const active = result.risk_level === lv;
                         const colors = { danger: "bg-red-500", warning: "bg-amber-400", normal: "bg-emerald-400" };
@@ -270,7 +273,7 @@ export function SeniorAnalyzer() {
                         return (
                           <div
                             key={lv}
-                            className={`w-12 h-12 rounded-full transition-all ${active ? `${colors[lv]} shadow-2xl` : "bg-white/10"}`}
+                            className={`w-12 h-12 rounded-full transition-all ${active ? `${colors[lv]} shadow-2xl` : "bg-slate-300 dark:bg-white/10"}`}
                             style={active ? { boxShadow: `0 0 30px ${shadows[lv]}` } : {}}
                           />
                         );
@@ -282,22 +285,22 @@ export function SeniorAnalyzer() {
                       <p className={`mb-2 ${cfg.color}`} style={{ fontWeight: 800, fontSize: "2.2rem", letterSpacing: "-0.015em" }}>
                         {cfg.label}
                       </p>
-                      <p className="text-white/85" style={{ fontSize: "1.3rem", lineHeight: 1.5, fontWeight: 600 }}>
+                      <p className="text-slate-700 dark:text-slate-200 dark:bg-slate-200 dark:bg-white/85" style={{ fontSize: "1.3rem", lineHeight: 1.5, fontWeight: 600 }}>
                         {cfg.desc}
                       </p>
                     </div>
                   </div>
 
                   {/* 위험도 점수 */}
-                  <div className="pt-6 border-t-2 border-white/10">
+                  <div className="pt-6 border-t-2 border-slate-200 dark:border-white/10">
                     <div className="flex items-center justify-between mb-3">
-                      <span className="text-white/60" style={{ fontSize: "1.15rem" }}>위험도 점수</span>
-                      <span className={cfg.color} style={{ fontWeight: 800, fontSize: "2.5rem" }}>
+                      <span className="text-slate-500 dark:text-white/60" style={{ fontSize: "1.15rem" }}>위험도 점수</span>
+                      <span className={`${cfg.color} text-4xl`} style={{ fontWeight: 800, lineHeight: 1 }}>
                         {result.risk_score}
-                        <span className="text-white/50 ml-2" style={{ fontSize: "1.3rem", fontWeight: 600 }}>/ 100점</span>
+                        <span className="text-slate-500 dark:text-white/50 ml-2 text-lg" style={{ fontWeight: 500, lineHeight: 1 }}>/ 100점</span>
                       </span>
                     </div>
-                    <div className="h-4 bg-white/10 rounded-full overflow-hidden">
+                    <div className="h-4 bg-slate-300 dark:bg-white/10 rounded-full overflow-hidden">
                       <motion.div
                         initial={{ width: 0 }}
                         animate={{ width: `${result.risk_score}%` }}
@@ -309,8 +312,8 @@ export function SeniorAnalyzer() {
                 </div>
 
                 {/* 판단 이유 */}
-                <div className="rounded-3xl bg-[#111c30] border-2 border-white/15 p-6">
-                  <p className="text-white/70 mb-4" style={{ fontSize: "1.2rem", fontWeight: 700 }}>
+                <div className="rounded-3xl bg-slate-50 dark:bg-[#111c30] border-2 border-slate-300 dark:border-white/15 p-6">
+                  <p className="text-slate-700 dark:text-white/70 mb-4 text-lg font-semibold">
                     왜 이렇게 판단했나요?
                   </p>
                   <ol className="space-y-4">
@@ -323,12 +326,12 @@ export function SeniorAnalyzer() {
                         className="flex items-start gap-4"
                       >
                         <span
-                          className="shrink-0 w-10 h-10 rounded-full bg-cyan-500/20 text-cyan-300 flex items-center justify-center border-2 border-cyan-500/30"
-                          style={{ fontWeight: 800, fontSize: "1.2rem" }}
+                          className="shrink-0 w-10 h-10 rounded-full bg-blue-500/20 text-blue-600 dark:text-blue-300 flex items-center justify-center border-2 border-blue-500/30"
+                          className="text-lg" style={{ fontWeight: 700, lineHeight: 1 }}
                         >
                           {i + 1}
                         </span>
-                        <span className="text-white/85" style={{ fontSize: "1.2rem", lineHeight: 1.7 }}>
+                        <span className="text-slate-700 dark:text-slate-200 text-lg" style={{ lineHeight: 1.5 }}>
                           {reason}
                         </span>
                       </motion.li>
@@ -339,11 +342,11 @@ export function SeniorAnalyzer() {
                 {/* 행동 가이드 */}
                 {result.risk_level === "danger" && (
                   <div className="rounded-3xl bg-red-500/15 border-3 border-red-500/40 p-7">
-                    <p className="text-red-200 mb-5 flex items-center gap-3" style={{ fontWeight: 800, fontSize: "1.5rem" }}>
+                    <p className="text-red-600 dark:text-red-200 mb-5 flex items-center gap-3 text-2xl" style={{ fontWeight: 700, lineHeight: 1.2 }}>
                       <AlertTriangle size={26} />
                       절대 하지 마세요!
                     </p>
-                    <ul className="space-y-4 text-white/95 mb-6" style={{ fontSize: "1.25rem", lineHeight: 1.8, fontWeight: 600 }}>
+                    <ul className="space-y-4 text-slate-800 dark:text-white/95 mb-6 text-lg" style={{ lineHeight: 1.5 }}>
                       {result.action_guide.map((action, i) => (
                         <li key={i} className="flex items-start gap-3">
                           <span className="text-red-400 text-2xl shrink-0">•</span>
@@ -352,22 +355,22 @@ export function SeniorAnalyzer() {
                       ))}
                     </ul>
                     <div className="pt-5 border-t-2 border-red-500/30">
-                      <p className="text-red-200/90 mb-4" style={{ fontSize: "1.1rem", fontWeight: 600 }}>
+                      <p className="text-red-600 dark:text-red-200/90 mb-4 text-base" style={{ fontWeight: 600 }}>
                         이미 링크를 눌렀거나 정보를 입력했다면 <strong>즉시 신고</strong>하세요
                       </p>
                       <div className="grid grid-cols-2 gap-4">
                         <a
                           href="tel:112"
-                          className="flex flex-col items-center justify-center gap-2 px-5 py-5 rounded-2xl bg-red-600/30 border-2 border-red-500/60 text-red-100 hover:bg-red-600/40 active:scale-95 transition-all"
-                          style={{ fontWeight: 800, fontSize: "1.3rem" }}
+                          className="flex flex-col items-center justify-center gap-2 px-5 py-5 rounded-2xl bg-red-600/20 border-2 border-red-500/60 text-red-700 dark:text-red-100 hover:bg-red-600/30 active:scale-95 transition-all text-lg"
+                          className="text-lg" style={{ fontWeight: 700, lineHeight: 1.2 }}
                         >
                           <Phone size={28} />
                           112 경찰
                         </a>
                         <a
                           href="tel:1332"
-                          className="flex flex-col items-center justify-center gap-2 px-5 py-5 rounded-2xl bg-amber-600/30 border-2 border-amber-500/60 text-amber-100 hover:bg-amber-600/40 active:scale-95 transition-all"
-                          style={{ fontWeight: 800, fontSize: "1.3rem" }}
+                          className="flex flex-col items-center justify-center gap-2 px-5 py-5 rounded-2xl bg-amber-600/20 border-2 border-amber-500/60 text-amber-700 dark:text-amber-100 hover:bg-amber-600/30 active:scale-95 transition-all text-lg"
+                          className="text-lg" style={{ fontWeight: 700, lineHeight: 1.2 }}
                         >
                           <Phone size={28} />
                           1332 금감원
@@ -379,11 +382,11 @@ export function SeniorAnalyzer() {
 
                 {result.risk_level === "warning" && (
                   <div className="rounded-3xl bg-amber-500/15 border-3 border-amber-500/40 p-7">
-                    <p className="text-amber-200 mb-4 flex items-center gap-3" style={{ fontWeight: 800, fontSize: "1.5rem" }}>
+                    <p className="text-amber-600 dark:text-amber-200 mb-4 flex items-center gap-3 text-2xl" style={{ fontWeight: 700, lineHeight: 1.2 }}>
                       <AlertTriangle size={26} />
                       이렇게 하세요
                     </p>
-                    <ul className="space-y-4 text-white/90" style={{ fontSize: "1.25rem", lineHeight: 1.8, fontWeight: 600 }}>
+                    <ul className="space-y-4 text-slate-800 dark:text-white/90 text-lg" style={{ lineHeight: 1.5 }}>
                       {result.action_guide.map((action, i) => (
                         <li key={i} className="flex items-start gap-3">
                           <span className="text-amber-400 text-2xl shrink-0">•</span>
@@ -396,14 +399,14 @@ export function SeniorAnalyzer() {
 
                 {result.risk_level === "normal" && (
                   <div className="rounded-3xl bg-emerald-500/15 border-3 border-emerald-500/40 p-7">
-                    <p className="text-emerald-200 mb-4 flex items-center gap-3" style={{ fontWeight: 800, fontSize: "1.5rem" }}>
+                    <p className="text-emerald-600 dark:text-emerald-200 mb-4 flex items-center gap-3 text-2xl" style={{ fontWeight: 700, lineHeight: 1.2 }}>
                       <ShieldCheck size={26} />
                       안심하셔도 좋습니다
                     </p>
-                    <p className="text-white/85 mb-4" style={{ fontSize: "1.2rem", lineHeight: 1.7 }}>
+                    <p className="text-slate-700 dark:text-slate-200 mb-4 text-lg" style={{ lineHeight: 1.5 }}>
                       이 문자는 안전한 것으로 보입니다.
                     </p>
-                    <ul className="space-y-3 text-white/75" style={{ fontSize: "1.15rem", lineHeight: 1.7 }}>
+                    <ul className="space-y-3 text-slate-700 dark:text-white/75" style={{ lineHeight: 1.6 }}>
                       {result.action_guide.map((action, i) => (
                         <li key={i} className="flex items-start gap-3">
                           <span className="text-emerald-400 shrink-0">•</span>
@@ -415,17 +418,17 @@ export function SeniorAnalyzer() {
                 )}
 
                 {/* 피드백 */}
-                <div className="rounded-3xl bg-[#111c30] border-2 border-white/15 p-6">
-                  <p className="text-white/70 mb-4" style={{ fontSize: "1.15rem" }}>
+                <div className="rounded-3xl bg-slate-50 dark:bg-[#111c30] border-2 border-slate-300 dark:border-white/15 p-6">
+                  <p className="text-slate-700 dark:text-white/70 mb-4 text-base">
                     이 결과가 정확했나요?
                   </p>
                   {feedback ? (
                     <motion.div
                       initial={{ opacity: 0, scale: 0.95 }}
                       animate={{ opacity: 1, scale: 1 }}
-                      className="p-5 rounded-2xl bg-cyan-500/15 border-2 border-cyan-500/30"
+                      className="p-5 rounded-2xl bg-blue-500/15 border-2 border-blue-500/30"
                     >
-                      <p className="text-cyan-200 flex items-center gap-3" style={{ fontSize: "1.2rem", fontWeight: 600 }}>
+                      <p className="text-blue-600 dark:text-blue-200 flex items-center gap-3 text-base" style={{ fontWeight: 600 }}>
                         <CheckCircle2 size={22} />
                         감사합니다! 더 정확한 분석을 위해 활용하겠습니다.
                       </p>
@@ -434,16 +437,16 @@ export function SeniorAnalyzer() {
                     <div className="grid grid-cols-2 gap-4">
                       <button
                         onClick={() => setFeedback("up")}
-                        className="flex items-center justify-center gap-3 px-5 py-4 rounded-2xl bg-emerald-500/15 border-2 border-emerald-500/35 text-emerald-200 hover:bg-emerald-500/25 active:scale-95 transition-all"
-                        style={{ fontWeight: 700, fontSize: "1.2rem" }}
+                        className="flex items-center justify-center gap-3 px-5 py-4 rounded-2xl bg-emerald-500/15 border-2 border-emerald-500/35 text-emerald-700 dark:text-emerald-200 hover:bg-emerald-500/25 active:scale-95 transition-all text-lg"
+                        className="text-lg" style={{ fontWeight: 600, lineHeight: 1.2 }}
                       >
                         <ThumbsUp size={22} />
                         정확해요
                       </button>
                       <button
                         onClick={() => setFeedback("down")}
-                        className="flex items-center justify-center gap-3 px-5 py-4 rounded-2xl bg-red-500/15 border-2 border-red-500/35 text-red-200 hover:bg-red-500/25 active:scale-95 transition-all"
-                        style={{ fontWeight: 700, fontSize: "1.2rem" }}
+                        className="flex items-center justify-center gap-3 px-5 py-4 rounded-2xl bg-red-500/15 border-2 border-red-500/35 text-red-700 dark:text-red-200 hover:bg-red-500/25 active:scale-95 transition-all text-lg"
+                        className="text-lg" style={{ fontWeight: 600, lineHeight: 1.2 }}
                       >
                         <ThumbsDown size={22} />
                         틀렸어요
@@ -456,8 +459,8 @@ export function SeniorAnalyzer() {
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                   <button
                     onClick={() => nav("/report")}
-                    className="flex items-center justify-center gap-2 px-4 py-4 rounded-2xl bg-red-500/20 border-2 border-red-500/50 text-red-100 hover:bg-red-500/30 active:scale-95 transition-all"
-                    style={{ fontWeight: 700, fontSize: "1.2rem" }}
+                    className="flex items-center justify-center gap-2 px-4 py-4 rounded-2xl bg-red-500/20 border-2 border-red-500/50 text-red-700 dark:text-red-100 hover:bg-red-500/30 active:scale-95 transition-all text-lg"
+                    className="text-lg" style={{ fontWeight: 600, lineHeight: 1.2 }}
                   >
                     🚨 이 사이트에 신고
                   </button>
@@ -469,15 +472,15 @@ export function SeniorAnalyzer() {
                         alert("공유 기능은 모바일에서 사용 가능합니다.");
                       }
                     }}
-                    className="flex items-center justify-center gap-2 px-4 py-4 rounded-2xl bg-emerald-500/20 border-2 border-emerald-500/50 text-emerald-100 hover:bg-emerald-500/30 active:scale-95 transition-all"
-                    style={{ fontWeight: 700, fontSize: "1.2rem" }}
+                    className="flex items-center justify-center gap-2 px-4 py-4 rounded-2xl bg-emerald-500/20 border-2 border-emerald-500/50 text-emerald-700 dark:text-emerald-100 hover:bg-emerald-500/30 active:scale-95 transition-all text-lg"
+                    className="text-lg" style={{ fontWeight: 600, lineHeight: 1.2 }}
                   >
                     👨‍👩‍👧 가족에게 보여주기
                   </button>
                   <button
                     onClick={handleReset}
-                    className="flex items-center justify-center gap-2 px-4 py-4 rounded-2xl bg-cyan-500/20 border-2 border-cyan-500/50 text-cyan-100 hover:bg-cyan-500/30 active:scale-95 transition-all"
-                    style={{ fontWeight: 700, fontSize: "1.2rem" }}
+                    className="flex items-center justify-center gap-2 px-4 py-4 rounded-2xl bg-blue-500/20 border-2 border-blue-500/50 text-blue-700 dark:text-blue-100 hover:bg-blue-500/30 active:scale-95 transition-all text-lg"
+                    className="text-lg" style={{ fontWeight: 600, lineHeight: 1.2 }}
                   >
                     <RotateCcw size={20} />
                     다시 검사

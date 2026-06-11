@@ -110,7 +110,11 @@ async function request<T>(path: string, options: RequestOptions = {}): Promise<T
           data.error?.details,
         );
       }
-      return (data.data ?? data) as T;
+      // BUG-6: ApiResponse<T>의 data 필드가 null/undefined면 명시적 에러
+      if (data.data === null || data.data === undefined) {
+        throw new ApiException('INTERNAL', 'API returned empty data', { status: res.status });
+      }
+      return data.data as T;
     }
     return data as T;
   } catch (e) {

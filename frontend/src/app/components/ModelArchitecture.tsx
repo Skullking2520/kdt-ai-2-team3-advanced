@@ -86,7 +86,7 @@ const LAYERS: LayerInfo[] = [
   },
   {
     id: "output", label: "Risk Score Output", sublabel: "위험도 1~10 + HIGH/MEDIUM/LOW",
-    color: "text-rose-300", border: "border-rose-500/30", bg: "bg-rose-500/8",
+    color: "text-red-300", border: "border-red-500/30", bg: "bg-red-500/8",
     detail: {
       desc: "피싱 확률을 1~10 위험도 점수로 스케일링하고 임계값(0.5)에 따라 등급을 산출합니다.",
       params: [

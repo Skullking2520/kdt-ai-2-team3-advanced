@@ -44,5 +44,4 @@ export const publicRoutes: RouteObject[] = [
   { path: "changelog", Component: Changelog },
   { path: "easy", Component: EasyCheck },
   { path: "emergency", Component: Emergency },
-  { path: "senior-home", Component: SeniorHome },
 ];

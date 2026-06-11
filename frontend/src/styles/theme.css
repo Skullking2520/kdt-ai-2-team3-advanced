@@ -202,6 +202,46 @@
 }
 
 /* ============================================
+   NewBiz Shield 다크/라이트 토큰
+   (시맨틱 변수 — 한 곳에서 다크/라이트 값 관리)
+   ============================================ */
+:root {
+  /* 다크 모드 배경 토큰 (기본) */
+  --nb-bg-deep:    #0b1120;
+  --nb-bg-card:    #0d1526;
+  --nb-bg-soft:    #111c30;
+  --nb-bg-mid1:    #0a1628;
+  --nb-bg-mid2:    #0c1829;
+  --nb-bg-mid3:    #0e1f35;
+  --nb-bg-mid4:    #13243d;
+  --nb-bg-mid5:    #0b1526;
+  --nb-bg-card2:   #1a2d47;
+
+  /* 라이트 모드 대응값 */
+  --nb-light-deep:   #f8fafc;
+  --nb-light-card:   #f1f5f9;
+  --nb-light-soft:   #ffffff;
+  --nb-light-mid1:   #f8fafc;
+  --nb-light-mid2:   #f1f5f9;
+  --nb-light-mid3:   #ffffff;
+  --nb-light-mid4:   #f1f5f9;
+  --nb-light-mid5:   #f8fafc;
+  --nb-light-card2:  #ffffff;
+}
+
+html:not(.dark) {
+  --nb-bg-deep:    var(--nb-light-deep);
+  --nb-bg-card:    var(--nb-light-card);
+  --nb-bg-soft:    var(--nb-light-soft);
+  --nb-bg-mid1:    var(--nb-light-mid1);
+  --nb-bg-mid2:    var(--nb-light-mid2);
+  --nb-bg-mid3:    var(--nb-light-mid3);
+  --nb-bg-mid4:    var(--nb-light-mid4);
+  --nb-bg-mid5:    var(--nb-light-mid5);
+  --nb-bg-card2:   var(--nb-light-card2);
+}
+
+/* ============================================
    큰 글씨 모드 (어르신 친화 모드)
    ============================================ */
 html.senior-mode {
@@ -231,16 +271,16 @@ html.senior-mode textarea {
    다크/라이트 모드 — 레거시 다크 컴포넌트 → 라이트 변환
    ============================================================ */
 
-/* 1. 레거시 하드코딩 다크 배경색 → 라이트 */
-html:not(.dark) .bg-\[\#0b1120\] { background-color: #f8fafc; }
-html:not(.dark) .bg-\[\#0d1526\] { background-color: #f1f5f9; }
-html:not(.dark) .bg-\[\#111c30\] { background-color: #ffffff; }
-html:not(.dark) .bg-\[\#0a1628\] { background-color: #f8fafc; }
-html:not(.dark) .bg-\[\#0c1829\] { background-color: #f1f5f9; }
-html:not(.dark) .bg-\[\#0e1f35\] { background-color: #ffffff; }
-html:not(.dark) .bg-\[\#13243d\] { background-color: #f1f5f9; }
-html:not(.dark) .bg-\[\#0b1526\] { background-color: #f8fafc; }
-html:not(.dark) .bg-\[\#1a2d47\] { background-color: #ffffff; }
+/* 1. 레거시 하드코딩 다크 배경색 → 라이트 (CSS 변수 사용) */
+html:not(.dark) .bg-\[\#0b1120\] { background-color: var(--nb-light-deep); }
+html:not(.dark) .bg-\[\#0d1526\] { background-color: var(--nb-light-card); }
+html:not(.dark) .bg-\[\#111c30\] { background-color: var(--nb-light-soft); }
+html:not(.dark) .bg-\[\#0a1628\] { background-color: var(--nb-light-mid1); }
+html:not(.dark) .bg-\[\#0c1829\] { background-color: var(--nb-light-mid2); }
+html:not(.dark) .bg-\[\#0e1f35\] { background-color: var(--nb-light-mid3); }
+html:not(.dark) .bg-\[\#13243d\] { background-color: var(--nb-light-mid4); }
+html:not(.dark) .bg-\[\#0b1526\] { background-color: var(--nb-light-mid5); }
+html:not(.dark) .bg-\[\#1a2d47\] { background-color: var(--nb-light-card2); }
 
 /* 2. 흰 텍스트 → 다크 텍스트 (라이트 모드) */
 html:not(.dark) .text-white     { color: #1e293b; }
@@ -272,6 +312,45 @@ html:not(.dark) [class*="bg-orange-"].text-white,
 html:not(.dark) [class*="bg-orange-"] .text-white,
 html:not(.dark) [class*="bg-green-"].text-white,
 html:not(.dark) [class*="bg-green-"] .text-white,
+
+/* 4. 다크 박스(bg-[#hex]) 안의 흰 텍스트 → 라이트 모드에서 다크 텍스트로 (가독성) */
+html:not(.dark) .bg-\[\#0b1120\] .text-white,
+html:not(.dark) .bg-\[\#0b1120\] .text-white\/90,
+html:not(.dark) .bg-\[\#0b1120\] .text-white\/80,
+html:not(.dark) .bg-\[\#0b1120\] .text-white\/70,
+html:not(.dark) .bg-\[\#0b1120\] .text-white\/60,
+html:not(.dark) .bg-\[\#0b1120\] .text-white\/50,
+html:not(.dark) .bg-\[\#0b1120\] .text-white\/45,
+html:not(.dark) .bg-\[\#0b1120\] .text-white\/40,
+html:not(.dark) .bg-\[\#0b1120\] .text-white\/35,
+html:not(.dark) .bg-\[\#0b1120\] .text-white\/30,
+html:not(.dark) .bg-\[\#0b1120\] .text-white\/25,
+html:not(.dark) .bg-\[\#0b1120\] .text-white\/20 { color: #1e293b; }
+
+html:not(.dark) .bg-\[\#0b1120\] .text-white\/60 { color: #475569; }
+html:not(.dark) .bg-\[\#0b1120\] .text-white\/50 { color: #475569; }
+html:not(.dark) .bg-\[\#0b1120\] .text-white\/40 { color: #64748b; }
+html:not(.dark) .bg-\[\#0b1120\] .text-white\/30 { color: #94a3b8; }
+html:not(.dark) .bg-\[\#0b1120\] .text-white\/20 { color: #cbd5e1; }
+
+html:not(.dark) .bg-\[\#0d1526\] .text-white,
+html:not(.dark) .bg-\[\#0d1526\] .text-white\/90,
+html:not(.dark) .bg-\[\#0d1526\] .text-white\/80,
+html:not(.dark) .bg-\[\#0d1526\] .text-white\/70,
+html:not(.dark) .bg-\[\#0d1526\] .text-white\/60,
+html:not(.dark) .bg-\[\#0d1526\] .text-white\/50,
+html:not(.dark) .bg-\[\#0d1526\] .text-white\/45,
+html:not(.dark) .bg-\[\#0d1526\] .text-white\/40,
+html:not(.dark) .bg-\[\#0d1526\] .text-white\/35,
+html:not(.dark) .bg-\[\#0d1526\] .text-white\/30,
+html:not(.dark) .bg-\[\#0d1526\] .text-white\/25,
+html:not(.dark) .bg-\[\#0d1526\] .text-white\/20 { color: #1e293b; }
+
+html:not(.dark) .bg-\[\#0d1526\] .text-white\/60 { color: #475569; }
+html:not(.dark) .bg-\[\#0d1526\] .text-white\/50 { color: #475569; }
+html:not(.dark) .bg-\[\#0d1526\] .text-white\/40 { color: #64748b; }
+html:not(.dark) .bg-\[\#0d1526\] .text-white\/30 { color: #94a3b8; }
+html:not(.dark) .bg-\[\#0d1526\] .text-white\/20 { color: #cbd5e1; }
 html:not(.dark) [class*="bg-indigo-"].text-white,
 html:not(.dark) [class*="bg-indigo-"] .text-white { color: #ffffff; }
 

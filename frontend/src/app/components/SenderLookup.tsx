@@ -85,12 +85,12 @@ export function SenderLookup() {
   const ss = result ? STATUS_STYLE[result.status] : null;
 
   return (
-    <div className="px-4 sm:px-6 py-8 max-w-3xl mx-auto">
+    <div className="min-h-[calc(100vh-4rem)] px-4 sm:px-6 py-8 max-w-3xl mx-auto bg-[#0b1120]">
       {/* Page header — 배지 필 스타일로 통일 */}
       <div className="mb-8">
-        <div className="inline-flex items-center gap-2 mb-3 px-3 py-1 rounded-full bg-rose-500/10 border border-rose-500/20">
-          <Phone size={12} className="text-rose-400" />
-          <span className="text-[11px] text-rose-400 tracking-wider uppercase">발신자 조회</span>
+        <div className="inline-flex items-center gap-2 mb-3 px-3 py-1 rounded-full bg-red-500/10 border border-red-500/20">
+          <Phone size={12} className="text-red-400" />
+          <span className="text-[11px] text-red-400 tracking-wider uppercase">발신자 조회</span>
         </div>
         <h1 className="text-white mb-2" style={{ fontWeight: 800, fontSize: "1.9rem", letterSpacing: "-0.02em" }}>발신번호 신뢰도 조회</h1>
         <p className="text-sm text-white/50">번호별 신고 이력, 신뢰 점수, 피싱 카테고리를 확인합니다.</p>
@@ -99,7 +99,7 @@ export function SenderLookup() {
       {/* Search */}
       <Card padding="p-4" className="mb-5">
         <div className="flex gap-2">
-          <div className="flex-1 flex items-center gap-2 bg-[#0b1120] border border-white/10 rounded-lg px-3 py-2 focus-within:border-rose-500/30 transition-all">
+          <div className="flex-1 flex items-center gap-2 bg-[#0b1120] border border-white/10 rounded-lg px-3 py-2 focus-within:border-red-500/30 transition-all">
             <Phone size={12} className="text-white/25 shrink-0" />
             <input value={input} onChange={(e) => setInput(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && handleSearch()}
@@ -107,8 +107,8 @@ export function SenderLookup() {
               className="flex-1 bg-transparent text-sm text-white/80 placeholder:text-white/20 outline-none" />
           </div>
           <button onClick={() => handleSearch()} disabled={!input.trim() || loading}
-            className="px-4 py-2 rounded-lg bg-rose-500/20 border border-rose-500/30 text-rose-400 text-sm hover:bg-rose-500/25 transition-all disabled:opacity-40 flex items-center gap-1.5">
-            {loading ? <div className="w-3.5 h-3.5 border border-rose-400/30 border-t-rose-400 rounded-full animate-spin" /> : <Search size={13} />}
+            className="px-4 py-2 rounded-lg bg-red-500/20 border border-red-500/30 text-red-400 text-sm hover:bg-red-500/25 transition-all disabled:opacity-40 flex items-center gap-1.5">
+            {loading ? <div className="w-3.5 h-3.5 border border-red-400/30 border-t-rose-400 rounded-full animate-spin" /> : <Search size={13} />}
             조회
           </button>
         </div>
@@ -116,7 +116,7 @@ export function SenderLookup() {
           <p className="text-[10px] text-white/25">샘플:</p>
           {SAMPLES.map((s) => (
             <button key={s} onClick={() => { setInput(s); handleSearch(s); }}
-              className="text-[10px] px-2 py-0.5 rounded bg-white/5 border border-white/10 text-white/35 hover:text-rose-400 hover:border-rose-500/25 transition-all font-mono">
+              className="text-[10px] px-2 py-0.5 rounded bg-white/5 border border-white/10 text-white/35 hover:text-red-400 hover:border-red-500/25 transition-all font-mono">
               {s}
             </button>
           ))}

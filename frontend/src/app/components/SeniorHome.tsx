@@ -1,6 +1,7 @@
 import {useNavigate} from "react-router";
 import {motion} from "motion/react";
 import {useState} from "react";
+import {useSenior} from "@/app/context/SeniorContext";
 import {
 ShieldAlert, MessageSquareWarning, Link2, Phone, Flag, Heart,
 Trophy, BookMarked, Volume2, VolumeX, ArrowRight, ArrowLeft, Home,
@@ -14,9 +15,9 @@ const BIG_ACTIONS = [
 ];
 
 const SUB_ACTIONS = [
-  { icon: Heart, title: "안전 사용 가이드", sub: "꼭 알아야 할 7가지 수칙", to: "/guide", iconColor: "text-rose-400" },
-  { icon: BookMarked, title: "실제 피해 사례", sub: "다른 분들의 경험 보기", to: "/cases", iconColor: "text-indigo-400" },
-  { icon: Trophy, title: "스미싱 퀴즈", sub: "재미있게 안목 키우기", to: "/quiz", iconColor: "text-fuchsia-400" },
+  { icon: Heart, title: "안전 사용 가이드", sub: "꼭 알아야 할 7가지 수칙", to: "/guide", iconColor: "text-red-500 dark:text-red-400" },
+  { icon: BookMarked, title: "실제 피해 사례", sub: "다른 분들의 경험 보기", to: "/cases", iconColor: "text-indigo-500 dark:text-indigo-400" },
+  { icon: Trophy, title: "스미싱 퀴즈", sub: "재미있게 안목 키우기", to: "/quiz", iconColor: "text-fuchsia-500 dark:text-fuchsia-400" },
 ];
 
 // 실제 정부·공공기관 신고/도움 전화번호
@@ -28,6 +29,7 @@ const EMERGENCY = [
 
 export function SeniorHome() {
   const nav = useNavigate();
+  const { setSenior } = useSenior();
   const [speaking, setSpeaking] = useState(false);
 
   const speak = (text: string) => {
@@ -47,76 +49,51 @@ export function SeniorHome() {
   };
 
   return (
-    <div className="min-h-full">
-      {/* 상단 어르신 전용 툴바 (sticky) */}
-      <div className="sticky top-0 z-20 bg-[#0b1120]/95 backdrop-blur border-b-2 border-white/10 px-4 py-3">
-        <div className="max-w-3xl mx-auto flex items-center gap-2 flex-wrap">
-          <button
-            onClick={() => window.history.length > 1 ? window.history.back() : nav("/")}
-            className="flex items-center gap-2 px-4 py-3 rounded-xl bg-white/8 border-2 border-white/15 text-white hover:bg-white/15 active:scale-95 transition-all"
-            style={{ fontSize: "1.05rem", fontWeight: 600 }}
-            aria-label="뒤로 가기"
-          >
-            <ArrowLeft size={22} /> 뒤로
-          </button>
-          <button
-            onClick={() => nav("/")}
-            className="flex items-center gap-2 px-4 py-3 rounded-xl bg-white/8 border-2 border-white/15 text-white hover:bg-white/15 active:scale-95 transition-all"
-            style={{ fontSize: "1.05rem", fontWeight: 600 }}
-            aria-label="처음 화면"
-          >
-            <Home size={22} /> 처음
-          </button>
+    <div className="min-h-full bg-background text-foreground">
+      {/* BUG-1 FIX: 자체 sticky 헤더 제거 — Layout 헤더(z-40)에 가려져 안 보임.
+          뒤로/처음/음성 버튼은 SeniorBottomBar(하단 고정)에서 제공. */}
 
-          <div className="ml-auto flex items-center gap-2">
-            <button
-              onClick={() => speak("안녕하세요. 이상한 문자를 받으셨나요? 아래 큰 파란 버튼인 문자 검사하기를 누르시면 받은 문자가 안전한지 확인할 수 있어요. 도움이 필요하시면 화면 아래쪽 빨간 버튼을 눌러 가족이나 경찰에게 연락하세요.")}
-              className={`w-12 h-12 rounded-xl border-2 flex items-center justify-center active:scale-95 transition-all ${speaking ? "bg-cyan-500/30 border-cyan-400 text-cyan-300" : "bg-white/8 border-white/15 text-white hover:bg-white/15"}`}
-              aria-label={speaking ? "음성 멈춤" : "음성 안내"}
-            >
-              {speaking ? <VolumeX size={22} /> : <Volume2 size={22} />}
-            </button>
-          </div>
-        </div>
-      </div>
-
-      <div className="px-6 py-8 max-w-3xl mx-auto">
-        {/* 환영 헤더 - 가이드: 단순하고 직접적으로 */}
+      <div className="px-6 py-8 max-w-3xl mx-auto pb-32">
+        {/* 환영 헤더 */}
         <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="text-center mb-8">
           <div className="inline-flex w-16 h-16 rounded-2xl bg-gradient-to-br from-cyan-500 to-blue-600 items-center justify-center shadow-xl shadow-cyan-500/30 mb-4">
             <ShieldAlert size={32} className="text-white" />
           </div>
-          <h1 className="text-white mb-3" style={{ fontWeight: 800, fontSize: "2rem", letterSpacing: "-0.02em" }}>
+          <h1 className="mb-3 text-foreground" style={{ fontWeight: 800, fontSize: "2rem", letterSpacing: "-0.02em" }}>
             안녕하세요!
           </h1>
-          <p className="text-white/85" style={{ fontSize: "1.25rem", lineHeight: 1.65, fontWeight: 500 }}>
+          <p className="text-muted-foreground" style={{ fontSize: "1.25rem", lineHeight: 1.65, fontWeight: 500 }}>
             의심스러운 문자를 받으셨나요?<br />
             아래 큰 파란 버튼을 눌러주세요.
           </p>
         </motion.div>
 
-        {/* 메인 큰 버튼 (문자 검사) - 어르신 전용 페이지로 이동 */}
+        {/* 메인 큰 버튼 (문자 검사) — 그라데이션 배경 위 흰 글씨 (theme.css 보호됨) */}
         <motion.button
           initial={{ opacity: 0, scale: 0.97 }}
           animate={{ opacity: 1, scale: 1 }}
           onClick={() => nav("/senior-analyze")}
-          className="w-full mb-4 rounded-3xl bg-gradient-to-br from-cyan-500 to-blue-600 shadow-2xl shadow-cyan-500/30 hover:scale-[1.01] active:scale-[0.99] transition-all p-8 text-left flex items-center gap-5"
+          className="w-full mb-4 rounded-3xl bg-gradient-to-br from-cyan-500 to-blue-600 shadow-2xl shadow-cyan-500/30 hover:scale-[1.01] active:scale-[0.99] transition-all p-5 sm:p-8 text-left flex items-center gap-4 sm:gap-5"
         >
-          <div className="w-20 h-20 rounded-2xl bg-white/15 flex items-center justify-center shrink-0">
-            <MessageSquareWarning size={40} className="text-white" />
+          <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl bg-white/15 flex items-center justify-center shrink-0">
+            <MessageSquareWarning size={32} className="text-white sm:hidden" />
+            <MessageSquareWarning size={40} className="text-white hidden sm:block" />
           </div>
-          <div className="flex-1">
-            <p className="text-white mb-1" style={{ fontWeight: 700, fontSize: "1.7rem", letterSpacing: "-0.01em" }}>
-              문자 검사하기
+          <div className="flex-1 min-w-0">
+            <p className="text-white mb-1" style={{ fontWeight: 700, fontSize: "1.4rem", letterSpacing: "-0.01em" }}>
+              <span className="sm:hidden">문자 검사</span>
+              <span className="hidden sm:inline">문자 검사하기</span>
             </p>
-            <p className="text-white/85" style={{ fontSize: "1.1rem" }}>
-              받은 문자를 붙여넣으면 위험한지 알려드려요
+            <p className="text-white/85" style={{ fontSize: "0.95rem" }}>
+              <span className="sm:hidden">문자를 붙여넣으면 알려드려요</span>
+              <span className="hidden sm:inline">받은 문자를 붙여넣으면 위험한지 알려드려요</span>
             </p>
           </div>
-          <ArrowRight size={32} className="text-white shrink-0" />
+          <ArrowRight size={28} className="text-white shrink-0 sm:hidden" />
+          <ArrowRight size={32} className="text-white shrink-0 hidden sm:block" />
         </motion.button>
 
-        {/* 보조 큰 버튼 3개 */}
+        {/* 보조 큰 버튼 3개 — 그라데이션 배경 위 흰 글씨 */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-10">
           {BIG_ACTIONS.map((a, i) => (
             <motion.button
@@ -134,10 +111,10 @@ export function SeniorHome() {
           ))}
         </div>
 
-        {/* 🚨 긴급 신고 / 도움 받기 — 중요 추가 */}
+        {/* 🚨 긴급 신고 / 도움 받기 */}
         <div className="mb-10">
-          <p className="text-white/60 mb-3 flex items-center gap-2" style={{ fontSize: "1.1rem", fontWeight: 600 }}>
-            <AlertTriangle size={22} className="text-red-400" />
+          <p className="text-muted-foreground mb-3 flex items-center gap-2" style={{ fontSize: "1.1rem", fontWeight: 600 }}>
+            <AlertTriangle size={22} className="text-red-500 dark:text-red-400" />
             급할 때 바로 전화하세요
           </p>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
@@ -160,9 +137,9 @@ export function SeniorHome() {
           </div>
         </div>
 
-        {/* 학습/사례 섹션 */}
-        <p className="text-white/60 mb-3 flex items-center gap-2" style={{ fontSize: "1.1rem", fontWeight: 600 }}>
-          <HelpCircle size={22} className="text-cyan-400" />
+        {/* 학습/사례 섹션 — 다크/라이트 자동 매핑 (theme.css line 286~) */}
+        <p className="text-muted-foreground mb-3 flex items-center gap-2" style={{ fontSize: "1.1rem", fontWeight: 600 }}>
+          <HelpCircle size={22} className="text-cyan-500 dark:text-cyan-400" />
           천천히 배우고 싶으시다면
         </p>
         <div className="space-y-3 mb-10">
@@ -170,78 +147,77 @@ export function SeniorHome() {
             <button
               key={a.to}
               onClick={() => nav(a.to)}
-              className="w-full flex items-center gap-4 p-5 rounded-2xl bg-[#111c30] border-2 border-white/10 hover:border-white/30 hover:bg-[#162238] active:scale-[0.99] transition-all text-left"
+              className="w-full flex items-center gap-4 p-5 rounded-2xl bg-card border-2 border-border hover:border-cyan-500/40 active:scale-[0.99] transition-all text-left"
             >
-              <div className="w-14 h-14 rounded-xl bg-white/5 flex items-center justify-center shrink-0">
+              <div className="w-14 h-14 rounded-xl bg-muted flex items-center justify-center shrink-0">
                 <a.icon size={26} className={a.iconColor} />
               </div>
               <div className="flex-1">
-                <p className="text-white" style={{ fontWeight: 600, fontSize: "1.15rem" }}>{a.title}</p>
-                <p className="text-white/55 mt-0.5" style={{ fontSize: "0.95rem" }}>{a.sub}</p>
+                <p className="text-foreground" style={{ fontWeight: 600, fontSize: "1.15rem" }}>{a.title}</p>
+                <p className="text-muted-foreground mt-0.5" style={{ fontSize: "0.95rem" }}>{a.sub}</p>
               </div>
-              <ArrowRight size={22} className="text-white/30 shrink-0" />
+              <ArrowRight size={22} className="text-muted-foreground shrink-0" />
             </button>
           ))}
         </div>
 
-        {/* 사용 안내 카드 - 가이드: 3단계 흐름 강조 */}
+        {/* 사용 안내 카드 — 다크에서도 컬러 배경 유지 (amber-500/10) */}
         <div className="rounded-2xl bg-amber-500/10 border-2 border-amber-500/30 p-6 mb-6">
-          <p className="text-amber-200 mb-4 flex items-center gap-2" style={{ fontWeight: 800, fontSize: "1.3rem" }}>
+          <p className="text-amber-700 dark:text-amber-200 mb-4 flex items-center gap-2" style={{ fontWeight: 800, fontSize: "1.3rem" }}>
             이렇게 사용하세요
           </p>
-          <ol className="space-y-4 text-white/90" style={{ fontSize: "1.15rem", lineHeight: 1.8, fontWeight: 500 }}>
+          <ol className="space-y-4 text-foreground" style={{ fontSize: "1.15rem", lineHeight: 1.8, fontWeight: 500 }}>
             <li className="flex items-start gap-3">
-              <span className="shrink-0 w-8 h-8 rounded-full bg-amber-500/30 text-amber-200 flex items-center justify-center" style={{ fontWeight: 800 }}>1</span>
-              <span>받은 문자를 <b className="text-white">길게 눌러</b> 복사하세요</span>
+              <span className="shrink-0 w-8 h-8 rounded-full bg-amber-500/30 text-amber-700 dark:text-amber-200 flex items-center justify-center" style={{ fontWeight: 800 }}>1</span>
+              <span>받은 문자를 <b>길게 눌러</b> 복사하세요</span>
             </li>
             <li className="flex items-start gap-3">
-              <span className="shrink-0 w-8 h-8 rounded-full bg-amber-500/30 text-amber-200 flex items-center justify-center" style={{ fontWeight: 800 }}>2</span>
-              <span>위의 <b className="text-white">"문자 검사하기"</b> 큰 버튼을 누르세요</span>
+              <span className="shrink-0 w-8 h-8 rounded-full bg-amber-500/30 text-amber-700 dark:text-amber-200 flex items-center justify-center" style={{ fontWeight: 800 }}>2</span>
+              <span>위의 <b>"문자 검사하기"</b> 큰 버튼을 누르세요</span>
             </li>
             <li className="flex items-start gap-3">
-              <span className="shrink-0 w-8 h-8 rounded-full bg-amber-500/30 text-amber-200 flex items-center justify-center" style={{ fontWeight: 800 }}>3</span>
-              <span>빈 칸에 <b className="text-white">붙여넣기</b> 하고 검사하기를 누르면 끝!</span>
+              <span className="shrink-0 w-8 h-8 rounded-full bg-amber-500/30 text-amber-700 dark:text-amber-200 flex items-center justify-center" style={{ fontWeight: 800 }}>3</span>
+              <span>빈 칸에 <b>붙여넣기</b> 하고 검사하기를 누르면 끝!</span>
             </li>
           </ol>
           <div className="mt-5 pt-5 border-t-2 border-amber-500/20">
-            <p className="text-rose-200 mb-2" style={{ fontSize: "1.15rem", fontWeight: 700 }}>
+            <p className="text-red-700 dark:text-red-200 mb-2" style={{ fontSize: "1.15rem", fontWeight: 700 }}>
               절대 하지 마세요!
             </p>
-            <ul className="space-y-2 text-white/80" style={{ fontSize: "1.05rem", lineHeight: 1.7 }}>
+            <ul className="space-y-2 text-foreground" style={{ fontSize: "1.05rem", lineHeight: 1.7 }}>
               <li className="flex items-start gap-2">
-                <span className="text-red-400 shrink-0">•</span>
-                <span>의심 문자의 <b className="text-red-300">링크(주소)를 누르지 마세요</b></span>
+                <span className="text-red-500 dark:text-red-400 shrink-0">•</span>
+                <span>의심 문자의 <b className="text-red-700 dark:text-red-300">링크(주소)를 누르지 마세요</b></span>
               </li>
               <li className="flex items-start gap-2">
-                <span className="text-red-400 shrink-0">•</span>
-                <span>개인정보나 비밀번호를 <b className="text-red-300">입력하지 마세요</b></span>
+                <span className="text-red-500 dark:text-red-400 shrink-0">•</span>
+                <span>개인정보나 비밀번호를 <b className="text-red-700 dark:text-red-300">입력하지 마세요</b></span>
               </li>
               <li className="flex items-start gap-2">
-                <span className="text-red-400 shrink-0">•</span>
-                <span>상품권을 <b className="text-red-300">구매하지 마세요</b></span>
+                <span className="text-red-500 dark:text-red-400 shrink-0">•</span>
+                <span>상품권을 <b className="text-red-700 dark:text-red-300">구매하지 마세요</b></span>
               </li>
             </ul>
-            <p className="text-emerald-300 mt-4 pt-3 border-t border-amber-500/20" style={{ fontSize: "1rem", fontWeight: 600 }}>
+            <p className="text-emerald-700 dark:text-emerald-300 mt-4 pt-3 border-t border-amber-500/20" style={{ fontSize: "1rem", fontWeight: 600 }}>
               어렵다면 가족이나 자녀에게 도움을 요청하세요
             </p>
           </div>
         </div>
 
-        {/* 일반 모드로 전환 */}
+        {/* 일반 모드로 전환 — BUG FIX: localStorage 키 'nb:senior' 통일 (이전 'nb-senior'로 setSenior가 읽지 못함) */}
         <button
           onClick={() => {
-            document.documentElement.classList.remove("senior-mode");
-            localStorage.setItem("nb-senior", "off");
+            setSenior(false);
             nav("/");
           }}
-          className="w-full mb-6 flex items-center justify-center gap-3 p-4 rounded-2xl bg-white/5 border-2 border-white/10 text-white/60 hover:bg-white/10 hover:text-white/80 active:scale-[0.99] transition-all"
+          className="w-full mb-6 flex items-center justify-center gap-3 p-4 rounded-2xl bg-muted border-2 border-border text-muted-foreground hover:bg-accent hover:text-foreground active:scale-[0.99] transition-all"
           style={{ fontSize: "1rem", fontWeight: 600 }}
         >
           일반 모드로 전환하기
         </button>
 
-        <p className="text-center text-white/40 mt-6" style={{ fontSize: "0.95rem" }}>
-          도움 필요하시면 우측 상단 <b className="text-cyan-400">🔊</b> 버튼을 눌러보세요.
+        <p className="text-center text-muted-foreground mt-6" style={{ fontSize: "0.95rem" }}>
+          도움 필요하시면 우측 상단 <b className="text-cyan-500 dark:text-cyan-400">🔊</b> 버튼을 눌러보세요.
         </p>
       </div>
     </div>

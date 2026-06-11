@@ -112,8 +112,8 @@ export function LiveFeed() {
       {/* Header */}
       <div className="mb-8">
         <div className="flex items-center gap-2 mb-2">
-          <Radio size={14} className="text-rose-400 animate-pulse" />
-          <span className="text-xs text-rose-400 tracking-widest uppercase">실시간</span>
+          <Radio size={14} className="text-red-400 animate-pulse" />
+          <span className="text-xs text-red-400 tracking-widest uppercase">실시간</span>
           <span className="w-1.5 h-1.5 rounded-full bg-rose-400 animate-pulse" />
         </div>
         <div className="flex items-center justify-between">
@@ -125,7 +125,7 @@ export function LiveFeed() {
             onClick={() => setRunning(!running)}
             className={`flex items-center gap-2 px-4 py-2 rounded-xl border text-sm transition-all ${
               running
-                ? "bg-rose-500/15 border-rose-500/25 text-rose-400 hover:bg-rose-500/20"
+                ? "bg-red-500/15 border-red-500/25 text-red-400 hover:bg-red-500/20"
                 : "bg-emerald-500/15 border-emerald-500/25 text-emerald-400 hover:bg-emerald-500/20"
             }`}
           >

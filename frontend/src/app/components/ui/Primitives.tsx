@@ -8,7 +8,7 @@ export function Card({ children, className = "", padding = "p-5" }: {
   children: React.ReactNode; className?: string; padding?: string;
 }) {
   return (
-    <div className={`bg-[#111c30] border border-white/10 rounded-2xl ${padding} ${className}`}>
+    <div className={`bg-card dark:bg-[#111c30] border border-border dark:border-white/10 rounded-2xl ${padding} ${className}`}>
       {children}
     </div>
   );

@@ -29,7 +29,7 @@ const PIPELINE = [
   { step: "3. 레이블링", desc: "전문가 검수 + 규칙 기반 1차 분류", color: "border-cyan-500/30 bg-cyan-500/8" },
   { step: "4. 증강", desc: "동의어 치환·노이즈 삽입·역번역", color: "border-amber-500/30 bg-amber-500/8" },
   { step: "5. 분할", desc: "Train 80% / Val 10% / Test 10%", color: "border-emerald-500/30 bg-emerald-500/8" },
-  { step: "6. 토크나이징", desc: "KcBERT WordPiece 적용", color: "border-rose-500/30 bg-rose-500/8" },
+  { step: "6. 토크나이징", desc: "KcBERT WordPiece 적용", color: "border-red-500/30 bg-red-500/8" },
 ];
 
 const SAMPLES = [

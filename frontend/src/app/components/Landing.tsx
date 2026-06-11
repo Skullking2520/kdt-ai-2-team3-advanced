@@ -76,37 +76,6 @@ const PHISHING_TYPES = [
   },
 ];
 
-const FEATURES = [
-  {
-    icon: ShieldCheck,
-    title: "AI 기반 정확한 탐지",
-    desc: "문자 패턴, URL, 키워드를 복합 분석하여 스미싱 여부를 판정합니다",
-    color: "text-blue-600 dark:text-blue-400",
-    bg: "bg-blue-50 dark:bg-blue-900/20",
-  },
-  {
-    icon: AlertTriangle,
-    title: "위험 근거 상세 제공",
-    desc: "단순 판정이 아닌 왜 위험한지, 어떤 유형인지 구체적으로 안내합니다",
-    color: "text-orange-600 dark:text-orange-400",
-    bg: "bg-orange-50 dark:bg-orange-900/20",
-  },
-  {
-    icon: TrendingUp,
-    title: "피해 시나리오 제시",
-    desc: "링크를 누르면 어떤 피해가 발생하는지 단계별로 설명합니다",
-    color: "text-emerald-600 dark:text-emerald-400",
-    bg: "bg-emerald-50 dark:bg-emerald-900/20",
-  },
-  {
-    icon: MessageSquareWarning,
-    title: "즉각적인 대응 방법",
-    desc: "지금 당장 해야 할 행동을 명확하게 알려줍니다",
-    color: "text-violet-600 dark:text-violet-400",
-    bg: "bg-violet-50 dark:bg-violet-900/20",
-  },
-];
-
 const RECENT_WARNINGS = [
   { text: "CJ대한통운 사칭 스미싱 주의보", time: "2시간 전", level: "긴급" },
   { text: "건강보험공단 사칭 피싱 신고 급증", time: "5시간 전", level: "경고" },
@@ -134,24 +103,10 @@ export function Landing() {
               스미싱 여부뿐만 아니라 공격 유형, 위험 근거, 예상 피해, 대응 방법까지<br className="hidden sm:block" />
               한 번에 확인할 수 있습니다.
             </p>
-            {/* 3-in-1 입력 시각화 (차별점 #1) */}
-            <div className="flex items-center justify-center gap-2 mb-6 flex-wrap">
-              <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400 border border-blue-100 dark:border-blue-700/30" style={{ fontWeight: 600 }}>
-                <MessageSquareWarning size={13} /> 문자
-              </span>
-              <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm bg-violet-50 dark:bg-violet-900/20 text-violet-700 dark:text-violet-400 border border-violet-100 dark:border-violet-700/30" style={{ fontWeight: 600 }}>
-                <Link2 size={13} /> URL
-              </span>
-              <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-400 border border-emerald-100 dark:border-emerald-700/30" style={{ fontWeight: 600 }}>
-                <ImageIcon size={13} /> 이미지
-              </span>
-              <span className="text-xs text-gray-500 dark:text-white/40">3가지 한 번에 분석</span>
-            </div>
-
             <div className="flex flex-col sm:flex-row gap-3 justify-center">
               <button
                 onClick={() => navigate("/analyze")}
-                className="flex items-center justify-center gap-2 px-6 py-3 rounded-xl text-sm transition-all hover:opacity-90 shadow-sm"
+                className="flex items-center justify-center gap-2 px-6 py-3 rounded-xl text-sm transition-all hover:opacity-90 shadow-sm cursor-pointer"
                 style={{ backgroundColor: "#2563EB", fontWeight: 600, color: "white" }}
               >
                 <MessageSquareWarning size={16} style={{ color: "white" }} />
@@ -160,7 +115,7 @@ export function Landing() {
               </button>
               <button
                 onClick={() => navigate("/guide")}
-                className="flex items-center justify-center gap-2 px-6 py-3 rounded-xl text-gray-700 dark:text-white/70 text-sm bg-gray-100 dark:bg-white/8 hover:bg-gray-200 dark:hover:bg-white/12 transition-all"
+                className="flex items-center justify-center gap-2 px-6 py-3 rounded-xl text-gray-700 dark:text-white/70 text-sm bg-gray-100 dark:bg-white/8 hover:bg-gray-200 dark:hover:bg-white/12 transition-all cursor-pointer"
                 style={{ fontWeight: 500 }}
               >
                 스미싱 예방 가이드 보기
@@ -172,7 +127,7 @@ export function Landing() {
 
       {/* Quick actions */}
       <section className="max-w-4xl mx-auto px-4 sm:px-6 py-10">
-        <p className="text-xs font-semibold text-gray-400 dark:text-white/30 mb-4 uppercase tracking-widest">검사 유형 선택</p>
+        <p className="text-xs font-semibold text-gray-400 dark:text-white/40 mb-4 uppercase tracking-widest">검사 유형 선택</p>
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
           {QUICK_ACTIONS.map(({ to, icon: Icon, label, desc, color, bg, border }, i) => (
             <motion.button
@@ -202,7 +157,7 @@ export function Landing() {
       <section className="max-w-4xl mx-auto px-4 sm:px-6 py-10">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
           <div>
-            <p className="text-xs font-semibold text-gray-400 dark:text-white/30 mb-4 uppercase tracking-widest">최근 많이 발견되는 유형</p>
+            <p className="text-xs font-semibold text-gray-400 dark:text-white/40 mb-4 uppercase tracking-widest">최근 많이 발견되는 유형</p>
             <div className="space-y-2">
               {PHISHING_TYPES.map(({ icon: Icon, label, example, level, levelColor }, i) => (
                 <motion.div
@@ -228,7 +183,7 @@ export function Landing() {
           </div>
 
           <div>
-            <p className="text-xs font-semibold text-gray-400 dark:text-white/30 mb-4 uppercase tracking-widest">최신 보안 경보</p>
+            <p className="text-xs font-semibold text-gray-400 dark:text-white/40 mb-4 uppercase tracking-widest">최신 보안 경보</p>
             <div className="space-y-2 mb-4">
               {RECENT_WARNINGS.map(({ text, time, level }, i) => (
                 <motion.div
@@ -242,7 +197,7 @@ export function Landing() {
                   <div className="flex-1 min-w-0">
                     <p className="text-sm text-gray-800 dark:text-white/80 leading-snug">{text}</p>
                     <div className="flex items-center gap-2 mt-1">
-                      <span className="text-[10px] text-gray-400 dark:text-white/30">{time}</span>
+                      <span className="text-[10px] text-gray-400 dark:text-white/40">{time}</span>
                       <span className="text-[10px] px-1.5 py-0.5 rounded bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 font-medium">{level}</span>
                     </div>
                   </div>
@@ -261,49 +216,6 @@ export function Landing() {
       </section>
 
       <div className="border-t border-gray-100 dark:border-white/8" />
-
-      {/* Features */}
-      <section className="max-w-4xl mx-auto px-4 sm:px-6 py-10">
-        <p className="text-xs font-semibold text-gray-400 dark:text-white/30 mb-6 uppercase tracking-widest">서비스 특징</p>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          {FEATURES.map(({ icon: Icon, title, desc, color, bg }, i) => (
-            <motion.div
-              key={title}
-              initial={{ opacity: 0, y: 8 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: i * 0.07 }}
-              className="flex gap-4 p-5 bg-white dark:bg-[#111c30] border border-gray-100 dark:border-white/8 rounded-xl"
-            >
-              <div className={`w-10 h-10 rounded-lg flex items-center justify-center shrink-0 ${bg}`}>
-                <Icon size={18} className={color} />
-              </div>
-              <div>
-                <p className="text-sm text-gray-900 dark:text-white mb-1" style={{ fontWeight: 600 }}>{title}</p>
-                <p className="text-xs text-gray-500 dark:text-white/40 leading-relaxed">{desc}</p>
-              </div>
-            </motion.div>
-          ))}
-        </div>
-      </section>
-
-      {/* CTA */}
-      <section className="border-t border-gray-100 dark:border-white/8">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 py-10">
-          <div className="rounded-2xl p-6 sm:p-8 text-center bg-blue-50 dark:bg-blue-900/15 border border-blue-100 dark:border-blue-700/30">
-            <ShieldCheck size={28} className="mx-auto mb-3" style={{ color: "#2563EB" }} />
-            <h2 className="text-lg text-gray-900 dark:text-white mb-2" style={{ fontWeight: 700 }}>의심스러운 문자를 받으셨나요?</h2>
-            <p className="text-sm text-gray-600 dark:text-white/50 mb-5">문자를 그대로 복사해서 붙여넣으면 바로 확인할 수 있습니다.</p>
-            <button
-              onClick={() => navigate("/analyze")}
-              className="inline-flex items-center gap-2 px-6 py-3 rounded-xl text-sm transition-all hover:opacity-90"
-              style={{ backgroundColor: "#2563EB", fontWeight: 600, color: "white" }}
-            >
-              지금 바로 확인하기
-              <ArrowRight size={14} style={{ color: "white" }} />
-            </button>
-          </div>
-        </div>
-      </section>
     </div>
   );
 }

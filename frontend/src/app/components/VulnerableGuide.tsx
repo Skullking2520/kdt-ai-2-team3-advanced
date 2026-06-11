@@ -106,8 +106,8 @@ export function VulnerableGuide() {
       {/* Header */}
       <div className="mb-8">
         <div className="flex items-center gap-2 mb-1">
-          <Heart size={16} className="text-rose-500 dark:text-rose-400" />
-          <span className="text-xs text-rose-600 dark:text-rose-400 font-semibold uppercase tracking-widest">피해 예방 안내</span>
+          <Heart size={16} className="text-red-500 dark:text-red-400" />
+          <span className="text-xs text-red-600 dark:text-red-400 font-semibold uppercase tracking-widest">피해 예방 안내</span>
         </div>
         <h1 className="text-gray-900 dark:text-white mb-2" style={{ fontWeight: 700, fontSize: "1.75rem" }}>
           스미싱 피해 예방 안내
@@ -118,10 +118,10 @@ export function VulnerableGuide() {
       </div>
 
       {/* Intro banner */}
-      <div className="bg-rose-50 dark:bg-rose-500/8 border border-rose-100 dark:border-rose-500/20 rounded-2xl p-5 mb-8">
+      <div className="bg-rose-50 dark:bg-red-500/8 border border-rose-100 dark:border-red-500/20 rounded-2xl p-5 mb-8">
         <p className="text-gray-700 dark:text-white/70 leading-relaxed" style={{ fontSize: "1.05rem" }}>
           요즘 스마트폰 문자를 통한 사기(스미싱)가 많이 일어나고 있어요.<br />
-          아래 내용을 잘 읽어보시면 <span className="text-rose-600 dark:text-rose-300" style={{ fontWeight: 600 }}>사기 문자를 피하는 데 도움이 됩니다.</span>
+          아래 내용을 잘 읽어보시면 <span className="text-red-600 dark:text-red-300" style={{ fontWeight: 600 }}>사기 문자를 피하는 데 도움이 됩니다.</span>
         </p>
       </div>
 
@@ -144,7 +144,7 @@ export function VulnerableGuide() {
                 </span>
                 <ChevronDown
                   size={18}
-                  className={`text-gray-400 dark:text-white/30 transition-transform shrink-0 ${openStep === i ? "rotate-180" : ""}`}
+                  className={`text-gray-400 dark:text-white/40 transition-transform shrink-0 ${openStep === i ? "rotate-180" : ""}`}
                 />
               </button>
               <AnimatePresence>
@@ -173,7 +173,7 @@ export function VulnerableGuide() {
         <div className="flex items-center gap-2 mb-4">
           <HelpCircle size={16} className="text-gray-400 dark:text-white/50" />
           <p className="text-gray-700 dark:text-white/70" style={{ fontWeight: 600, fontSize: "1.05rem" }}>연습해보기</p>
-          <span className="text-sm text-gray-400 dark:text-white/30 ml-auto">{quizIndex + 1} / {QUIZ_ITEMS.length}</span>
+          <span className="text-sm text-gray-400 dark:text-white/40 ml-auto">{quizIndex + 1} / {QUIZ_ITEMS.length}</span>
         </div>
 
         <div className="bg-white dark:bg-[#111c30] border border-gray-200 dark:border-white/10 rounded-2xl p-6">
@@ -182,7 +182,7 @@ export function VulnerableGuide() {
               <p className="text-gray-500 dark:text-white/50 mb-3" style={{ fontSize: "0.9rem" }}>이 문자는 피싱(사기)인가요, 아닌가요?</p>
               <div className="bg-gray-50 dark:bg-[#0b1120] border border-gray-200 dark:border-white/10 rounded-xl p-4 mb-5">
                 <div className="flex items-start gap-2 mb-2">
-                  <MessageSquare size={14} className="text-gray-400 dark:text-white/30 shrink-0 mt-0.5" />
+                  <MessageSquare size={14} className="text-gray-400 dark:text-white/40 shrink-0 mt-0.5" />
                   <p className="text-gray-700 dark:text-white/65 leading-relaxed" style={{ fontSize: "0.95rem" }}>
                     {currentQuiz.message}
                   </p>
@@ -263,7 +263,7 @@ export function VulnerableGuide() {
                   score >= 2 ? "잘 하셨어요! 위의 안내를 다시 읽어보시면 더 잘 구별하실 수 있어요." :
                   "괜찮아요! 위의 설명을 천천히 읽어보시면 충분히 이해하실 수 있어요."}
               </p>
-              <button onClick={resetQuiz} className="px-6 py-2.5 rounded-xl bg-rose-50 dark:bg-rose-500/20 border border-rose-200 dark:border-rose-500/30 text-rose-600 dark:text-rose-400 hover:bg-rose-100 dark:hover:bg-rose-500/25 transition-all">
+              <button onClick={resetQuiz} className="px-6 py-2.5 rounded-xl bg-rose-50 dark:bg-red-500/20 border border-rose-200 dark:border-red-500/30 text-red-600 dark:text-red-400 hover:bg-rose-100 dark:hover:bg-red-500/25 transition-all">
                 다시 풀기
               </button>
             </motion.div>
