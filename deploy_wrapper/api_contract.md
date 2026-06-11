@@ -1,6 +1,6 @@
 # Deploy Wrapper API Contract
 
-이 문서는 backend 담당자가 deploy wrapper를 호출할 때 참고할 API contract다. Deploy wrapper async FastAPI app은 `deploy/app/` 아래에 두며, `ai_service/` 폴더는 모델링 담당자 영역으로 유지한다.
+이 문서는 backend 담당자가 deploy wrapper를 호출할 때 참고할 API contract다. Deploy wrapper async FastAPI app은 `deploy_wrapper/app/` 아래에 두며, `ai_service/` 폴더는 모델링 담당자 영역으로 유지한다.
 
 내부 구현은 FastAPI lifespan에서 관리되는 공유 `httpx.AsyncClient`를 사용해 Hugging Face Encoder/Decoder inference API를 호출한다. Decoder는 encoder의 `label`, `confidence`, `features`가 필요하므로 두 호출은 병렬이 아니라 순차 `await` 구조로 처리한다. API contract는 기존과 동일하게 유지한다.
 

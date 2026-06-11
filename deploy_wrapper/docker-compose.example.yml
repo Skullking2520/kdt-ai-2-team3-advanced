@@ -1,16 +1,16 @@
 # Deploy wrapper compose example.
-# Run from the deploy directory:
+# Run from the deploy_wrapper directory:
 # docker compose -f docker-compose.example.yml up --build
 
 services:
   deploy_wrapper:
     build:
       context: ..
-      dockerfile: deploy/Dockerfile
+      dockerfile: deploy_wrapper/Dockerfile
     ports:
       - "8001:8001"
     env_file:
       # Relative to this compose file. Do not put real secrets in .env.example.
       - .env.example
-    # The wrapper app lives under deploy/app.
-    command: ["uvicorn", "deploy.app.main:app", "--host", "0.0.0.0", "--port", "8001"]
+    # The wrapper app lives under deploy_wrapper/app.
+    command: ["uvicorn", "deploy_wrapper.app.main:app", "--host", "0.0.0.0", "--port", "8001"]
