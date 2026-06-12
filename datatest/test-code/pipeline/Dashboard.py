@@ -150,6 +150,19 @@ def get_vt_score_hist(con):
         FROM read_ndjson_auto('{S3_PREFIX}/analytics/virustotal/**/*.jsonl')
     """)
 
+def get_avg_times(con):
+    return duckdb_query(con, f"""
+        SELECT
+            AVG(
+                epoch(CAST(processed_at AS TIMESTAMP)) -
+                epoch(CAST(received_at AS TIMESTAMP))
+            ) as avg_model_sec,
+            AVG(
+                epoch(CAST(reasoned_at AS TIMESTAMP)) -
+                epoch(CAST(processed_at AS TIMESTAMP))
+            ) as avg_reason_sec
+        FROM read_ndjson_auto('{S3_PREFIX}/reason/**/*.jsonl')
+    """)
 
 def get_log_summary(con):
     error_df = duckdb_query(con, f"""
