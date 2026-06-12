@@ -1,13 +1,14 @@
-import {useNavigate} from "react-router";
-import {motion} from "motion/react";
+import { useNavigate } from "react-router";
+import { motion } from "motion/react";
 import {
-Inbox,
-Search,
-FileText,
-Users,
-AlertTriangle,
-TrendingUp,
-History,
+  Inbox,
+  Search,
+  FileText,
+  Users,
+  AlertTriangle,
+  TrendingUp,
+  History,
+  type LucideIcon,
 } from "lucide-react";
 
 /* ────────────────────────── 데이터 없는 상태 (공통) ────────────────────────── */

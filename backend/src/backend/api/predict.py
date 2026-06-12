@@ -5,7 +5,7 @@ from ..db.session import get_db
 from ..schemas.predict_api import PredictRequest, PredictResponse
 from ..services.predict_service import predict_smishing
 
-router = APIRouter(prefix="/predict")
+router = APIRouter(prefix="/api/predict")
 
 
 @router.post("", response_model=PredictResponse)

@@ -1,4 +1,5 @@
 import { useState, useRef, useCallback } from "react";
+import { api, ApiException } from "@/lib/api";
 import { ImageIcon, Upload, FileText, ChevronRight, RotateCcw, CheckCircle2, Loader2, AlertCircle, Edit3, X, Save } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { useNavigate } from "react-router";
@@ -10,12 +11,6 @@ const OCR_STEPS = [
   "완료",
 ];
 
-const MOCK_OCR_RESULTS = [
-  "【CJ대한통운】배송 주소 확인이 필요합니다. 주소 오류로 반송 예정입니다. 확인: http://cj-delivery-check.com/re123",
-  "고객님 본인인증이 만료되었습니다. 즉시 재인증하지 않으면 계좌가 정지됩니다. http://kb-secure-verify.net/auth",
-  "【국민건강보험】미납 보험료 안내. 3일 이내 미납 시 급여 정지됩니다. 납부: http://nhis-pay-kr.com/check",
-  "안녕 엄마 나야 폰이 고장났어 새 번호로 바꿨어 급하게 상품권 50만원어치 필요해 010-9382-7461",
-];
 
 export function ImageAnalyzer() {
   const [file, setFile] = useState<File | null>(null);
@@ -23,6 +18,7 @@ export function ImageAnalyzer() {
   const [ocrStep, setOcrStep] = useState(-1);
   const [ocrRunning, setOcrRunning] = useState(false);
   const [ocrText, setOcrText] = useState<string | null>(null);
+  const [imageResult, setImageResult] = useState<unknown>(null);
   const [isEditing, setIsEditing] = useState(false);
   const [editedText, setEditedText] = useState("");
   const [dragOver, setDragOver] = useState(false);
@@ -63,23 +59,30 @@ export function ImageAnalyzer() {
     setOcrText(null);
     setOcrError(false);
 
-    // 5% 확률로 OCR 실패 시뮬레이션
-    const willFail = Math.random() < 0.05;
-
     let step = 0;
     const interval = setInterval(() => {
       step += 1;
       setOcrStep(step);
       if (step >= OCR_STEPS.length - 1) {
         clearInterval(interval);
-        setTimeout(() => {
-          if (willFail) {
-            setOcrError(true);
+        setTimeout(async () => {
+          try {
+            const dataUri = await new Promise<string>((resolve, reject) => {
+              const reader = new FileReader();
+              reader.onload = () => resolve(reader.result as string);
+              reader.onerror = reject;
+              reader.readAsDataURL(file!);
+            });
+            const result = await api.analyze({ type: 'image', content: dataUri });
+            setOcrText(result.content);
+            setEditedText(result.content);
+            setImageResult(result);
             setOcrRunning(false);
-          } else {
-            const mockText = MOCK_OCR_RESULTS[Math.floor(Math.random() * MOCK_OCR_RESULTS.length)];
-            setOcrText(mockText);
-            setEditedText(mockText);
+          } catch (e) {
+            if (e instanceof ApiException) {
+              console.error("[ImageAnalyzer] OCR 실패:", e.message);
+            }
+            setOcrError(true);
             setOcrRunning(false);
           }
         }, 400);
@@ -90,7 +93,9 @@ export function ImageAnalyzer() {
   const handleAnalyze = () => {
     const textToAnalyze = isEditing ? editedText : ocrText;
     if (!textToAnalyze || !textToAnalyze.trim()) return;
-    nav(`/analyze/progress?text=${encodeURIComponent(textToAnalyze)}&type=image`);
+    // 원본 입력이 이미지이므로 수정 여부 관계없이 기존 분석 결과 재사용 (DB 중복 저장 방지)
+    const state = imageResult ? { preloadedResult: imageResult } : undefined;
+    nav(`/analyze/progress?text=${encodeURIComponent(textToAnalyze)}&type=image`, { state });
   };
 
   const handleReset = () => {

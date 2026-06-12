@@ -12,7 +12,7 @@ from ..models.url_candidate import (
     UrlCandidateStatus,
 )
 from ..repository.static_pattern_repository import (
-    create_static_patterns_if_new,
+    upsert_static_patterns,
     delete_static_url_pattern,
 )
 from ..repository.url_candidate_repository import (
@@ -81,7 +81,7 @@ async def review_url_candidate(
         return None
 
     if approve:
-        await create_static_patterns_if_new(
+        await upsert_static_patterns(
             db,
             [
                 {

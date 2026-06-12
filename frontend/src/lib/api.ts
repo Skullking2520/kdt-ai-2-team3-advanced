@@ -26,6 +26,7 @@ import type {
   ShareResponse,
   CaseStudy,
   AsyncJob,
+  ApiError,
 } from '@/types/api';
 
 // ───────────────────────────────────────────
@@ -47,8 +48,12 @@ export class ApiException extends Error {
 // Mock 가드
 // ───────────────────────────────────────────
 
+const ALWAYS_MOCK_PREFIXES = ['/api/history', '/api/feedback'];
+
 function isMockPath(path: string, method: string): boolean {
-  if (!env.USE_MOCK) return false;
+  if (!env.USE_MOCK) {
+    return ALWAYS_MOCK_PREFIXES.some(p => path.startsWith(p)) && mockHandle.has(path, method);
+  }
   return mockHandle.has(path, method);
 }
 
@@ -131,14 +136,14 @@ async function request<T>(path: string, options: RequestOptions = {}): Promise<T
 export const api = {
   // ── 분석 (핵심) ──────────────────────────
   analyze: (req: AnalysisRequest) =>
-    request<AnalysisResult>('/api/analyze', { method: 'POST', body: req }),
+    request<AnalysisResult>('/api/predict', { method: 'POST', body: req }),
 
   // ── OCR ─────────────────────────────────
   ocr: (image: string) =>
     request<OcrResponse>('/api/ocr', { method: 'POST', body: { image } }),
 
   // ── 발신번호 조회 ────────────────────────
-  lookupSender: (number: string) =>
+  sender: (number: string) =>
     request<SenderLookupResult>(`/api/sender/${encodeURIComponent(number)}`),
 
   // ── 검사 이력 ────────────────────────────

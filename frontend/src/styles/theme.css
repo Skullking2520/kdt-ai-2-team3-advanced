@@ -244,6 +244,8 @@ html:not(.dark) .bg-\[\#1a2d47\] { background-color: #ffffff; }
 
 /* 2. 흰 텍스트 → 다크 텍스트 (라이트 모드) */
 html:not(.dark) .text-white     { color: #1e293b; }
+html:not(.dark) .text-white\/90 { color: #1e293b; }
+html:not(.dark) .text-white\/80 { color: #334155; }
 html:not(.dark) .text-white\/70 { color: #475569; }
 html:not(.dark) .text-white\/60 { color: #64748b; }
 html:not(.dark) .text-white\/55 { color: #64748b; }

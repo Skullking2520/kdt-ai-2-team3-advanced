@@ -19,14 +19,22 @@ class DetectionType(enum.Enum):
     RAG_DECODER = "RAG_DECODER"        # 인코더 점수 애매 → RAG + 디코더 최종 판정
 
 
+class InputType(enum.Enum):
+    SMS = "SMS"
+    URL = "URL"
+    IMAGE = "IMAGE"
+    PHONE = "PHONE"
+
+
 class SmishingLog(Base):
     __tablename__ = "smishing_logs"
     __table_args__ = {"mysql_charset": "utf8mb4", "mysql_collate": "utf8mb4_unicode_ci"}
 
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
-    message_content: Mapped[str] = mapped_column(Text, nullable=False)
+    content: Mapped[str] = mapped_column(Text, nullable=False)
     is_smishing: Mapped[bool] = mapped_column(Boolean, nullable=False)
     detection_type: Mapped[DetectionType] = mapped_column(Enum(DetectionType), nullable=False)
+    input_type: Mapped[InputType | None] = mapped_column(Enum(InputType), nullable=True)
     ai_score: Mapped[float] = mapped_column(Numeric(5, 4), nullable=True)
     reasoning: Mapped[str | None] = mapped_column(Text, nullable=True)  # 디코더 출력 결과
 

@@ -1,8 +1,14 @@
 # src/backend/main.py
+import logging
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s %(levelname)-8s %(name)s - %(message)s",
+)
 
 from .core.config import CORS_OPTIONS, configure_app
 from .core.exceptions import exception_handlers
@@ -11,12 +17,27 @@ from .db.create_tables import create_db_tables
 
 # lifespan: 애플리케이션이 시작될 때와 종료될 때 실행되어야
 # 하는 로직(DB 연결, 모델 로드, 캐시 초기화 등)을 정의
+logger = logging.getLogger(__name__)
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # 서버가 시작될 때 테이블 생성
     await create_db_tables()
-    yield  # 제어권 넘기는 제너레이터, 앱 시작 / 종료 실행 로직 나누는 곳
-    # 서버가 종료될 때 실행할 코드가 있다면 여기에 작성
+    await _warmup_ocr()
+    yield
+
+
+async def _warmup_ocr() -> None:
+    from .core.pydantic_settings import settings
+    if settings.USE_MOCK_OCR:
+        return
+    try:
+        from .ocr.ocr_service import _get_paddle_ocr
+        import asyncio
+        await asyncio.get_event_loop().run_in_executor(None, _get_paddle_ocr)
+        logger.info("[startup] PaddleOCR 워밍업 완료")
+    except Exception as e:
+        logger.warning("[startup] PaddleOCR 워밍업 실패 (첫 요청이 느릴 수 있음): %s", e)
 
 
 app = FastAPI(lifespan=lifespan, exception_handlers=exception_handlers)

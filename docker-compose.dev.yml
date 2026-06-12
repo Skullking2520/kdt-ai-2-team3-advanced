@@ -43,7 +43,7 @@ services:
       MYSQL_USER: ${MYSQL_USER}
       MYSQL_PASSWORD: ${MYSQL_PASSWORD}
     ports:
-      - "3306:3306" # host port: container port
+      - "3307:3306" # host port: container port (3307 → 로컬 MySQL 충돌 방지)
     volumes:
       - mysql_data:/var/lib/mysql
     networks:
