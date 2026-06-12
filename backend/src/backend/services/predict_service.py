@@ -11,13 +11,12 @@ from pydantic import TypeAdapter, ValidationError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..core.pydantic_settings import settings
-from ..models.static_patterns import PatternType, StaticPattern
 from ..models.smishing_log import DetectionType, InputType
+from ..models.static_patterns import PatternType, StaticPattern
 from ..repository.smishing_log_repository import create_smishing_log
 from ..repository.static_pattern_repository import (
     find_matching_static_patterns,
     increment_pattern_counts,
-    upsert_static_patterns,
 )
 from ..schemas.predict_api import EncoderClassificationOutput, PredictRequest
 from ..templates.predict_templates import (
@@ -33,6 +32,7 @@ from ..utils.preprocessor import (
     kw_pattern,
     money_pattern,
 )
+from .url_candidate_service import register_model_url_candidates
 
 SMISHING_LABELS = {"phishing", "smishing", "scam", "spam", "fraud"}
 
@@ -210,30 +210,16 @@ async def generate_explanation(
         return NORMAL_EXPLANATION
 
     if settings.USE_MOCK_MODEL:
-        return "테스트 모드: 스미싱 의심 문자로 탐지되었습니다. 링크나 개인정보 입력 요청에 응하지 마세요."
+        return (
+            "테스트 모드: 스미싱 의심 문자로 탐지되었습니다. "
+            "링크나 개인정보 입력 요청에 응하지 마세요."
+        )
 
     # TODO: ai_service 엔드포인트 확정 후 아래 형태로 교체
     # POST {AI_SERVICE_URL}/api/v1/graph/invoke
     # body: {"text": text}
     # response: {"is_smishing": bool, "reason": str}
     return EXPLAINER_UNAVAILABLE_EXPLANATION
-
-
-def _to_static_pattern_rows(
-    extracted: dict[str, list[str]],
-    reason: str,
-) -> list[dict]:
-    # 전화번호/이메일은 피해자 정보일 수 있어 URL만 블랙리스트에 저장
-    description = reason[:255] if reason else "AI 모델 스미싱 탐지"
-    return [
-        {
-            "pattern_type": PatternType.URL,
-            "pattern_value": url,
-            "description": description,
-            "source": "model_detection",
-        }
-        for url in extracted["urls"]
-    ]
 
 
 async def _ocr_extract(image_data: str) -> str:
@@ -333,7 +319,12 @@ async def predict_smishing(
         else:
             features = _build_features(masked_content, extracted)
             reason = await generate_explanation(masked_content, "스미싱", features)
-            await upsert_static_patterns(db, _to_static_pattern_rows(extracted, reason))
+            await register_model_url_candidates(
+                db,
+                urls=extracted["urls"],
+                confidence=encoder_output.score,
+                reason=reason,
+            )
             # 고신뢰도: 인코더가 판정, 디코더는 설명 생성만 담당
             # 애매한 신뢰도: 디코더가 판정에도 참여
             det_type = (

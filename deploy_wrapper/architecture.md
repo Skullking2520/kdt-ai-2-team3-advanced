@@ -62,8 +62,8 @@ graph LR
 ## Current Assumption
 
 - 모델은 아직 학습 중이다.
-- 실제 HF Endpoint URL은 모델팀이 공유하면 `deploy/.env` 또는 secret으로 연결한다.
+- 실제 HF Endpoint URL은 모델팀이 공유하면 `deploy_wrapper/.env` 또는 secret으로 연결한다.
 - DB와 backend schema는 확정 전이다.
 - 따라서 API 응답 필드와 mock mode를 먼저 고정해 병렬 개발이 가능하게 한다.
-- `ai_service/`는 모델링 담당자 영역이므로 deployment wrapper 코드는 `deploy/app/`에 둔다.
+- `ai_service/`는 모델링 담당자 영역이므로 deployment wrapper 코드는 `deploy_wrapper/app/`에 둔다.
 - deploy wrapper는 `text`만 분석하고, `phone_number`와 신고 DB 관리는 backend 영역으로 둔다.

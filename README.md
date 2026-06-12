@@ -11,7 +11,7 @@ AI 추론은 다음 두 모델 흐름을 기준으로 합니다.
 - Encoder: KcELECTRA 기반 스미싱/정상 분류 모델
 - Decoder: Qwen 계열 설명 생성 모델
 
-현재 모델 추론은 `deploy/` 폴더의 FastAPI wrapper를 통해 Hugging Face Dedicated Inference Endpoint와 연동하는 구조입니다.
+현재 모델 추론은 `deploy_wrapper/` 폴더의 FastAPI wrapper를 통해 Hugging Face Dedicated Inference Endpoint와 연동하는 구조입니다.
 
 ---
 
@@ -117,7 +117,7 @@ Frontend
 ├── frontend/              # React/Vite/Tailwind 기반 웹 MVP
 ├── backend/               # FastAPI backend, DB model, /predict API
 ├── ai_service/            # 모델 학습, 평가, inference 실험 영역
-├── deploy/                # Hugging Face endpoint 연동용 FastAPI wrapper
+├── deploy_wrapper/                # Hugging Face endpoint 연동용 FastAPI wrapper
 ├── docs/                  # 프로젝트 문서
 ├── infra/                 # 인프라 관련 파일
 ├── e2e_tests/             # E2E 테스트 리소스
@@ -169,9 +169,9 @@ Frontend
 - 전처리 실험
 - 모델 inference prototype 관리
 
-실제 서비스용 endpoint wrapper는 `ai_service/`가 아니라 `deploy/`에서 관리합니다.
+실제 서비스용 endpoint wrapper는 `ai_service/`가 아니라 `deploy_wrapper/`에서 관리합니다.
 
-### `deploy/`
+### `deploy_wrapper/`
 
 Hugging Face 모델 배포 연동을 담당합니다.
 
@@ -185,7 +185,7 @@ Hugging Face 모델 배포 연동을 담당합니다.
 - Docker 실행 환경 제공
 - 개발/검증용 mock mode 제공
 
-자세한 내용은 [`deploy/README.md`](deploy/README.md)를 참고합니다.
+자세한 내용은 [`deploy_wrapper/README.md`](deploy_wrapper/README.md)를 참고합니다.
 
 ---
 
@@ -234,7 +234,7 @@ Backend
 }
 ```
 
-자세한 API contract는 [`deploy/api_contract.md`](deploy/api_contract.md)를 참고합니다.
+자세한 API contract는 [`deploy_wrapper/api_contract.md`](deploy_wrapper/api_contract.md)를 참고합니다.
 
 ---
 
@@ -307,11 +307,11 @@ DATABASE_URL=
 ### Deploy Wrapper
 
 ```bash
-python -m py_compile deploy/app/main.py deploy/app/__init__.py
-python -m unittest deploy.tests.test_normalization
-python -m ruff check deploy
+python -m py_compile deploy_wrapper/app/main.py deploy_wrapper/app/__init__.py
+python -m unittest deploy_wrapper.tests.test_normalization
+python -m ruff check deploy_wrapper
 git diff --check
-docker compose -f deploy/docker-compose.example.yml config
+docker compose -f deploy_wrapper/docker-compose.example.yml config
 ```
 
 ### Frontend
@@ -455,7 +455,7 @@ PR 작성 양식은 `.github/pull_request_template.md`를 따릅니다.
 - [`frontend/README.md`](frontend/README.md)
 - [`frontend/web_mvp/README.md`](frontend/web_mvp/README.md)
 - [`backend/README.md`](backend/README.md)
-- [`deploy/README.md`](deploy/README.md)
-- [`deploy/api_contract.md`](deploy/api_contract.md)
-- [`deploy/hf_endpoint_checklist.md`](deploy/hf_endpoint_checklist.md)
+- [`deploy_wrapper/README.md`](deploy_wrapper/README.md)
+- [`deploy_wrapper/api_contract.md`](deploy_wrapper/api_contract.md)
+- [`deploy_wrapper/hf_endpoint_checklist.md`](deploy_wrapper/hf_endpoint_checklist.md)
 - [`docs/MONOREPO.md`](docs/MONOREPO.md)
