@@ -1,7 +1,7 @@
-import {useState, useEffect} from "react";
-import {useNavigate, useSearchParams} from "react-router";
-import {motion} from "motion/react";
-import {CheckCircle2, Loader2, FileText, Search, Database, Sparkles, X} from "lucide-react";
+import { useState, useEffect } from "react";
+import { useNavigate, useSearchParams, useLocation } from "react-router";
+import { motion } from "motion/react";
+import { CheckCircle2, Loader2, FileText, Search, Database, Sparkles, X } from "lucide-react";
 
 interface AnalysisStep {
   id: number;
@@ -21,15 +21,16 @@ export function AnalysisProgress() {
   const [currentStep, setCurrentStep] = useState(0);
   const [progress, setProgress] = useState(0);
   const navigate = useNavigate();
+  const { state } = useLocation();
   const [searchParams] = useSearchParams();
   const text = searchParams.get("text") || "";
   const type = searchParams.get("type") || "sms"; // sms, url, image
 
   useEffect(() => {
     if (currentStep >= STEPS.length) {
-      // 모든 단계 완료 - 결과 페이지로 이동
+      // 모든 단계 완료 - 결과 페이지로 이동 (preloadedResult state 그대로 전달)
       const resultId = `result-${Date.now()}`;
-      navigate(`/analyze/result/${resultId}?text=${encodeURIComponent(text)}&type=${type}`);
+      navigate(`/analyze/result/${resultId}?text=${encodeURIComponent(text)}&type=${type}`, { state });
       return;
     }
 
@@ -106,6 +107,7 @@ export function AnalysisProgress() {
               const Icon = step.icon;
               const isCompleted = index < currentStep;
               const isCurrent = index === currentStep;
+              const isPending = index > currentStep;
 
               return (
                 <motion.div

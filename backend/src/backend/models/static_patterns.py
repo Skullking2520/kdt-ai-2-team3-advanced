@@ -1,7 +1,7 @@
 import enum
 from datetime import datetime
 
-from sqlalchemy import TIMESTAMP, Enum, String, Text, UniqueConstraint, func
+from sqlalchemy import TIMESTAMP, Enum, Integer, String, Text, UniqueConstraint, func
 from sqlalchemy.orm import Mapped, mapped_column
 
 from . import Base
@@ -36,4 +36,8 @@ class StaticPattern(Base):
     pattern_hash: Mapped[str] = mapped_column(String(64), nullable=False)
     description: Mapped[str] = mapped_column(String(255), nullable=True)
     managed_source: Mapped[str | None] = mapped_column(String(30), nullable=True)
+    report_count: Mapped[int] = mapped_column(Integer, nullable=False, default=1)
     created_at: Mapped[datetime] = mapped_column(TIMESTAMP, server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(
+        TIMESTAMP, server_default=func.now(), onupdate=func.now()
+    )

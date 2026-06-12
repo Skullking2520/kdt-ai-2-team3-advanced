@@ -1,4 +1,4 @@
-from sqlalchemy import delete, select, tuple_
+from sqlalchemy import delete, select, tuple_, update
 from sqlalchemy.dialects.mysql import insert as mysql_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -21,7 +21,6 @@ async def find_matching_static_patterns(
     db: AsyncSession,
     extracted_patterns: dict[PatternType, list[str]],
 ) -> list[StaticPattern]:
-    # 데이터베이스(DB)에 이미 존재하는지 한 번에 대량 조회(Bulk Lookup)
     lookup_pairs = []
     for pattern_type, values in extracted_patterns.items():
         for value in values:
@@ -48,11 +47,25 @@ async def find_matching_static_patterns(
             ).in_(set(lookup_pairs))
         )
     )
-
     return list(rows.scalars().all())
 
 
-async def create_static_patterns_if_new(
+async def increment_pattern_counts(
+    db: AsyncSession,
+    patterns: list[StaticPattern],
+) -> None:
+    if not patterns:
+        return
+    ids = [p.id for p in patterns]
+    await db.execute(
+        update(StaticPattern)
+        .where(StaticPattern.id.in_(ids))
+        .values(report_count=StaticPattern.report_count + 1)
+    )
+    await db.commit()
+
+
+async def upsert_static_patterns(
     db: AsyncSession,
     patterns: list[dict],
     *,

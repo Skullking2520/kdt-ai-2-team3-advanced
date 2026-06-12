@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from "motion/react";
 import { Phone, Search, AlertTriangle, CheckCircle, Clock, Flag, RefreshCw } from "lucide-react";
 import { Card } from "./ui/Primitives";
 import { ErrorState } from "./ErrorState";
+import { api, ApiException } from "@/lib/api";
 
 interface SenderResult {
   number: string;
@@ -65,21 +66,37 @@ export function SenderLookup() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const handleSearch = (val?: string) => {
+  const STATUS_MAP: Record<string, SenderResult["status"]> = {
+    danger: "위험", caution: "주의", safe: "안전", unknown: "알 수 없음",
+  };
+
+  const handleSearch = async (val?: string) => {
     const target = (val ?? input).trim();
     if (!target) return;
     setLoading(true);
     setResult(null);
     setError(null);
-    setTimeout(() => {
-      try {
-        setResult(mockLookup(target));
-      } catch (e) {
-        setError(e instanceof Error ? e.message : "조회 중 오류가 발생했어요");
-      } finally {
-        setLoading(false);
+    try {
+      const data = await api.sender(target);
+      setResult({
+        number: data.number,
+        trustScore: data.trustScore === 0 ? 1 : data.trustScore === 100 ? 9 : data.trustScore,
+        status: STATUS_MAP[data.status] ?? "알 수 없음",
+        reportCount: data.reportCount,
+        lastSeen: data.lastReportedAt ? new Date(data.lastReportedAt).toLocaleDateString("ko-KR") : "-",
+        categories: data.categories,
+        history: data.history,
+        isp: data.isp,
+        region: data.region,
+      });
+    } catch (e) {
+      if (e instanceof ApiException) {
+        console.error("[SenderLookup] API 실패, mock fallback:", e.message);
       }
-    }, 800);
+      setResult(mockLookup(target));
+    } finally {
+      setLoading(false);
+    }
   };
 
   const ss = result ? STATUS_STYLE[result.status] : null;
@@ -104,7 +121,7 @@ export function SenderLookup() {
             <input value={input} onChange={(e) => setInput(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && handleSearch()}
               placeholder="010-0000-0000 또는 발신번호 입력..."
-              className="flex-1 bg-transparent text-sm text-white/80 placeholder:text-white/20 outline-none" />
+              className="flex-1 bg-transparent text-sm text-gray-900 placeholder:text-white/20 outline-none" />
           </div>
           <button onClick={() => handleSearch()} disabled={!input.trim() || loading}
             className="px-4 py-2 rounded-lg bg-rose-500/20 border border-rose-500/30 text-rose-400 text-sm hover:bg-rose-500/25 transition-all disabled:opacity-40 flex items-center gap-1.5">

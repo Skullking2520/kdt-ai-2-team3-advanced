@@ -22,7 +22,7 @@ interface URLResult {
 /** api.analyze() UrlAnalysisResult → 컴포넌트 내부 URLResult 어댑터 */
 function adaptUrlResult(r: UrlAnalysisResult): URLResult {
   const upper = (s: "high" | "medium" | "low") =>
-    (s.charAt(0).toUpperCase() + s.slice(1)) as "HIGH" | "MEDIUM" | "LOW";
+    s.toUpperCase() as "HIGH" | "MEDIUM" | "LOW";
   return {
     url: r.content,
     domain: r.urlDetails.domain,

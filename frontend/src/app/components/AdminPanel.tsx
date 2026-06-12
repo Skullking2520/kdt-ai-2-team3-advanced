@@ -1,19 +1,20 @@
-import {useState} from "react";
-import {useAdmin} from "../context/AdminContext";
+import { useState } from "react";
+import { useAdmin } from "../context/AdminContext";
 import {
-Lock,
-Unlock,
-ShieldAlert,
-Eye,
-EyeOff,
-LogOut,
-BarChart2,
-Cpu,
-Zap,
-CheckCircle2,
-AlertCircle,
+  Lock,
+  Unlock,
+  ShieldAlert,
+  Eye,
+  EyeOff,
+  LogOut,
+  BarChart2,
+  Cpu,
+  Zap,
+  TrendingUp,
+  CheckCircle2,
+  AlertCircle,
 } from "lucide-react";
-import {motion, AnimatePresence} from "motion/react";
+import { motion, AnimatePresence } from "motion/react";
 
 /* ── 커스텀 레이더 차트 ─────────────────────────────────── */
 const RADAR_METRICS = ["정확도", "정밀도", "재현율", "F1", "속도", "Zero-day"];

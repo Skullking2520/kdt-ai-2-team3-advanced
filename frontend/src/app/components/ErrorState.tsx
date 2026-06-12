@@ -1,11 +1,12 @@
-import {motion} from "motion/react";
+import { motion } from "motion/react";
 import {
-AlertTriangle,
-WifiOff,
-Clock,
-ServerCrash,
-RefreshCw,
-Home,
+  AlertTriangle,
+  WifiOff,
+  Clock,
+  ServerCrash,
+  RefreshCw,
+  Home,
+  type LucideIcon,
 } from "lucide-react";
 
 /* ────────────────────────── 에러 상태 (공통) ────────────────────────── */
