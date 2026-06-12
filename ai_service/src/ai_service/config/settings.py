@@ -32,11 +32,26 @@ class Settings(BaseSettings):
     EMBEDDING_PROVIDER: str = Field(default="huggingface")
     EMBEDDING_MODEL_NAME: str = Field(default="jhgan/ko-sroberta-multitask")
 
-    # Ollama LLM 설정
+    # Ollama LLM 설정 (운영용)
     OLLAMA_BASE_URL: str = Field(default="http://localhost:11434")
     OLLAMA_MODEL_NAME: str = Field(default="")
     OLLAMA_NUM_CTX: int = Field(default=8192)
     OLLAMA_NUM_PREDICT: int = Field(default=1024)
+
+    # 평가 LLM 설정 (ragas 메트릭 계산용)
+    EVALUATOR_LLM_PROVIDER: str = Field(default="openai")  # openai, ollama, huggingface 중 선택
+    EVALUATOR_MODEL_NAME: str = Field(default="gpt-4o-mini")  # openai: gpt-4o-mini, ollama: 모델명 등
+    EVALUATOR_TEMPERATURE: float = Field(default=0.0)
+
+    # 평가 배치 처리 설정
+    EVALUATION_BATCH_SIZE: int = Field(default=10)  # 한 번에 평가할 데이터 수
+    EVALUATION_MAX_CONCURRENT_REQUESTS: int = Field(default=3)  # 동시 요청 수
+    EVALUATION_REQUEST_TIMEOUT: int = Field(default=60)  # 단일 요청 타임아웃(초)
+    EVALUATION_RETRY_COUNT: int = Field(default=2)  # 실패 시 재시도 횟수
+    EVALUATION_RETRY_DELAY: int = Field(default=5)  # 재시도 대기 시간(초)
+    EVALUATION_MAX_ITEMS: int = Field(default=0)  # 0 = 제한 없음, N > 0 = N개까지만 평가
+    EVALUATION_COST_LIMIT_DOLLARS: float = Field(default=0.0)  # 0.0 = 제한 없음
+    EVALUATION_SKIP_ON_ERROR: bool = Field(default=True)  # True = 오류 발생 시 스킵하고 계속, False = 중단
 
     HF_XET_HIGH_PERFORMANCE: int = Field(default=1)
 
