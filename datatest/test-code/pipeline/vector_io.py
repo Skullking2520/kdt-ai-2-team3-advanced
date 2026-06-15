@@ -1,77 +1,67 @@
-"""ChromaDB 헬퍼.
+"""Pinecone Vector DB 헬퍼.
 
-임베딩 모델은 jhgan/ko-sroberta-multitask, 768차원, cosine.
+본 모듈은 ChromaDB 기반의 기존 vector_io.py를 Pinecone API로 재구현한 버전.
+임베딩 모델은 jhgan/ko-sroberta-multitask (768차원, cosine) 그대로 유지.
 
 [메타데이터 스키마 v2.1]
 {
-    "id": "case_kisa_2025_001",
-    "document": "본인인증 위해 첨부 링크 클릭 바랍니다",
-    "metadata": {
-        # 출처·분류
-        "source":           "train_data | crawling_kr | crawling_foreign | user_input",
-        "security_type":    "스미싱 | 피싱 | 보이스피싱 | zero-day | 악성앱",
-        "language":         "ko | en",
-
-        # 문서 식별·버전
-        "chunk_idx":        0,
-        "original_doc_id":  "doc-uuid",
-        "source_url":       "https://boannews.com",
-        "doc_version":      "v2.1",
-        "pipeline_version": "p-0.4.0",
-
-        # 평가용 (선택)
-        "question":         "골든 데이터셋 질문 (선택)",
-        "ground_truth":     "전문가 정답 (선택)",
-
-        # 시간 (ISO 8601 문자열)
-        "collected_at":     "2026-06-01T10:00:00Z",
-        "updated_at":       "2026-06-01T10:00:00Z",
-
-        # 추출 결과 플래그 (검색 필터용)
-        "has_url":               0,
-        "has_phone":             0,
-        "has_money":             0,
-        "has_account":           0,    # ← v2.1 신규: 계좌번호 포함 여부
-        "special_keyword_count": 0,
-    }
+    "source":           "train_data | crawling_kr | crawling_foreign | user_input | ragas_golden",
+    "security_type":    "스미싱 | 피싱 | 보이스피싱 | zero-day | 악성앱 | analysis",
+    "language":         "ko | en",
+    "chunk_idx":        0,
+    "original_doc_id":  "doc-uuid",
+    "source_url":       "https://...",
+    "doc_version":      "v2.1",
+    "pipeline_version": "p-0.4.0",
+    "question":         "...",
+    "ground_truth":     "...",
+    "collected_at":     "2026-06-01T10:00:00Z",
+    "updated_at":       "2026-06-01T10:00:00Z",
+    "has_url":               0,
+    "has_phone":             0,
+    "has_money":             0,
+    "has_account":           0,
+    "special_keyword_count": 0,
 }
 
-상세 추출 데이터(url/phone/money/account 리스트)는 MySQL
-`extracted_entities` 테이블에 별도 저장. ChromaDB 메타엔 has_* 플래그만 둠.
-
-[변경 이력]
-- v2.1 (2026-06-XX): has_account 플래그 추가
-- v2.0: source 분리(crawling_kr/crawling_foreign), has_* 플래그 도입, _extracted 제거
+상세 내용은 docs/pinecone_spec.md 참조.
 """
-import chromadb
-from chromadb import errors as chroma_errors
+import os
+from pinecone import Pinecone
 from sentence_transformers import SentenceTransformer
-from .config import CHROMA_COLLECTION, CHROMA_PATH, EMBEDDING_MODEL
+from pipeline.config import EMBEDDING_MODEL, PINECONE_INDEX_NAME
 from .logger import log_error, log_info, log_warning
 
 
-# ─── 메타데이터 검증 상수 ─────────────────────────────────────────────
-ALLOWED_SOURCES = {"train_data", "crawling_kr", "crawling_foreign", "user_input"}
-ALLOWED_SECURITY_TYPES = {"스미싱", "피싱", "보이스피싱", "zero-day", "악성앱"}
+# ─── 메타데이터 검증 상수 (ChromaDB 버전과 동일하게 유지) ─────────────
+# v0.1에서 ragas_golden, analysis 추가
+ALLOWED_SOURCES = {
+    "train_data", "crawling_kr", "crawling_foreign",
+    "user_input", "ragas_golden"
+}
+ALLOWED_SECURITY_TYPES = {
+    "스미싱", "피싱", "보이스피싱", "zero-day", "악성앱", "analysis"
+}
 ALLOWED_LANGUAGES = {"ko", "en"}
 
-# v2.1: has_account 추가
 HAS_FLAGS = ("has_url", "has_phone", "has_money", "has_account")
 
 REQUIRED_META_KEYS = {
     "source", "security_type", "language",
     "original_doc_id", "doc_version", "pipeline_version",
     "collected_at", "updated_at",
-    "has_url", "has_phone", "has_money", "has_account",  # ← v2.1 추가
+    "has_url", "has_phone", "has_money", "has_account",
     "special_keyword_count",
 }
 
-# ChromaDB 메타데이터에 허용되는 타입 (스칼라만)
+# Pinecone 메타데이터에 허용되는 타입 (스칼라 + list[str])
+# 단, 현 단계에선 ChromaDB 호환 위해 스칼라만 사용
 _SCALAR_TYPES = (str, int, float, bool)
 
 
 _client = None
 _model = None
+_index = None
 
 
 def get_model() -> SentenceTransformer:
@@ -82,40 +72,48 @@ def get_model() -> SentenceTransformer:
     return _model
 
 
-def get_client():
-    """싱글톤 ChromaDB 클라이언트."""
+def get_client() -> Pinecone:
+    """싱글톤 Pinecone 클라이언트.
+
+    환경변수 PINECONE_API_KEY 필요.
+    """
     global _client
     if _client is None:
-        _client = chromadb.PersistentClient(path=CHROMA_PATH)
+        api_key = os.environ.get("PINECONE_API_KEY")
+        if not api_key:
+            raise RuntimeError(
+                "PINECONE_API_KEY 환경변수가 설정되지 않음. .env 파일 확인."
+            )
+        _client = Pinecone(api_key=api_key)
     return _client
 
 
-def get_collection():
-    """smishing_cases 컬렉션 (없으면 생성)."""
-    client = get_client()
-    return client.get_or_create_collection(
-        name=CHROMA_COLLECTION,
-        metadata={"hnsw:space": "cosine"},
-    )
+def get_index():
+    """smishing-cases-v01 인덱스 핸들 (싱글톤).
+
+    인덱스가 없으면 RuntimeError. 인덱스 생성은 Pinecone 콘솔에서 수동으로 수행.
+    """
+    global _index
+    if _index is None:
+        pc = get_client()
+        existing = [idx.name for idx in pc.list_indexes()]
+        if PINECONE_INDEX_NAME not in existing:
+            raise RuntimeError(
+                f"Pinecone 인덱스 '{PINECONE_INDEX_NAME}'가 존재하지 않음. "
+                f"콘솔에서 먼저 생성 필요. (dimension=768, metric=cosine) "
+                f"현재 인덱스 목록: {existing}"
+            )
+        _index = pc.Index(PINECONE_INDEX_NAME)
+    return _index
 
 
 # ─── 메타데이터 검증·정제 ────────────────────────────────────────────
 def _validate_metadata(meta: dict, idx: int) -> None:
-    """ChromaDB에 적재하기 전 메타데이터 검증.
-
-    Args:
-        meta: 검증할 메타데이터 dict
-        idx:  배치 내 인덱스 (에러 메시지에 사용)
-
-    Raises:
-        ValueError: 필수 키 누락·허용 값 위반·비스칼라 타입 등
-    """
-    # 1. 필수 키 체크
+    """ChromaDB 버전과 동일한 검증 규칙 적용."""
     missing = REQUIRED_META_KEYS - meta.keys()
     if missing:
         raise ValueError(f"[idx={idx}] 필수 메타 키 누락: {missing}")
 
-    # 2. enum 값 체크
     if meta["source"] not in ALLOWED_SOURCES:
         raise ValueError(
             f"[idx={idx}] source='{meta['source']}'는 허용되지 않음. "
@@ -132,29 +130,30 @@ def _validate_metadata(meta: dict, idx: int) -> None:
             f"허용: {ALLOWED_LANGUAGES}"
         )
 
-    # 3. 플래그 0/1 체크 (v2.1: has_account 포함)
     for flag in HAS_FLAGS:
         if meta[flag] not in (0, 1):
             raise ValueError(
                 f"[idx={idx}] {flag}={meta[flag]}는 0 또는 1만 허용"
             )
 
-    # 4. ChromaDB 호환 — 모든 값이 스칼라(또는 None)인지
     for k, v in meta.items():
         if v is None:
             continue
         if not isinstance(v, _SCALAR_TYPES):
             raise ValueError(
-                f"[idx={idx}] 메타 '{k}'={type(v).__name__} 타입은 ChromaDB 비호환. "
-                f"스칼라(str/int/float/bool)만 허용. (리스트라면 MySQL로 분리 저장 필요)"
+                f"[idx={idx}] 메타 '{k}'={type(v).__name__} 타입은 비호환. "
+                f"스칼라(str/int/float/bool)만 허용."
             )
 
 
-def _normalize_metadata(meta: dict) -> dict:
-    """ChromaDB 적재 직전에 None 값을 빈 문자열로 변환.
-    ChromaDB는 None을 메타 값으로 허용하지 않으므로 선택 필드를 정제.
+def _normalize_metadata(meta: dict, document: str) -> dict:
+    """Pinecone 적재 직전 정제.
+    - None → "" 변환
+    - document 본문을 메타에 포함 (Pinecone은 ChromaDB의 documents 슬롯이 없음)
     """
-    return {k: ("" if v is None else v) for k, v in meta.items()}
+    clean = {k: ("" if v is None else v) for k, v in meta.items()}
+    clean["document"] = document  # 검색 결과에서 본문 복원용
+    return clean
 
 
 # ─── 적재·검색 ──────────────────────────────────────────────────────
@@ -162,11 +161,14 @@ def upsert_cases(
     ids: list[str],
     documents: list[str],
     metadatas: list[dict],
+    batch_size: int = 100,
 ) -> None:
-    """검증 사례 적재 (upsert로 중복 실행 안전).
+    """사례 적재. ChromaDB 버전과 동일한 시그니처 유지.
 
-    각 메타데이터는 적재 전에 _validate_metadata로 검증됨. 검증 실패 시
-    ValueError가 발생하며, 한 건이라도 실패하면 배치 전체가 적재되지 않음.
+    Pinecone API 특성:
+    - 한 번에 최대 100개씩 배치 처리 권장
+    - upsert는 ID 충돌 시 자동 덮어쓰기
+    - documents는 메타의 'document' 필드에 저장됨 (Pinecone은 본문 슬롯 없음)
     """
     if not (len(ids) == len(documents) == len(metadatas)):
         raise ValueError(
@@ -175,33 +177,43 @@ def upsert_cases(
         )
 
     try:
-        # 1. 모든 메타데이터 사전 검증
+        # 1. 검증
         for i, meta in enumerate(metadatas):
             _validate_metadata(meta, i)
 
-        # 2. None → "" 정제
-        clean_metas = [_normalize_metadata(m) for m in metadatas]
+        # 2. 정제 (document 본문을 메타에 포함)
+        clean_metas = [
+            _normalize_metadata(m, doc)
+            for m, doc in zip(metadatas, documents)
+        ]
 
-        # 3. 임베딩·적재
+        # 3. 임베딩
         model = get_model()
-        collection = get_collection()
-        embeddings = model.encode(documents).tolist()
-        collection.upsert(
-            ids=ids,
-            embeddings=embeddings,
-            documents=documents,
-            metadatas=clean_metas,
-        )
-        log_info("vector_io", "upsert_cases", f"{len(ids)}건 적재 완료")
+        embeddings = model.encode(documents, show_progress_bar=True).tolist()
+
+        # 4. Pinecone에 적재 (배치)
+        index = get_index()
+        vectors = [
+            {"id": id_, "values": emb, "metadata": meta}
+            for id_, emb, meta in zip(ids, embeddings, clean_metas)
+        ]
+
+        for i in range(0, len(vectors), batch_size):
+            batch = vectors[i:i + batch_size]
+            index.upsert(vectors=batch)
+            log_info(
+                "vector_io",
+                "upsert_cases",
+                f"배치 {i//batch_size + 1} 적재: {len(batch)}건"
+            )
+
+        log_info("vector_io", "upsert_cases", f"총 {len(ids)}건 적재 완료")
 
     except ValueError as e:
-        log_error("vector_io", "upsert_cases", f"메타데이터 검증 실패: {e}", exc=e)
-        raise
-    except chroma_errors.InvalidDimensionException as e:
-        log_error("vector_io", "upsert_cases", f"차원 불일치 오류: {e}", exc=e)
+        log_error("vector_io", "upsert_cases", f"검증 실패: {e}", exc=e)
         raise
     except Exception as e:
-        log_error("vector_io", "upsert_cases", f"upsert 실패: {e}", exc=e)
+        log_error("vector_io", "upsert_cases", f"적재 실패: {e}", exc=e)
         raise
 
 
@@ -213,64 +225,65 @@ def search_similar(
     """질의 텍스트로 유사 사례 검색.
 
     Args:
-        query_text: 검색할 질의 문장
-        n_results:  반환 결과 수 (컬렉션 크기 초과 시 자동 조정)
-        where:      메타데이터 필터 (예: {"has_account": 1}). None이면 전체.
+        query_text: 검색 질의
+        n_results: 반환할 결과 수
+        where: Pinecone 메타 필터 (예: {"language": "ko"}, {"has_url": 1}).
+               복합 조건은 {"$and": [...]} 형식.
 
     Returns:
         [
             {
-                "case_id":    "case_kisa_2025_001",
-                "document":   "본인인증 위해 첨부 링크 클릭 바랍니다",
-                "similarity": 0.873,
-                "metadata":   {...}
+                "case_id": ...,
+                "document": ...,
+                "similarity": ...,   # Pinecone score (코사인의 경우 1.0이 최대)
+                "metadata": ...,
             },
             ...
         ]
-        오류 발생 시 빈 리스트 반환.
+        오류 시 빈 리스트.
     """
     try:
         model = get_model()
-        collection = get_collection()
+        index = get_index()
 
-        if collection.count() == 0:
-            log_warning("vector_io", "search_similar", "컬렉션이 비어있음")
+        # 인덱스 통계 확인
+        stats = index.describe_index_stats()
+        total = stats.get("total_vector_count", 0)
+        if total == 0:
+            log_warning("vector_io", "search_similar", "인덱스가 비어있음")
             return []
 
-        query_emb = model.encode([query_text]).tolist()
+        # 임베딩 → 검색
+        query_emb = model.encode([query_text])[0].tolist()
 
         query_kwargs = {
-            "query_embeddings": query_emb,
-            "n_results": min(n_results, collection.count()),
+            "vector": query_emb,
+            "top_k": min(n_results, total),
+            "include_metadata": True,
         }
         if where:
-            query_kwargs["where"] = where
+            query_kwargs["filter"] = where
 
-        results = collection.query(**query_kwargs)
+        response = index.query(**query_kwargs)
 
         output = []
-        for case_id, doc, dist, meta in zip(
-            results["ids"][0],
-            results["documents"][0],
-            results["distances"][0],
-            results["metadatas"][0],
-        ):
+        for match in response["matches"]:
+            meta = dict(match["metadata"])
+            document = meta.pop("document", "")  # 메타에서 본문 분리
             output.append({
-                "case_id": case_id,
-                "document": doc,
-                "similarity": round(1 - dist, 3),
-                "metadata": meta,
+                "case_id":    match["id"],
+                "document":   document,
+                "similarity": round(match["score"], 3),
+                "metadata":   meta,
             })
+
         log_info(
             "vector_io",
             "search_similar",
-            f"{len(output)}건 검색 완료 (filter={where})",
+            f"{len(output)}건 검색 완료 (filter={where})"
         )
         return output
 
-    except chroma_errors.InvalidDimensionException as e:
-        log_error("vector_io", "search_similar", f"차원 불일치 오류: {e}", exc=e)
-        return []
     except Exception as e:
         log_error("vector_io", "search_similar", f"검색 실패: {e}", exc=e)
         return []
