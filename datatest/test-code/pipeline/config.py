@@ -7,7 +7,7 @@ import os
 
 from dotenv import load_dotenv
 
-load_dotenv()
+load_dotenv(override=True)
 
 # ─ S3 ─────────────────────────────────────────
 S3_BUCKET = os.getenv("S3_BUCKET", "smishing-dev-newbies-2026")
