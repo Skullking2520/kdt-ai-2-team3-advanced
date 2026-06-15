@@ -18,6 +18,7 @@ import requests
 
 from .mysql_io import get_conn
 from .logger import log_info, log_error, log_warning
+from .config import URLHAUS_AUTH_KEY
 
 KST = ZoneInfo("Asia/Seoul")
 
@@ -115,8 +116,10 @@ def crawl_urlhaus(limit: int = 1000) -> list[dict]:
     """
     log_info("crawler", "crawl_urlhaus", "URLhaus 크롤링 시작")
 
+    headers = {"Auth-Key": URLHAUS_AUTH_KEY}  # 추가
+
     try:
-        response = requests.get(URLHAUS_API_URL, timeout=REQUEST_TIMEOUT)
+        response = requests.get(URLHAUS_API_URL, headers=headers, timeout=REQUEST_TIMEOUT)  # headers 추가
         response.raise_for_status()
         data = response.json()
     except requests.RequestException as e:

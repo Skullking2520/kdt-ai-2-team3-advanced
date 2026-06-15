@@ -44,3 +44,6 @@ VT_RATE_LIMIT_PER_MIN = 4
 # ─ 배치 크기 ──────────────────────────────────
 BATCH_SIZE_PIPELINE = 100   # raw/labeled/processed/reason
 BATCH_SIZE_VT = 1000        # analytics/virustotal
+
+# ─ URLhaus ────────────────────────────────────
+URLHAUS_AUTH_KEY = os.getenv("URLHAUS_AUTH_KEY", "")
