@@ -17,6 +17,7 @@
 import logging
 import os
 import tempfile
+import time
 from datetime import datetime
 from zoneinfo import ZoneInfo
 
@@ -61,8 +62,12 @@ def fetch_blacklist_targets() -> list[dict]:
 # 단건 VT 처리
 # ─────────────────────────────────────────────────
 
-def process_one(target: dict) -> None:
-    """블랙리스트 항목 1건 VT 조회 → MySQL 갱신 → S3 즉시 append."""
+def process_one(target: dict) -> bool:
+    """블랙리스트 항목 1건 VT 조회 → MySQL 갱신 → S3 즉시 append.
+
+    Returns:
+        True: 성공, False: 호출 실패 (재시도 가능)
+    """
     pattern_type = target["pattern_type"]
     pattern_value = target["pattern_value"]
     blacklist_id = target["id"]
@@ -76,7 +81,7 @@ def process_one(target: dict) -> None:
 
     if raw is None:
         log.warning(f"[VT] 할당량 초과 또는 호출 실패: {pattern_value}")
-        return
+        return False
 
     summary = summarize_report(raw)
 
@@ -104,6 +109,7 @@ def process_one(target: dict) -> None:
     )
 
     log.info(f"[VT] 완료: {pattern_value} → {summary['위험등급']} ({summary['위험점수']})")
+    return True
 
 
 # ─────────────────────────────────────────────────
@@ -212,6 +218,10 @@ def job_process_s3_manual() -> None:
 # Job 3: VT 자동 스캔 (02:00)
 # ─────────────────────────────────────────────────
 
+_VT_MAX_RETRIES = 3
+_VT_RETRY_DELAY = 30  # seconds
+
+
 def job_vt_auto_scan() -> None:
     """매일 02:00: blacklist VT 미처리 항목 스캔 (최대 400건)."""
     log.info("=" * 50)
@@ -237,6 +247,7 @@ def job_vt_auto_scan() -> None:
 
     success = 0
     fail = 0
+    retry_queue: list[tuple[dict, int]] = []  # (target, attempt)
 
     for target in targets:
         ok, reason = can_call("auto")
@@ -245,11 +256,40 @@ def job_vt_auto_scan() -> None:
             break
 
         try:
-            process_one(target)
-            success += 1
+            if process_one(target):
+                success += 1
+            else:
+                retry_queue.append((target, 1))
         except Exception as e:
             log.error(f"[Scheduler] 오류: {target['pattern_value']} → {e}")
+            retry_queue.append((target, 1))
+
+    # 실패 항목 당일 재시도
+    while retry_queue:
+        target, attempt = retry_queue.pop(0)
+
+        if attempt > _VT_MAX_RETRIES:
+            log.warning(f"[Scheduler] 최대 재시도 초과 ({_VT_MAX_RETRIES}회): {target['pattern_value']}")
             fail += 1
+            continue
+
+        ok, reason = can_call("auto")
+        if not ok:
+            log.warning(f"[Scheduler] 재시도 중 할당량 소진: {reason}")
+            fail += 1 + len(retry_queue)
+            break
+
+        log.info(f"[Scheduler] 재시도 {attempt}/{_VT_MAX_RETRIES}: {target['pattern_value']} ({_VT_RETRY_DELAY}초 대기)")
+        time.sleep(_VT_RETRY_DELAY)
+
+        try:
+            if process_one(target):
+                success += 1
+            else:
+                retry_queue.append((target, attempt + 1))
+        except Exception as e:
+            log.error(f"[Scheduler] 재시도 오류: {target['pattern_value']} → {e}")
+            retry_queue.append((target, attempt + 1))
 
     log.info(f"[Scheduler] 완료 — 성공: {success}건 / 실패: {fail}건")
 
