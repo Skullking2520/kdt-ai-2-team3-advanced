@@ -1,6 +1,13 @@
-from dotenv import find_dotenv
+from pathlib import Path
+
+from dotenv import find_dotenv, load_dotenv
 from pydantic import AnyUrl, Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+# .env.local이 있으면 OS 환경변수로 주입 (pydantic_settings 환경변수 우선순위 활용)
+_env_local = Path(__file__).parents[4] / ".env.local"
+if _env_local.exists():
+    load_dotenv(_env_local, override=True)
 
 
 # 환경변수 읽어오는 설정
@@ -31,10 +38,37 @@ class Settings(BaseSettings):
     ENCODER_INFERENCE_ENDPOINT: str | None = Field(default=None)
     DECODER_ENDPOINT_URL: str | None = Field(default=None)
     EXPLAINER_MODEL: str = Field(default="Qwen/Qwen3-1.7B")
+    USE_MOCK_MODEL: bool = Field(default=False)
+    USE_MOCK_OCR: bool = Field(default=False)
+    MODEL_VERSION: str = Field(default="unknown")
+
+    # CLOVA OCR 설정 (USE_MOCK_OCR=False 시 필요)
+    CLOVA_OCR_URL: str | None = Field(default=None)
+    CLOVA_OCR_SECRET: str | None = Field(default=None)
+
+    # VirusTotal URL 후보 검증 worker 설정
+    VIRUSTOTAL_API_KEY: str | None = Field(default=None)
+    VT_TIMEOUT_SECONDS: int = Field(default=15, ge=1)
+    VT_BATCH_SIZE: int = Field(default=100, ge=1)
+    VT_WORKER_INTERVAL_MINUTES: int = Field(default=5, ge=1)
+    VT_RECHECK_DAYS: int = Field(default=7, ge=1)
+    VT_SUBMITTED_RECHECK_MINUTES: int = Field(default=15, ge=1)
+    VT_ERROR_RETRY_HOURS: int = Field(default=6, ge=1)
+    VT_AUTO_APPROVE_MALICIOUS_COUNT: int = Field(default=3, ge=1)
+    VT_SUBMIT_UNKNOWN_URLS: bool = Field(default=True)
+    VT_REQUESTS_PER_MINUTE: int = Field(default=4, ge=1)
+    VT_DAILY_REQUEST_LIMIT: int = Field(default=400, ge=1)
+    VT_RATE_LIMIT_RETRY_SECONDS: int = Field(default=60, ge=1)
+    VT_DAILY_LIMIT_RETRY_SECONDS: int = Field(default=86400, ge=1)
+    VT_WORKER_STARTUP_DELAY_SECONDS: int = Field(default=15, ge=0)
+    VT_CANDIDATE_LEASE_MINUTES: int = Field(default=30, ge=1)
+
+    # URL 후보 검토 API
+    ADMIN_API_KEY: str | None = Field(default=None)
 
     # .env 파일 로드 설정 (pydantic v2 방식)
     model_config = SettingsConfigDict(
-        env_file=find_dotenv(),  # 루트 .env까지 찾아 올라감
+        env_file=find_dotenv(),
         env_file_encoding="utf-8",
         extra="ignore",  # .env에 다른 변수가 더 있어도 에러 내지 않고 무시
     )
