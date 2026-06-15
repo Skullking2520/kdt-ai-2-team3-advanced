@@ -1,0 +1,6 @@
+OCR,compact_exact,CER,char_accuracy,avg_processing_time,note
+EasyOCR,5.00%,0.1119,88.81%,0.2482초,완전 일치율은 낮지만 문자 단위 정확도는 비교적 안정적
+PaddleOCR,70.00%,0.1049,89.51%,1.3997초,좌표 정렬 전 단독 결과 기준
+Tesseract psm 6,30.00%,0.0997,90.03%,0.1568초,로컬 OCR 중 처리 속도가 빠르고 문자 정확도는 안정적
+CLOVA OCR,75.00%,0.0087,99.13%,1.0636초,단독 OCR 기준 문자 정확도 최고
+PaddleOCR + CLOVA fallback,90.00%,0.0035,99.65%,1.6950초,좌표 정렬과 confidence 기반 fallback 적용 후 최고 성능

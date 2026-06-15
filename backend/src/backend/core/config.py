@@ -5,7 +5,7 @@ from slowapi.errors import RateLimitExceeded
 from slowapi.middleware import SlowAPIMiddleware
 from slowapi.util import get_remote_address
 
-from ..api import predict, report, root
+from ..api import predict, report, root, sender, url_candidates
 
 limiter = Limiter(key_func=get_remote_address, default_limits=["15/minutes"])
 # get_remote_address: Returns the ip address for the current request
@@ -43,3 +43,5 @@ def configure_app(app: FastAPI):
     app.include_router(root.router)
     app.include_router(predict.router)
     app.include_router(report.router)
+    app.include_router(sender.router)
+    app.include_router(url_candidates.router)

@@ -10,6 +10,16 @@ services:
     env_file:
       - .env
 
+  url-validator:
+    image: ${NCP_REGISTRY}/smishing-backend:latest
+    container_name: smishing-url-validator
+    restart: always
+    command: ["python", "-m", "src.backend.workers.virustotal_worker"]
+    env_file:
+      - .env
+    depends_on:
+      - fastapi
+
   nginx:
     image: nginx:alpine
     container_name: nginx-proxy

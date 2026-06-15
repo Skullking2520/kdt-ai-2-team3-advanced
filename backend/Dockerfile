@@ -7,6 +7,12 @@ RUN apt-get update && apt-get install -y \
     build-essential \
     default-libmysqlclient-dev \
     pkg-config \
+    libgomp1 \
+    libglib2.0-0 \
+    libgl1 \
+    libsm6 \
+    libxext6 \
+    libxrender1 \
     && rm -rf /var/lib/apt/lists/*
 
 # default-libmysqlclient-dev: MySQL 클라이언트 라이브러리의 개발 헤더와 라이브러리를 설치
@@ -26,6 +32,15 @@ RUN pip install uv && uv sync --frozen
 # 2단계: 실행 환경 (최종 이미지)
 FROM python:3.12-slim
 
+RUN apt-get update && apt-get install -y \
+    libgomp1 \
+    libglib2.0-0 \
+    libgl1 \
+    libsm6 \
+    libxext6 \
+    libxrender1 \
+    && rm -rf /var/lib/apt/lists/*
+
 WORKDIR /app
 
 # builder 단계에서 생성된 가상환경(.venv)만 복사
@@ -36,6 +51,12 @@ COPY backend ./
 
 # PATH 설정 (uv가 .venv 안에 설치되어 있으므로)
 ENV PATH="/app/.venv/bin:$PATH"
+
+# PaddleOCR 한국어 모델 빌드 시 사전 다운로드 (콜드 스타트 지연 방지)
+RUN python -c "\
+from paddleocr import PaddleOCR; \
+PaddleOCR(lang='korean', use_doc_orientation_classify=False, use_doc_unwarping=False, use_textline_orientation=False) \
+"
 
 EXPOSE 8000
 CMD [ "uvicorn", "src.backend.main:app", "--host", "0.0.0.0", "--port", "8000"]

@@ -137,8 +137,6 @@ def generate_explanation(
 
 
 # ── 모델별 생성 실행 ─────────────────────────────────────────────
-
-
 def generate_model(model_name: str, model_config: dict) -> list[dict]:
     print(f"\n[{model_name}] 생성 시작...")
 
