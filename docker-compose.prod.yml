@@ -1,0 +1,90 @@
+# EC2 운영 환경용 docker-compose (RDS 사용, MySQL 컨테이너 제거)
+# 루트 폴더에서 docker compose -f docker-compose.prod.yml up -d 로 시작
+services:
+  fastapi:
+    image: 395120012527.dkr.ecr.ap-northeast-2.amazonaws.com/smishing-server:latest
+    container_name: fastapi
+    ports:
+      - "8000:8000"
+    env_file:
+      - .env
+    environment:
+      - USE_MOCK_MODEL=true
+      - USE_MOCK_OCR=true
+    mem_limit: 400m
+    memswap_limit: 400m
+    networks:
+      - monitoring
+    restart: unless-stopped
+
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+      - "--storage.tsdb.retention.time=7d"
+    mem_limit: 200m
+    memswap_limit: 200m
+    networks:
+      - monitoring
+    restart: unless-stopped
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: grafana
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin123
+    volumes:
+      - grafana_data:/var/lib/grafana
+    mem_limit: 300m
+    memswap_limit: 300m
+    networks:
+      - monitoring
+    restart: unless-stopped
+
+  nginx:
+    image: nginx:alpine
+    container_name: nginx
+    ports:
+      - "80:80"
+    volumes:
+      - ~/frontend-dist:/usr/share/nginx/html:ro
+      - ~/nginx.prod.conf:/etc/nginx/conf.d/default.conf:ro
+    mem_limit: 64m
+    memswap_limit: 64m
+    networks:
+      - monitoring
+    restart: unless-stopped
+
+  node-exporter:
+    image: prom/node-exporter:latest
+    container_name: node-exporter
+    ports:
+      - "9100:9100"
+    volumes:
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /:/rootfs:ro
+    command:
+      - "--path.procfs=/host/proc"
+      - "--path.sysfs=/host/sys"
+    mem_limit: 64m
+    memswap_limit: 64m
+    networks:
+      - monitoring
+    restart: unless-stopped
+
+volumes:
+  prometheus_data:
+  grafana_data:
+
+networks:
+  monitoring:
+    driver: bridge
