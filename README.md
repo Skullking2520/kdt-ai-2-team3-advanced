@@ -1,138 +1,461 @@
-# NewBiz Shield — AI 스미싱/피싱 탐지 서비스
+# 피싱/스미싱 문자 판별 프로젝트
 
-> AI 기반 스미싱·피싱 탐지 웹 애플리케이션
-> 입력: SMS / URL / 이미지(OCR) → 위험도·공격유형·탐지근거·피해시나리오·대응가이드 제공
+## 1. 프로젝트 개요
 
----
+본 프로젝트는 사용자가 입력한 문자 메시지를 분석하여 스미싱 위험 여부를 판단하고, 의심 근거와 대응 안내를 제공하는 서비스입니다.
 
-## 프로젝트 개요
+사용자는 문자 내용을 입력하고, 선택적으로 발신 전화번호를 함께 입력할 수 있습니다. 서비스는 백엔드의 정적 패턴 검사와 Hugging Face에 배포된 AI 모델 추론 결과를 바탕으로 문자 메시지의 위험도를 판단합니다.
 
-| | |
-|---|---|
-| **서비스명** | NewBiz Shield |
-| **목적** | 일반 사용자 대상 AI 스미싱/피싱 탐지 및 대응 가이드 |
-| **시술** | React 18 + Vite 6 + TypeScript / FastAPI + MySQL / KcELECTRA + LangGraph + RAG |
-| **배포** | NCP (Naver Cloud Platform) / GitHub Actions CI/CD |
+AI 추론은 다음 두 모델 흐름을 기준으로 합니다.
 
----
+- Encoder: KcELECTRA 기반 스미싱/정상 분류 모델
+- Decoder: Qwen 계열 설명 생성 모델
 
-## 모듈 구조
-
-| 디렉토리 | 설명 |
-|---|---|
-| `frontend/` | React SPA (**19 public routes, 45 components**) — 2026-06-15 기준 |
-| `backend/` | FastAPI REST API + MySQL |
-| `ai_service/` | KcELECTRA 탐지 모델 + LangGraph 분석 파이프라인 + RAG |
-| `deploy_wrapper/` | 배포 스크립트 및 설정 |
-| `prometheus/` | 모니터링 설정 |
+현재 모델 추론은 `deploy_wrapper/` 폴더의 FastAPI wrapper를 통해 Hugging Face Dedicated Inference Endpoint와 연동하는 구조입니다.
 
 ---
 
-## 로컬 개발
+## 2. 프로젝트 목표
 
-### 전제 조건
-- Docker & Docker Compose
-- Node.js 20+
-- Python 3.11+
+본 프로젝트의 목표는 사용자가 수신한 문자 메시지를 더욱 안전하게 확인할 수 있도록 돕는 스미싱 탐지 서비스를 구현하는 것입니다.
 
-### 개발 환경 실행
+구체적인 목표는 다음과 같습니다.
+
+- 문자 메시지 내용을 기반으로 스미싱 위험 여부를 자동 분석합니다.
+- URL, 전화번호, 금액 표현, 긴급 표현 등 스미싱 의심 특징을 탐지합니다.
+- Encoder 모델을 통해 정상/스미싱 여부를 분류합니다.
+- Decoder 모델을 통해 사용자가 이해하기 쉬운 판단 이유를 제공합니다.
+- 사용자가 위험 문자를 확인한 뒤 신고 안내 페이지로 이동할 수 있도록 합니다.
+- 백엔드에서 정적 패턴 검사와 AI 모델 추론 결과를 함께 활용할 수 있는 구조를 설계합니다.
+- 모델 학습, 백엔드, 프론트엔드, 배포 영역을 분리하여 팀 단위 개발이 가능한 모노레포 구조를 구성합니다.
+- Hugging Face Endpoint 기반 모델 서빙 구조를 통해 모델 교체와 운영을 쉽게 만듭니다.
+
+---
+
+## 3. 서비스 흐름
+
+전체 목표 흐름은 다음과 같습니다.
+
+```text
+Frontend
+→ Backend API
+→ Static pattern pre-filtering
+→ Deploy FastAPI Wrapper
+→ Hugging Face Encoder Endpoint
+→ Hugging Face Decoder Endpoint
+→ Backend response normalization
+→ DB logging
+→ Frontend result page
+```
+
+역할을 나누면 다음과 같습니다.
+
+- Frontend: 문자 입력, 결과 화면, 신고 안내 화면
+- Backend: `/predict` API, 정적 패턴 검사, DB 저장, frontend 응답 형식 변환
+- Deploy Wrapper: Hugging Face 모델 endpoint 호출, 모델 응답 정규화
+- AI/Modeling: 모델 학습, 평가, Hugging Face 업로드
+- DB: 정적 패턴, 분석 로그, 신고 기록 저장
+
+---
+
+## 4. 주요 기능
+
+- 문자 메시지 기반 스미싱 위험도 분석
+- URL, 전화번호, 금액 표현 등 의심 특징 추출
+- Encoder 모델 기반 `normal` / `phishing` 분류
+- Decoder 모델 기반 판단 이유 생성
+- 위험도, 의심 근거, 추천 행동 표시
+- 신고 안내 페이지 제공
+- 정적 패턴 기반 사전 필터링 구조
+- 스미싱 의심 문자 및 전화번호 신고 기록 저장 구조
+- Hugging Face Endpoint 기반 모델 서빙
+
+---
+
+## 5. 기술 스택
+
+### Frontend
+
+- React
+- Vite
+- Tailwind CSS
+- JavaScript
+
+### Backend
+
+- Python
+- FastAPI
+- SQLAlchemy
+- MySQL
+- Pydantic
+- uv
+
+### AI / Modeling
+
+- PyTorch
+- Transformers
+- KcELECTRA
+- Qwen
+- Optuna
+- pandas
+- scikit-learn
+- Weights & Biases
+
+### Deployment Wrapper
+
+- FastAPI
+- httpx
+- Docker
+- Hugging Face Dedicated Inference Endpoint
+
+---
+
+## 6. 프로젝트 구조
+
+```text
+.
+├── frontend/              # React/Vite/Tailwind 기반 웹 MVP
+├── backend/               # FastAPI backend, DB model, /predict API
+├── ai_service/            # 모델 학습, 평가, inference 실험 영역
+├── deploy_wrapper/                # Hugging Face endpoint 연동용 FastAPI wrapper
+├── docs/                  # 프로젝트 문서
+├── infra/                 # 인프라 관련 파일
+├── e2e_tests/             # E2E 테스트 리소스
+├── load_tests/            # 부하 테스트 리소스
+├── nginx/                 # Nginx 설정
+├── .github/               # GitHub issue/PR template, workflow
+├── docker-compose.yml     # 서비스 배포용 compose
+└── README.md
+```
+
+### `frontend/`
+
+사용자 화면을 담당합니다.
+
+주요 역할:
+
+- 문자 입력 UI
+- 분석 결과 표시
+- 위험도, 의심 근거, AI 설명 표시
+- 신고 안내 페이지
+- 백엔드 장애 시 fallback 표시
+
+자세한 내용은 [`frontend/README.md`](frontend/README.md)를 참고합니다.
+
+### `backend/`
+
+서비스 API와 DB 연동을 담당합니다.
+
+주요 역할:
+
+- Frontend의 `/predict` 요청 처리
+- 정적 패턴 pre-filtering
+- Deploy wrapper `/analyze` 호출
+- AI 분석 결과를 frontend 응답 형식으로 변환
+- MySQL 기반 로그/패턴/신고 데이터 저장 구조 관리
+
+현재 backend에는 `static_patterns`, `smishing_logs`, `model_info` 등의 SQLAlchemy 모델과 MySQL 개발용 compose가 포함되어 있습니다.
+
+자세한 내용은 [`backend/README.md`](backend/README.md)를 참고합니다.
+
+### `ai_service/`
+
+모델링 담당 영역입니다.
+
+주요 역할:
+
+- Encoder 모델 학습 및 평가
+- Decoder 설명 생성 실험
+- 전처리 실험
+- 모델 inference prototype 관리
+
+실제 서비스용 endpoint wrapper는 `ai_service/`가 아니라 `deploy_wrapper/`에서 관리합니다.
+
+### `deploy_wrapper/`
+
+Hugging Face 모델 배포 연동을 담당합니다.
+
+주요 역할:
+
+- FastAPI 기반 deploy wrapper 제공
+- Backend가 호출할 `POST /analyze` API 제공
+- Encoder Endpoint 호출
+- Decoder Endpoint 호출
+- 모델 응답 정규화
+- Docker 실행 환경 제공
+- 개발/검증용 mock mode 제공
+
+자세한 내용은 [`deploy_wrapper/README.md`](deploy_wrapper/README.md)를 참고합니다.
+
+---
+
+## 7. AI 모델 연동 구조
+
+현재 실제 모델 연동 방향은 다음과 같습니다.
+
+```text
+Backend
+→ POST /analyze
+→ Deploy FastAPI Wrapper
+→ Encoder Dedicated Inference Endpoint
+→ Decoder Dedicated Inference Endpoint
+→ Normalized response
+→ Backend
+```
+
+### Encoder
+
+- 모델: KcELECTRA 기반 스미싱 분류 모델
+- 역할: 문자 메시지를 `normal` 또는 `phishing`으로 분류
+- 출력: label, confidence
+
+### Decoder
+
+- 모델: Qwen 계열 설명 생성 모델
+- 역할: phishing으로 판단된 문자에 대해 사용자에게 보여줄 설명 생성
+- 출력: reason
+
+### Deploy Wrapper Response 예시
+
+```json
+{
+  "success": true,
+  "label": "phishing",
+  "confidence": 0.92,
+  "reason": "외부 링크를 통해 사용자를 피싱 사이트로 유도할 가능성이 있습니다.",
+  "features": ["외부 링크 포함"],
+  "risk_level": "위험 높음",
+  "score": 92,
+  "encoder_model_id": "kdt-2-team4-newbiz/kcelectra-smishing-classifier",
+  "encoder_model_version": "v1.0.0",
+  "decoder_model_id": "Qwen/Qwen3-1.7B",
+  "decoder_model_version": "v1.0.0",
+  "serving_mode": "hf_endpoint"
+}
+```
+
+자세한 API contract는 [`deploy_wrapper/api_contract.md`](deploy_wrapper/api_contract.md)를 참고합니다.
+
+---
+
+## 8. 데이터 및 전처리
+
+모델 학습에는 문자 본문과 라벨이 포함된 데이터셋을 사용합니다.
+
+예시:
+
+| text                                                      | label |
+| --------------------------------------------------------- | ----- |
+| 배송 주소 확인이 필요합니다. 아래 링크를 눌러 확인하세요. | 1     |
+| 오늘 저녁에 밥 먹을래?                                   | 0     |
+
+Encoder 모델은 학습 시 전처리된 텍스트를 기준으로 학습되었습니다. 따라서 deploy wrapper는 Encoder Endpoint 호출 전에 모델 입력 정규화를 수행합니다.
+
+예시:
+
+- `[Web발신]` 제거
+- URL → `<URL>`
+- 8자리 이상 전화번호 → `<PHONE>`
+- 금액 표현 → `<MONEY>`
+- 공백 및 일부 특수문자 정리
+
+Backend의 URL/static pattern pre-filtering과 deploy wrapper의 전처리는 역할이 다릅니다.
+
+- Backend pre-filtering: 서비스 정책, 정적 패턴 검사, DB 저장 판단
+- Deploy preprocessing: 모델 학습 입력 형식에 맞추기 위한 모델 입력 정규화
+
+---
+
+## 9. 실행 방법
+
+각 파트별 실행 방법은 해당 폴더의 README를 참고하세요.
+
+- 백엔드: [backend/README.md](backend/README.md)
+- 프론트엔드: [frontend/README.md](frontend/README.md)
+
+---
+
+## 10. 환경 변수 관리
+
+실제 secret 값은 Git에 커밋하지 않습니다.
+
+레포에는 `.env.example`만 포함하고, 실제 `.env`는 각자 로컬 또는 배포 환경에서 관리합니다.
+
+민감정보 예시:
+
+```text
+HF_TOKEN=
+ENCODER_ENDPOINT_URL=
+DECODER_ENDPOINT_URL=
+MYSQL_ROOT_PASSWORD=
+MYSQL_DATABASE=
+MYSQL_USER=
+MYSQL_PASSWORD=
+DATABASE_URL=
+```
+
+주의:
+
+- 실제 Hugging Face token을 Git에 올리지 않습니다.
+- 실제 endpoint URL은 문서나 `.env.example`에 직접 쓰지 않습니다.
+- DB password는 secret manager 또는 로컬 `.env`로만 관리합니다.
+
+---
+
+## 11. 테스트
+
+### Deploy Wrapper
 
 ```bash
-# 전체 서비스 (프론트엔드 + 백엔드 + AI)
-docker compose -f docker-compose.dev.yml up --build
-
-# 프론트엔드만
-cd frontend && npm install && npm run dev
-
-# 백엔드만
-cd backend && pip install -r requirements.txt && uvicorn main:app --reload
+python -m py_compile deploy_wrapper/app/main.py deploy_wrapper/app/__init__.py
+python -m unittest deploy_wrapper.tests.test_normalization
+python -m ruff check deploy_wrapper
+git diff --check
+docker compose -f deploy_wrapper/docker-compose.example.yml config
 ```
 
-### 환경변수
+### Frontend
 
 ```bash
-cp .env.example .env
-# 편집 후 사용
+cd frontend/web_mvp
+npm test
+npm run build
+```
+
+각 영역별 자세한 검증 방법은 해당 폴더의 README를 참고합니다.
+
+---
+
+## 12. 현재 상태
+
+현재 레포는 다음 구조를 기준으로 개발 중입니다.
+
+- Frontend: React/Vite 기반 웹 MVP 구현
+- Backend: FastAPI 기반 `/predict` API와 DB 모델 구조 구현
+- Deploy: Hugging Face Encoder/Decoder Endpoint 연동 wrapper 구현
+- AI Service: 모델 학습/평가/실험 영역 유지
+
+실제 서비스 통합 기준으로는 다음 연결을 목표로 합니다.
+
+```text
+Frontend /predict
+→ Backend
+→ Deploy /analyze
+→ Hugging Face Encoder/Decoder Endpoint
+→ Backend DB/logging
+→ Frontend 결과 화면
 ```
 
 ---
 
-## 시연 방법
+## 13. 팀원 역할
 
-### 시연 동선
-
-1. **SMS 분석**: 분석 페이지에서 스미싱 의심 문자를 입력 → 위험도·공격유형 확인
-2. **URL 분석**: URL 입력 → 악성 여부 판정 + 탐지근거
-3. **이미지 분석**: 스미싱 스크린샷 이미지 업로드 → OCR + AI 분석
-4. **발신번호 조회**: 수상 번호 정보 조회
-5. **신고 접수**: 분석 결과를 바탕으로 신고
-6. **사례조회**: 유사 사기 수법 사례 검색 (현재 11건)
-7. **시니어 모드**: 큰글씨·단순UI로 고령자도 사용 가능
-   - SeniorHome 5개 메인 버튼 (문자/이미지/링크/전화번호/신고)
-   - SeniorAnalyzer / SeniorImageAnalyzer 큰 글씨 + 다크 테마
-8. **관리자 대시보드** (관리자 비밀번호 필요): 모델 성능, 대시보드, 패턴 DB, 보안 감사, 피드백 분석, 설정
-
-자세한 시연 시나리오는 `PROJECT_QA_REPORT.md` 참고.
+| 이름 | 역할 |
+| --- | --- |
+| 이기필 | 팀장, 백엔드 API, 클라우드 배포 관리 |
+| 이동건 | 데이터 전처리, 모델 입력 정제 |
+| 심현서, 현준수, 남주원 | 모델링, 하이퍼파라미터 튜닝, 모델 성능 평가 |
+| 성화섭 | 프론트엔드 UI/UX 및 웹 구현 |
+| 공통 | 데이터 수집, 발표 자료, 최종 산출물 정리 |
 
 ---
 
-## 빌드 & 배포
+## 14. 한계점
 
-### 프론트엔드 빌드
+본 프로젝트는 교육 목적의 팀 프로젝트이며, 실제 운영 서비스로 사용하기 위해서는 추가적인 검증과 보완이 필요합니다.
 
-```bash
-cd frontend
-npm install
-npm run build        # dist/ 생성 (1.80s)
-npm run typecheck    # 타입 검사
-npm run lint         # ESLint 검사
-npm run test         # vitest (2개 테스트)
-```
+현재 또는 예상되는 한계점은 다음과 같습니다.
 
-### 프론트엔드 라우트 (19 public + 24 admin/dev)
-
-**Public 라우트** (일반 사용자 접근 가능):
-- `/` 랜딩, `/analyze` 문자 검사, `/analyze/progress`, `/analyze/result/:id`
-- `/senior-home`, `/senior-analyze` (시니어 모드)
-- `/url` URL 검사, `/image` 이미지 검사, `/senior-image` (시니어 이미지 검사)
-- `/sender` 발신번호 조회, `/history` 검사 이력
-- `/cases` 피해 사례, `/trend` 최신 피싱 트렌드
-- `/quiz` 스미싱 퀴즈, `/guide` 예방 가이드
-- `/report` 신고하기, `/changelog` 변경 이력, `/emergency` 응급 안내
-
-**Admin/Dev 라우트** (관리자 인증 필요, DEV 빌드에서만):
-- `/admin` 모델 성능, `/dashboard` 대시보드, `/patterns` 패턴 DB
-- `/audit` 보안 감사, `/feedback` 피드백 분석, `/settings` 설정
-- 기타 18개 (simulator, live-feed, export, attention, bulk, compare, benchmark 등)
-
-### CI/CD
-
-`deploy` 또는 `test_deploy` 브랜치에 푸시 시 자동 배포:
-- 프론트엔드 빌드 → NCP 서버에 배포
-- 백엔드 Docker 이미지 빌드 → NCP Container Registry 푸시
-- Docker Compose 서비스 재시작
+- 공개된 한국어 스미싱/피싱 문자 데이터셋이 제한적입니다.
+- 학습 데이터의 품질과 라벨 정확도에 따라 모델 성능이 크게 달라질 수 있습니다.
+- 새로운 유형의 스미싱 문자는 기존 학습 데이터만으로 탐지하기 어려울 수 있습니다.
+- URL, 전화번호, 금액 표현 등 규칙 기반 특징은 지속적인 업데이트가 필요합니다.
+- 모델이 `normal`로 판단하더라도 실제로 완전히 안전하다고 단정할 수 없습니다.
+- 모델이 `phishing`으로 판단하더라도 오탐 가능성이 존재합니다.
+- Decoder가 생성하는 설명은 참고용이며, 법적/보안적 최종 판단으로 사용할 수 없습니다.
+- Hugging Face Endpoint 상태, cold start, 비용, timeout 등에 따라 응답 속도가 달라질 수 있습니다.
+- 실제 서비스 적용 시 개인정보 보호, 보안, 법적 검토가 필요합니다.
+- 신고 데이터와 전화번호 저장 시 개인정보 및 민감정보 처리 기준을 명확히 해야 합니다.
 
 ---
 
-## 기여
+## 15. 향후 개선 방향
 
-1. 브랜치 생성: `git checkout -b feature/my-feature`
-2. 변경 사항 커밋: `git commit -m "feat: description"`
-3. 브랜치 푸시: `git push origin feature/my-feature`
-4. Pull Request 생성
+향후 개선 방향은 다음과 같습니다.
 
-### 커밋 컨벤션
+### 모델 성능 개선
 
-```
-feat:    새 기능
-fix:     버그 수정
-docs:    문서 변경
-refactor: 코드 리팩토링
-chore:   빌드/설정 변경
-```
+- 신규 스미싱 사례를 지속적으로 수집하고 라벨링합니다.
+- 오탐/미탐 사례를 분석하여 학습 데이터에 반영합니다.
+- KcELECTRA Encoder 모델을 주기적으로 재학습합니다.
+- class imbalance 완화를 위해 oversampling, focal loss 등 다양한 학습 전략을 비교합니다.
+- 모델별 precision, recall, F1-score를 지속적으로 추적합니다.
+
+### 정적 패턴 고도화
+
+- 자주 등장하는 악성 URL, 전화번호, 키워드를 static pattern으로 관리합니다.
+- backend pre-filtering 로직을 통해 알려진 위험 패턴은 빠르게 탐지합니다.
+- 신규 사기 유형에 맞춰 정규식과 keyword rule을 업데이트합니다.
+
+### 서비스 연동 개선
+
+- Backend `/predict`와 deploy wrapper `/analyze` 연동을 안정화합니다.
+- 분석 결과를 DB에 저장하고, 신고 횟수 및 사용자 feedback을 누적합니다.
+- Frontend 결과 화면에서 사용자가 이해하기 쉬운 위험도와 근거를 제공합니다.
+- 신고 안내 페이지와 실제 신고 기관 정보를 정리합니다.
+
+### MLOps 및 운영 개선
+
+- Hugging Face Hub를 모델 registry로 활용합니다.
+- Encoder/Decoder model version을 명확히 관리합니다.
+- Endpoint URL과 token은 secret manager로 관리합니다.
+- 모델 업데이트 시 rollback 가능한 구조를 유지합니다.
+- Endpoint 비용, scale-to-zero, timeout, retry 정책을 정리합니다.
+- 운영 로그를 바탕으로 모델 성능과 장애 상황을 모니터링합니다.
+
+### 보안 및 개인정보 보호
+
+- 실제 token, DB password, endpoint URL을 Git에 커밋하지 않습니다.
+- 문자 내용과 전화번호 저장 시 개인정보 처리 기준을 명확히 합니다.
+- 신고 데이터 보관 기간과 접근 권한을 정의합니다.
+- 악성 URL 처리 시 사용자가 직접 클릭하지 않도록 UI/UX를 설계합니다.
 
 ---
 
-## 라이선스
+## 16. 기여 규칙
 
-MIT License
+- 본인 담당 영역을 확인한 뒤 작업합니다.
+- 실제 secret 값은 커밋하지 않습니다.
+- `.env` 대신 `.env.example`만 문서화합니다.
+- 다른 담당 영역을 수정해야 할 경우 담당자와 먼저 합의합니다.
+- PR 작성 시 변경 내용과 테스트 여부를 명확히 작성합니다.
+
+PR 작성 양식은 `.github/pull_request_template.md`를 따릅니다.
+
+---
+
+## 17. 라이선스
+
+본 프로젝트는 KDT 교육 과정의 팀 프로젝트로 제작되었습니다.
+
+현재 코드는 교육 및 학습 목적을 기준으로 작성되었으며, 실제 상용 서비스 또는 공공 서비스에 적용하기 전에는 다음 사항을 추가로 검토해야 합니다.
+
+- 사용한 데이터셋의 라이선스
+- Hugging Face 모델 및 외부 모델의 라이선스
+- 개인정보 처리 기준
+- 보안 및 법적 책임 범위
+- 배포 환경의 이용 약관
+
+별도의 라이선스 파일이 추가되기 전까지는 프로젝트 외부 재사용, 배포, 상업적 이용 여부를 팀과 먼저 확인해야 합니다.
+
+---
+
+## 18. 참고 문서
+
+- [`frontend/README.md`](frontend/README.md)
+- [`frontend/web_mvp/README.md`](frontend/web_mvp/README.md)
+- [`backend/README.md`](backend/README.md)
+- [`deploy_wrapper/README.md`](deploy_wrapper/README.md)
+- [`deploy_wrapper/api_contract.md`](deploy_wrapper/api_contract.md)
+- [`deploy_wrapper/hf_endpoint_checklist.md`](deploy_wrapper/hf_endpoint_checklist.md)
+- [`docs/MONOREPO.md`](docs/MONOREPO.md)

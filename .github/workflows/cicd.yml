@@ -18,15 +18,15 @@ jobs:
         with:
           node-version: 20
           cache: "npm" # 빌드 속도 향상을 위한 캐시 추가
-          cache-dependency-path: "./frontend/package-lock.json"
+          cache-dependency-path: "./frontend/web_mvp/package-lock.json"
 
       - name: Install dependencies
-        working-directory: ./frontend
+        working-directory: ./frontend/web_mvp
         run: npm ci
 
       # 하단 env 설정을 통해 빌드 시점에 환경 변수가 주입됩니다.
       - name: Build project
-        working-directory: ./frontend
+        working-directory: ./frontend/web_mvp
         run: npm run build
         env:
           VITE_SMISHING_HOME_URL: ${{ secrets.VITE_SMISHING_HOME_URL }}
@@ -88,8 +88,8 @@ jobs:
           username: ${{ secrets.NCP_SERVER_USER }}
           key: ${{ secrets.NCP_SERVER_SSH_KEY }}
           port: ${{ fromJson(secrets.NCP_SERVER_SSH_PORT) }}
-          source: "frontend/dist/*"
-          target: "/home/${{ secrets.NCP_SERVER_USER }}/app/frontend/dist"
+          source: "frontend/web_mvp/dist/*"
+          target: "/home/${{ secrets.NCP_SERVER_USER }}/app/frontend/web_mvp/dist"
           strip_components: 3 # 앞의 고정 경로 제거 후 dist 안의 내용만 복사
 
       # 3. Deploy to NCP Server via SSH
