@@ -52,7 +52,7 @@ jobs:
         run: npm run build -- --mode staging
         env:
           VITE_USE_MOCK: false
-          VITE_API_BASE_URL: http://3.37.93.11
+          VITE_API_BASE_URL: https://smishing-detect-kdt2.cloud
           VITE_API_TIMEOUT: 10000
           VITE_DEBUG: false
 
