@@ -78,7 +78,7 @@ jobs:
             aws ecr get-login-password --region ${{ vars.AWS_REGION }} | \
               docker login --username AWS --password-stdin \
               395120012527.dkr.ecr.${{ vars.AWS_REGION }}.amazonaws.com
-            docker pull 395120012527.dkr.ecr.${{ vars.AWS_REGION }}.amazonaws.com/smishing-server:latest
-            docker-compose -f ~/docker-compose.prod.yml up -d fastapi
-            docker restart nginx
+            docker-compose -f ~/docker-compose.prod.yml pull fastapi
+            docker-compose -f ~/docker-compose.prod.yml up -d --no-deps --force-recreate fastapi
+            docker-compose -f ~/docker-compose.prod.yml up -d --no-deps --force-recreate nginx
             docker image prune -f
