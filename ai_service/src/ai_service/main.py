@@ -1,9 +1,10 @@
 """FastAPI 진입점."""
 
 from fastapi import FastAPI
+import uvicorn
 
 from .api.routes import router
-from .utils.langfuse_init import get_langfuse_client
+from .config.settings import settings
 
 app = FastAPI(
     title="AI Service",
@@ -11,18 +12,13 @@ app = FastAPI(
     version="0.1.0",
 )
 
-# ensure Langfuse client is instantiated at import/startup time
-langfuse = get_langfuse_client()
-
 app.include_router(router)
 
 
 @app.get("/")
 def root() -> dict[str, str]:
-    return {"message": "ai_service is running"}
+    return {"message": f'ai_service is running in {settings.APP_ENV}'}
 
 
 def main() -> None:
-    import uvicorn
-
     uvicorn.run("ai_service.main:app", host="0.0.0.0", port=8080, reload=True)

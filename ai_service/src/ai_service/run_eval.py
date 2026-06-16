@@ -5,7 +5,8 @@ import json
 import sys
 from ai_service.utils.langfuse_init import load_langfuse_env_variable
 
-# 🚀 다른 모듈(RAGGraphEvaluator 등)을 import 하기 전에 환경 변수부터 주입!
+# 🚀 다른 모듈(RAGGraphEvaluator 등)을 import 하기 전에 
+# 랭퓨즈, openai 환경 변수부터 주입!
 load_langfuse_env_variable()
 
 from .evaluation.evaluator import RAGGraphEvaluator
