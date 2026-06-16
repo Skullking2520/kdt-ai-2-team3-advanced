@@ -1,6 +1,6 @@
 import unittest
 
-from deploy.app.main import (
+from deploy_wrapper.app.main import (
     ResponseNormalizationError,
     Settings,
     build_decoder_payload,

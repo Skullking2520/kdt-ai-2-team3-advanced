@@ -172,7 +172,7 @@ Docker는 deploy wrapper FastAPI 서버를 실행한다.
 ```text
 Docker container
 -> uvicorn
--> deploy/app/main.py
+-> deploy_wrapper/app/main.py
 -> /health, /analyze API 제공
 ```
 
@@ -183,14 +183,14 @@ Docker container
 Python으로 실행:
 
 ```bash
-cd deploy
+cd deploy_wrapper
 uvicorn app.main:app --reload --host 0.0.0.0 --port 8001
 ```
 
 Docker로 실행:
 
 ```bash
-cd deploy
+cd deploy_wrapper
 docker compose -f docker-compose.example.yml up --build
 ```
 

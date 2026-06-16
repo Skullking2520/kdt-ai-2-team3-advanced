@@ -12,6 +12,14 @@ _PARENT_DIRECTORY = Path(__file__).resolve().parents[1]
 class Settings(BaseSettings):
     APP_ENV: str = Field(default="development")  # 개발/운영 환경
 
+    # langfuse .env key
+    LANGFUSE_PUBLIC_KEY: str = Field(default="")
+    LANGFUSE_SECRET_KEY: str = Field(default="")
+    LANGFUSE_BASE_URL: str = Field(default="https://jp.cloud.langfuse.com")
+
+    # openai api key 
+    OPENAI_API_KEY: str = Field(default="")
+
     # 파인콘
     PINECONE_API_KEY: str = Field(default="")  # 파인콘 api key
     PINECONE_INDEX: str = Field(default="")  # 파인콘 데이터를 담는 기본 단위
@@ -23,13 +31,14 @@ class Settings(BaseSettings):
     # 임베딩 설정 (예: "openai", "ollama", "huggingface")
     EMBEDDING_PROVIDER: str = Field(default="huggingface")
     EMBEDDING_MODEL_NAME: str = Field(default="jhgan/ko-sroberta-multitask")
-    OPENAI_API_KEY: str = Field(default="")
 
     # Ollama LLM 설정
     OLLAMA_BASE_URL: str = Field(default="http://localhost:11434")
-    OLLAMA_MODEL_NAME: str = Field(default="my-custom-qwen")
+    OLLAMA_MODEL_NAME: str = Field(default="")
     OLLAMA_NUM_CTX: int = Field(default=8192)
     OLLAMA_NUM_PREDICT: int = Field(default=1024)
+
+    HF_XET_HIGH_PERFORMANCE: int = Field(default=1)
 
     # .env 파일 로드 설정 (pydantic v2 방식)
     model_config = SettingsConfigDict(

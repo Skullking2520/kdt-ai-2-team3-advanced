@@ -62,11 +62,11 @@ graph TD
 
 ## Local API Test
 
-FastAPI는 LangGraph 로직과 Chroma RAG를 로컬에서 검증하기 위한 최소 API를 제공한다.
+FastAPI는 LangGraph 로직과 Chroma RAG를 로컬에서 검증하기 위한 최소 API를 제공한다. 포트는 백엔드와 겹치지 않게 8080을 사용했다.
 
 ```bash
 cd ai_service
-uv run uvicorn ai_service.main:app --reload
+uv run uvicorn ai_service.main:app --reload --port 8080
 ```
 
 주요 엔드포인트:
@@ -81,7 +81,7 @@ RAG 경로를 강제로 테스트하려면 `graph/invoke` 요청에 `"route_over
 예시:
 
 ```bash
-curl -X POST http://127.0.0.1:8000/api/v1/vectordb/upsert \
+curl -X POST http://127.0.0.1:8080/api/v1/vectordb/upsert \
   -H "Content-Type: application/json" \
   -d '{
     "documents": [
@@ -90,7 +90,7 @@ curl -X POST http://127.0.0.1:8000/api/v1/vectordb/upsert \
     "metadatas": [{"source": "local-test", "category": "delivery"}]
   }'
 
-curl -X POST http://127.0.0.1:8000/api/v1/graph/invoke \
+curl -X POST http://127.0.0.1:8080/api/v1/graph/invoke \
   -H "Content-Type: application/json" \
   -d '{
     "text": "[CJ대한통운] 배송 주소 오류로 반송 예정입니다. http://delivery-check.example",

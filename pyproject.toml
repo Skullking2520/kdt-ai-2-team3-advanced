@@ -1,0 +1,62 @@
+[project]
+name = "team-ai-project-monorepo"
+version = "0.1.0"
+description = "Team newbiz AI Project for smishing detection"
+requires-python = ">=3.12,<3.13"
+dependencies = [
+    "backend", # 워크스페이스 내의 backend 패키지를 등록
+    "ai_service",
+    "ai_monitoring",
+    "python-dotenv>=1.2.2",
+    "ragas==0.3.9",
+    "langchain-community<0.4.0",
+    "rapidfuzz>=3.14.5",
+] # backend를 로컬 편집 가능(editable) 패키지로 등록
+
+[tool.uv.sources]
+backend = { workspace = true }
+ai_service = { workspace = true }
+ai_monitoring = { workspace = true }
+
+[project.optional-dependencies]
+dev = [
+    "ruff>=0.4.0",
+    "pytest>=8.0.0",
+    "pytest-cov>=5.0.0",
+    "pre-commit>=3.7.0",
+    "python-dotenv>=1.0.0",
+]
+
+[tool.ruff]
+line-length = 88
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "N", "W"]
+# N815: 클래스 스코프에서 mixedCase 변수 사용 허용
+# N816: 글로벌 스코프에서 mixedCase 변수 사용 허용
+ignore = ["N815", "N816"]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+
+[tool.pytest.ini_options]
+python_files = "test_*.py"      # 인식할 파일 패턴
+addopts = "-v --durations=10"   # 기본 옵션 (상세 출력, 느린 테스트 표시 등)
+
+[tool.uv.workspace]
+members = [
+    "backend",
+    "ai_service",
+    "ai_monitoring"
+]
+
+[dependency-groups]
+dev = [
+    "pre-commit>=4.5.1",
+    "pytest>=9.0.3",
+    "pytest-cov>=7.1.0",
+    "python-dotenv>=1.2.2",
+    "ruff>=0.15.11",
+]

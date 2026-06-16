@@ -155,7 +155,7 @@ ENCODER_MODEL_VERSION=v1.0.0
 Deploy wrapper 실행:
 
 ```bash
-cd deploy
+cd deploy_wrapper
 uvicorn app.main:app --reload --host 0.0.0.0 --port 8001
 ```
 

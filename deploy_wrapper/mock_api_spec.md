@@ -10,7 +10,7 @@ AI_SERVICE_MODE=mock
 
 mock mode에서는 실제 Hugging Face Endpoint를 호출하지 않는다. 대신 prototype 흐름에서 사용하는 분석 신호를 가볍게 흉내 내어 `/analyze` API response shape을 유지한다.
 
-Mock mode는 `deploy/app/`의 FastAPI wrapper에서 지원한다. `ai_service/` 폴더는 모델링 담당자 영역이므로 mock wrapper 구현을 두지 않는다.
+Mock mode는 `deploy_wrapper/app/`의 FastAPI wrapper에서 지원한다. `ai_service/` 폴더는 모델링 담당자 영역이므로 mock wrapper 구현을 두지 않는다.
 
 URL filtering과 static pattern matching은 backend 책임이다. Mock mode에서 URL 형태를 감지하는 이유는 실제 URL 차단 정책을 구현하기 위해서가 아니라, 모델 연결 전 `features` field와 backend adapter 흐름을 테스트하기 위해서다.
 
