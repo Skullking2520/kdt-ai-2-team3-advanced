@@ -1,4 +1,4 @@
-import { Component, ErrorInfo, ReactNode } from "react";
+import { Component, type ErrorInfo, type ReactNode } from "react";
 import { AlertTriangle, Home, RotateCcw } from "lucide-react";
 import { Link } from "react-router";
 
@@ -29,7 +29,6 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
 
   componentDidCatch(error: Error, info: ErrorInfo): void {
     // 콘솔 로깅 — Sentry 같은 외부 로거 도입 시 여기서 전송
-    // eslint-disable-next-line no-console
     console.error("[ErrorBoundary] caught:", error, info.componentStack);
   }
 
