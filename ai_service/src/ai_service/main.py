@@ -21,4 +21,8 @@ def root() -> dict[str, str]:
 
 
 def main() -> None:
-    uvicorn.run("ai_service.main:app", host="0.0.0.0", port=8080, reload=True)
+    is_prod = settings.APP_ENV == "production"
+    uvicorn.run("ai_service.main:app", host="0.0.0.0", port=8080, reload=not is_prod)
+
+if __name__ == "__main__":
+    main()

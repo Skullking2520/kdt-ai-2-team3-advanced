@@ -12,14 +12,17 @@ dependencies = [
     "langchain-huggingface>=1.2.2",
     "langchain-ollama>=1.1.0",
     "langgraph>=1.2.4",
+    "langchain-community<0.4.0",
+    "langfuse>=4.0.0", # 주의: self-hosted runner는 v3이하로 해야됨
+    "openai>=1.0.0", # test용 임시 클라이언트
     "pinecone>=9.1.0",
+    "pydantic>=2.0.0",
     "pydantic-settings>=2.12.0",
     "python-dotenv>=1.2.1",
+    "ragas==0.3.9",
+    "rapidfuzz>=3.14.5",
     "sentence-transformers>=5.1.2",
     "uvicorn>=0.38.0",
-    "ragas==0.3.9",
-    "langchain-community<0.4.0",
-    "rapidfuzz>=3.14.5",
 ]
 
 [project.scripts]
@@ -28,6 +31,11 @@ ai-service = "ai_service.main:main"
 [build-system]
 requires = ["uv_build>=0.11.7,<0.12.0"]
 build-backend = "uv_build"
+
+[dependency-groups]
+dev = [ # 개발용 의존성
+    "pytest>=9.0.3",
+]
 
 [tool.pytest.ini_options]
 pythonpath=["src"] # 파이썬 import용
