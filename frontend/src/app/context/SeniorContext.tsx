@@ -10,7 +10,7 @@
  *   const { senior, toggle, setSenior } = useSenior();
  */
 
-import { createContext, useContext, useState, useEffect, ReactNode } from "react";
+import { createContext, useContext, useState, useEffect, type ReactNode } from "react";
 
 const STORAGE_KEY = "nb:senior";
 

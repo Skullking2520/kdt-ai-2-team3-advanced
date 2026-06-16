@@ -1,7 +1,8 @@
-import {useState, useEffect} from "react";
+import {useState, useEffect, useRef, useMemo} from "react";
 import {useNavigate, useSearchParams} from "react-router";
 import {motion} from "motion/react";
 import {CheckCircle2, Loader2, FileText, Search, Database, Sparkles, X} from "lucide-react";
+import {ErrorState, type ErrorType} from "./ErrorState";
 
 interface AnalysisStep {
   id: number;
@@ -10,24 +11,55 @@ interface AnalysisStep {
   duration: number; // milliseconds
 }
 
-const STEPS: AnalysisStep[] = [
+const STEPS_BASE: AnalysisStep[] = [
   { id: 1, icon: FileText, label: "입력 확인 중", duration: 500 },
   { id: 2, icon: Search, label: "문자 분석 중", duration: 1000 },
   { id: 3, icon: Database, label: "유사 사례 검색 중", duration: 1000 },
   { id: 4, icon: Sparkles, label: "결과 생성 중", duration: 700 },
 ];
 
+/** 실패 시뮬레이션 — ?fail=network|timeout|server 쿼리로 강제 트리거 */
+function getForcedError(searchParams: URLSearchParams): ErrorType | null {
+  const fail = searchParams.get("fail");
+  if (fail === "network" || fail === "timeout" || fail === "server" || fail === "unknown") {
+    return fail;
+  }
+  return null;
+}
+
+/** 시뮬레이션 — ?slow=ms 쿼리로 분석 시간 강제 (실제 백엔드 응답 시뮬레이션) */
+function getSlowMs(searchParams: URLSearchParams): number {
+  const slow = parseInt(searchParams.get("slow") || "0", 10);
+  if (Number.isFinite(slow) && slow >= 0 && slow <= 60000) return slow;
+  return 0;
+}
+
 export function AnalysisProgress() {
   const [currentStep, setCurrentStep] = useState(0);
   const [progress, setProgress] = useState(0);
+  const [error, setError] = useState<ErrorType | null>(null);
+  const [attempt, setAttempt] = useState(0); // 재시도 시 step 리셋 트리거
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const text = searchParams.get("text") || "";
   const type = searchParams.get("type") || "sms"; // sms, url, image
+  const slowMs = getSlowMs(searchParams);
+  const forcedError = getForcedError(searchParams);
+  const cancelledRef = useRef(false);
+
+  // STEPS 가변 (slow 모드면 비례) — useMemo로 안정화하여 effect 의존성 깨지지 않게
+  const STEPS: AnalysisStep[] = useMemo(
+    () => (slowMs > 0
+      ? STEPS_BASE.map((s) => ({ ...s, duration: Math.max(50, Math.round((s.duration / 3200) * slowMs)) }))
+      : STEPS_BASE),
+    [slowMs]
+  );
 
   useEffect(() => {
+    if (error) return; // 에러 상태면 진행 멈춤
     if (currentStep >= STEPS.length) {
       // 모든 단계 완료 - 결과 페이지로 이동
+      if (cancelledRef.current) return;
       const resultId = `result-${Date.now()}`;
       navigate(`/analyze/result/${resultId}?text=${encodeURIComponent(text)}&type=${type}`);
       return;
@@ -38,6 +70,10 @@ export function AnalysisProgress() {
     const interval = 50; // 50ms마다 진행률 업데이트
 
     const timer = setInterval(() => {
+      if (cancelledRef.current) {
+        clearInterval(timer);
+        return;
+      }
       const elapsed = Date.now() - startTime;
       const stepProgress = Math.min((elapsed / step.duration) * 100, 100);
 
@@ -52,11 +88,59 @@ export function AnalysisProgress() {
     }, interval);
 
     return () => clearInterval(timer);
-  }, [currentStep, navigate, text, type]);
+  }, [currentStep, navigate, text, type, error, attempt, STEPS.length]);
+
+  // ?fail= 쿼리가 있으면 강제 에러
+  useEffect(() => {
+    if (forcedError) {
+      // 약간의 지연 후 에러 표시 (로딩이 한 번은 보이게)
+      const t = setTimeout(() => {
+        if (!cancelledRef.current) setError(forcedError);
+      }, 800);
+      return () => clearTimeout(t);
+    }
+    return undefined;
+  }, [forcedError, attempt]);
+
+  // 컴포넌트 언마운트 시 취소 플래그
+  useEffect(() => {
+    return () => { cancelledRef.current = true; };
+  }, []);
 
   const handleCancel = () => {
+    cancelledRef.current = true;
     navigate(-1);
   };
+
+  const handleRetry = () => {
+    cancelledRef.current = false;
+    setError(null);
+    setCurrentStep(0);
+    setProgress(0);
+    setAttempt((a) => a + 1);
+  };
+
+  const handleHome = () => {
+    cancelledRef.current = true;
+    navigate("/");
+  };
+
+  // 에러 상태
+  if (error) {
+    return (
+      <div className="min-h-[calc(100vh-200px)] flex items-center justify-center px-4 sm:px-6 py-12">
+        <div className="w-full max-w-lg bg-white dark:bg-[#111c30] border border-gray-200 dark:border-white/10 rounded-2xl p-8 shadow-lg dark:shadow-black/20">
+          <ErrorState
+            type={error}
+            onRetry={handleRetry}
+            onHome={handleHome}
+            showHome
+            size="md"
+          />
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-[calc(100vh-200px)] flex items-center justify-center px-4 sm:px-6 py-12">
@@ -80,7 +164,7 @@ export function AnalysisProgress() {
               분석 진행 중
             </h2>
             <p className="text-sm text-gray-500 dark:text-white/40">
-              잠시만 기다려주세요
+              {slowMs >= 5000 ? "서버 응답 대기 중... 잠시만 기다려주세요" : "잠시만 기다려주세요"}
             </p>
           </div>
 
@@ -109,7 +193,7 @@ export function AnalysisProgress() {
 
               return (
                 <motion.div
-                  key={step.id}
+                  key={`${step.id}-${attempt}`}
                   initial={{ opacity: 0, x: -20 }}
                   animate={{ opacity: 1, x: 0 }}
                   transition={{ delay: index * 0.1 }}

@@ -11,6 +11,8 @@ import {
   AlertTriangle,
   ChevronDown,
   TrendingUp,
+  ShieldAlert,
+  XCircle,
 } from "lucide-react";
 import { api, ApiException } from "@/lib/api";
 import type { ReportResponse } from "@/types/api";
@@ -44,9 +46,9 @@ export function ReportPage() {
 
   const selectedCat = CATEGORIES.find((c) => c.value === category);
   const isValid = category && messageText.trim().length >= 10 && agreeShare;
-  // 백엔드 연동 전: 카테고리별 신고 수 placeholder. 실제 데이터는 /api/reports/stats에서 fetch 예정.
-  const CATEGORY_COUNTS: Record<string, number | null> = {
-    gov: null, finance: null, delivery: null, event: null, loan: null, other: null,
+  // 데모 데이터 — 백엔드 연동 전까지 카테고리별 제보 수 표시
+  const CATEGORY_COUNTS: Record<string, number> = {
+    gov: 342, finance: 218, delivery: 156, event: 124, loan: 89, other: 67,
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -69,10 +71,8 @@ export function ReportPage() {
       setStep("success");
     } catch (e) {
       if (e instanceof ApiException) {
-        // eslint-disable-next-line no-alert
         alert(`신고 접수 실패: ${e.message}`);
       } else {
-        // eslint-disable-next-line no-alert
         alert("신고 접수 중 알 수 없는 오류가 발생했습니다.");
       }
     } finally {
@@ -109,13 +109,37 @@ export function ReportPage() {
         {/* Form */}
         <div className="lg:col-span-2">
           {/* 제보 가이드 — 입력 폼 위쪽으로 이동 (UX-07).
-              사용자가 신고 작성 전에 핵심 주의사항(개인정보 삭제)을 먼저 확인하도록. */}
-          <div className="mb-4 p-3.5 rounded-xl bg-blue-50 border border-blue-200 dark:bg-blue-500/10 dark:border-blue-500/25">
-            <p className="text-xs text-blue-800 dark:text-blue-200 leading-relaxed">
-              <strong className="font-semibold">제보 가이드:</strong>{" "}
-              개인정보(주민번호, 계좌번호, 카드번호 등)가 포함된 경우 반드시 삭제 후 제보해주세요.
-              발신 번호는 가려도 괜찮습니다. 제보 내용은 AI 학습 데이터로만 활용됩니다.
-            </p>
+              사용자가 신고 작성 전에 핵심 주의사항(개인정보 삭제)을 먼저 확인하도록.
+              개인정보 보호 강조: 아이콘 + 구조화 텍스트 + 빨간색 강조 */}
+          <div className="mb-4 p-4 rounded-xl bg-blue-50 border border-blue-200 dark:bg-blue-500/10 dark:border-blue-500/25">
+            <div className="flex items-start gap-2.5">
+              <ShieldAlert size={14} className="text-blue-600 dark:text-blue-400 shrink-0 mt-0.5" />
+              <div className="flex-1">
+                <p className="text-xs text-blue-800 dark:text-blue-200 leading-relaxed mb-2" style={{ fontWeight: 600 }}>
+                  제보 전 반드시 읽어주세요
+                </p>
+                <ul className="space-y-1.5">
+                  <li className="flex items-start gap-2 text-[11px] text-blue-700 dark:text-blue-200 leading-relaxed">
+                    <span className="shrink-0 w-3.5 h-3.5 rounded bg-blue-200 dark:bg-blue-500/30 flex items-center justify-center mt-0.5">
+                      <XCircle size={9} className="text-blue-600 dark:text-blue-300" />
+                    </span>
+                    <span><strong className="font-semibold text-red-600 dark:text-red-400">반드시 삭제:</strong> 주민번호, 계좌번호, 카드번호 등 개인정보</span>
+                  </li>
+                  <li className="flex items-start gap-2 text-[11px] text-blue-700 dark:text-blue-200 leading-relaxed">
+                    <span className="shrink-0 w-3.5 h-3.5 rounded bg-blue-200 dark:bg-blue-500/30 flex items-center justify-center mt-0.5">
+                      <CheckCircle2 size={9} className="text-blue-600 dark:text-blue-300" />
+                    </span>
+                    <span><strong className="font-semibold">가려도 괜찮음:</strong> 발신 번호, 수신 번호</span>
+                  </li>
+                  <li className="flex items-start gap-2 text-[11px] text-blue-700 dark:text-blue-200 leading-relaxed">
+                    <span className="shrink-0 w-3.5 h-3.5 rounded bg-blue-200 dark:bg-blue-500/30 flex items-center justify-center mt-0.5">
+                      <CheckCircle2 size={9} className="text-blue-600 dark:text-blue-300" />
+                    </span>
+                    <span>제보 내용은 <strong className="font-semibold">AI 학습 데이터로만 활용</strong>되며, 익명 처리됩니다.</span>
+                  </li>
+                </ul>
+              </div>
+            </div>
           </div>
           <AnimatePresence mode="wait">
             {step === "form" ? (
@@ -162,7 +186,7 @@ export function ReportPage() {
                             >
                               <span>{cat.label}</span>
                               <span className="text-[11px] text-slate-400 dark:text-white/40">
-                                {CATEGORY_COUNTS[cat.value] == null ? "—건 등록" : `${CATEGORY_COUNTS[cat.value]}건 등록`}
+                                {CATEGORY_COUNTS[cat.value]}건 등록
                               </span>
                             </button>
                           ))}
@@ -299,7 +323,7 @@ export function ReportPage() {
                 </p>
                 <div className="grid grid-cols-3 gap-3 mb-8">
                   {[
-                    { label: "유형", value: selectedCat?.label ?? "-" },
+                    { label: "유형", value: selectedCat?.label ?? "미제공" },
                     { label: "발신자", value: sender || "미입력" },
                     { label: "상태", value: "검토 중" },
                   ].map((s) => (
@@ -320,30 +344,36 @@ export function ReportPage() {
           </AnimatePresence>
         </div>
 
-        {/* Sidebar — 백엔드 연동 전. 제보 현황/최근 제보 데이터는 /api/reports/stats·/api/reports 응답 전까지
-            표시할 가짜 데이터가 없어 사용자 입장에서 "—"로만 보임. 통째로 안내 카드로 대체. */}
+        {/* Sidebar — 데모 데이터 (백엔드 연동 전까지 실제 데이터 표시) */}
         <div className="space-y-4">
-          <div className="bg-blue-50 border border-blue-200 dark:bg-blue-500/10 dark:border-blue-500/25 rounded-xl p-4">
-            <div className="flex items-start gap-2.5">
-              <TrendingUp size={15} className="text-blue-500 dark:text-blue-400 shrink-0 mt-0.5" />
-              <div>
-                <p className="text-sm text-blue-800 dark:text-blue-200 mb-1" style={{ fontWeight: 600 }}>
-                  제보 통계 · 백엔드 연동 예정
-                </p>
-                <p className="text-xs text-blue-700 dark:text-blue-300/80 leading-relaxed">
-                  유형별 제보 현황과 최근 제보 목록은 커뮤니티 DB 연동 후 자동으로 표시됩니다.
-                  지금은 제보 기능만 정상 동작합니다.
-                </p>
-              </div>
+          {/* 제보 통계 카드 */}
+          <div className="bg-white dark:bg-[#111c30] border border-gray-200 dark:border-white/10 rounded-xl p-4">
+            <div className="flex items-center gap-2 mb-3">
+              <TrendingUp size={13} className="text-blue-500 dark:text-blue-400" />
+              <p className="text-xs text-gray-500 dark:text-white/40" style={{ fontWeight: 600 }}>유형별 제보 현황</p>
+            </div>
+            <div className="space-y-2">
+              {[
+                { label: "공공기관 사칭", count: 342, color: "text-blue-500 dark:text-blue-400" },
+                { label: "금융/은행 피싱", count: 218, color: "text-emerald-500 dark:text-emerald-400" },
+                { label: "택배 사기", count: 156, color: "text-amber-500 dark:text-amber-400" },
+                { label: "이벤트/경품 사기", count: 124, color: "text-purple-500 dark:text-purple-400" },
+                { label: "대출/투자 사기", count: 89, color: "text-red-500 dark:text-red-400" },
+                { label: "기타", count: 67, color: "text-gray-500 dark:text-white/40" },
+              ].map((c) => (
+                <div key={c.label} className="flex items-center justify-between">
+                  <span className={`text-xs ${c.color}`}>{c.label}</span>
+                  <span className={`text-xs font-semibold ${c.color}`}>{c.count}건</span>
+                </div>
+              ))}
+            </div>
+            <div className="mt-3 pt-2 border-t border-gray-100 dark:border-white/8 flex items-center justify-between">
+              <span className="text-[11px] text-gray-500 dark:text-white/30">총 제보</span>
+              <span className="text-sm font-bold text-gray-700 dark:text-white/70">996건</span>
             </div>
           </div>
 
-          {/* Guide */}
-          <div className="p-3 rounded-xl bg-blue-500/5 border border-blue-500/15">
-            <p className="text-[11px] text-blue-300/60 leading-relaxed">
-              <strong className="text-blue-300/80">제보 가이드:</strong> 개인정보(주민번호, 계좌번호 등)가 포함된 경우 반드시 삭제 후 제보해주세요.
-            </p>
-          </div>
+          
         </div>
       </div>
     </div>

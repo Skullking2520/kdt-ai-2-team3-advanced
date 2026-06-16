@@ -43,20 +43,6 @@ export function SeniorAnalyzer() {
 
   useEffect(() => { textareaRef.current?.focus(); }, []);
 
-  // 입력 중 빠른 미리보기 분석 (실제 분석은 별도 플로우에서)
-  // smsAnalysis.ts 의 analyzeSms 결과를 시니어 어투로 변환해서 setResult
-  useEffect(() => {
-    if (!textInput.trim()) { setResult(null); return; }
-    const sms = analyzeSms(textInput);
-    setResult({
-      risk_level: toLegacyRiskLevel(sms.risk_level),
-      risk_score: sms.risk_score,
-      smishing_type: sms.smishing_type,
-      reasons: toSeniorReasons(sms.reasons),
-      action_guide: toSeniorActions(sms.action_guide),
-    });
-  }, [textInput]);
-
   const handleAnalyze = () => {
     setError("");
     if (!textInput.trim()) { setError("문자 내용을 입력해주세요."); return; }
@@ -78,7 +64,7 @@ export function SeniorAnalyzer() {
         });
         setLoading(false);
         setTimeout(() => resultRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 100);
-      } catch (err) {
+      } catch {
         setError("분석 중 오류가 발생했습니다. 다시 시도해주세요.");
         setLoading(false);
       }
@@ -103,14 +89,14 @@ export function SeniorAnalyzer() {
         <div className="max-w-3xl mx-auto flex items-center gap-2 flex-wrap">
           <button
             onClick={() => window.history.length > 1 ? window.history.back() : nav("/")}
-            className="flex items-center gap-2 px-4 py-3 rounded-xl bg-slate-200 dark:bg-white/8 border-2 border-slate-300 dark:border-white/15 text-white hover:bg-slate-300 dark:bg-white/15 active:scale-95 transition-all"
+            className="flex items-center gap-2 px-4 py-3 rounded-xl bg-slate-200 dark:bg-white/8 border-2 border-slate-300 dark:border-white/15 text-slate-900 dark:text-white hover:bg-slate-300 dark:bg-white/15 active:scale-95 transition-all"
             style={{ fontSize: "1.05rem", fontWeight: 600 }}
           >
             <ArrowLeft size={22} /> 뒤로
           </button>
           <button
             onClick={() => nav("/")}
-            className="flex items-center gap-2 px-4 py-3 rounded-xl bg-slate-200 dark:bg-white/8 border-2 border-slate-300 dark:border-white/15 text-white hover:bg-slate-300 dark:bg-white/15 active:scale-95 transition-all"
+            className="flex items-center gap-2 px-4 py-3 rounded-xl bg-slate-200 dark:bg-white/8 border-2 border-slate-300 dark:border-white/15 text-slate-900 dark:text-white hover:bg-slate-300 dark:bg-white/15 active:scale-95 transition-all"
             style={{ fontSize: "1.05rem", fontWeight: 600 }}
           >
             <Home size={22} /> 처음
@@ -161,7 +147,7 @@ export function SeniorAnalyzer() {
           <textarea
             ref={textareaRef}
             value={textInput}
-            onChange={(e) => setTextInput(e.target.value.slice(0, MAX_LEN))}
+            onChange={(e) => { setTextInput(e.target.value.slice(0, MAX_LEN)); setError(""); }}
             placeholder="받은 문자를 길게 눌러 복사한 뒤 여기에 붙여넣으세요..."
             rows={10}
             maxLength={MAX_LEN}
@@ -203,8 +189,8 @@ export function SeniorAnalyzer() {
           <button
             onClick={handleAnalyze}
             disabled={!textInput.trim() || loading}
-            className="flex-1 flex items-center justify-center gap-3 px-6 py-5 rounded-2xl bg-blue-600 text-white disabled:opacity-40 hover:bg-blue-700 active:scale-[0.98] transition-all shadow-lg"
-            className="text-2xl" style={{ fontWeight: 700, lineHeight: 1.2 }}
+            className="flex-1 flex items-center justify-center gap-3 px-6 py-5 rounded-2xl text-white disabled:bg-white/10 disabled:text-white/30 disabled:cursor-not-allowed disabled:shadow-none active:scale-[0.98] transition-all text-2xl"
+            style={!textInput.trim() || loading ? undefined : { backgroundColor: "#3B82F6", fontWeight: 700, lineHeight: 1.2, boxShadow: "0 8px 24px rgba(59,130,246,0.4)" }}
           >
             {loading ? (
               <>
@@ -285,7 +271,7 @@ export function SeniorAnalyzer() {
                       <p className={`mb-2 ${cfg.color}`} style={{ fontWeight: 800, fontSize: "2.2rem", letterSpacing: "-0.015em" }}>
                         {cfg.label}
                       </p>
-                      <p className="text-slate-700 dark:text-slate-200 dark:bg-slate-200 dark:bg-white/85" style={{ fontSize: "1.3rem", lineHeight: 1.5, fontWeight: 600 }}>
+                      <p className="text-slate-700 dark:text-white/85" style={{ fontSize: "1.3rem", lineHeight: 1.5, fontWeight: 600 }}>
                         {cfg.desc}
                       </p>
                     </div>
@@ -326,8 +312,8 @@ export function SeniorAnalyzer() {
                         className="flex items-start gap-4"
                       >
                         <span
-                          className="shrink-0 w-10 h-10 rounded-full bg-blue-500/20 text-blue-600 dark:text-blue-300 flex items-center justify-center border-2 border-blue-500/30"
-                          className="text-lg" style={{ fontWeight: 700, lineHeight: 1 }}
+                          className="shrink-0 w-10 h-10 rounded-full bg-blue-500/20 text-blue-600 dark:text-blue-300 flex items-center justify-center border-2 border-blue-500/30 text-lg"
+                          style={{ fontWeight: 700, lineHeight: 1 }}
                         >
                           {i + 1}
                         </span>
@@ -358,22 +344,30 @@ export function SeniorAnalyzer() {
                       <p className="text-red-600 dark:text-red-200/90 mb-4 text-base" style={{ fontWeight: 600 }}>
                         이미 링크를 눌렀거나 정보를 입력했다면 <strong>즉시 신고</strong>하세요
                       </p>
-                      <div className="grid grid-cols-2 gap-4">
+                      <div className="grid grid-cols-3 gap-3">
                         <a
                           href="tel:112"
-                          className="flex flex-col items-center justify-center gap-2 px-5 py-5 rounded-2xl bg-red-600/20 border-2 border-red-500/60 text-red-700 dark:text-red-100 hover:bg-red-600/30 active:scale-95 transition-all text-lg"
-                          className="text-lg" style={{ fontWeight: 700, lineHeight: 1.2 }}
+                          className="flex flex-col items-center justify-center gap-2 px-4 py-4 rounded-2xl bg-red-600/20 border-2 border-red-500/60 text-red-700 dark:text-red-100 hover:bg-red-600/30 active:scale-95 transition-all text-base"
+                          style={{ fontWeight: 700, lineHeight: 1.2 }}
                         >
-                          <Phone size={28} />
+                          <Phone size={24} />
                           112 경찰
                         </a>
                         <a
                           href="tel:1332"
-                          className="flex flex-col items-center justify-center gap-2 px-5 py-5 rounded-2xl bg-amber-600/20 border-2 border-amber-500/60 text-amber-700 dark:text-amber-100 hover:bg-amber-600/30 active:scale-95 transition-all text-lg"
-                          className="text-lg" style={{ fontWeight: 700, lineHeight: 1.2 }}
+                          className="flex flex-col items-center justify-center gap-2 px-4 py-4 rounded-2xl bg-amber-600/20 border-2 border-amber-500/60 text-amber-700 dark:text-amber-100 hover:bg-amber-600/30 active:scale-95 transition-all text-base"
+                          style={{ fontWeight: 700, lineHeight: 1.2 }}
                         >
-                          <Phone size={28} />
+                          <Phone size={24} />
                           1332 금감원
+                        </a>
+                        <a
+                          href="tel:118"
+                          className="flex flex-col items-center justify-center gap-2 px-4 py-4 rounded-2xl bg-blue-600/20 border-2 border-blue-500/60 text-blue-700 dark:text-blue-100 hover:bg-blue-600/30 active:scale-95 transition-all text-base"
+                          style={{ fontWeight: 700, lineHeight: 1.2 }}
+                        >
+                          <Phone size={24} />
+                          118 사이버
                         </a>
                       </div>
                     </div>
@@ -438,7 +432,7 @@ export function SeniorAnalyzer() {
                       <button
                         onClick={() => setFeedback("up")}
                         className="flex items-center justify-center gap-3 px-5 py-4 rounded-2xl bg-emerald-500/15 border-2 border-emerald-500/35 text-emerald-700 dark:text-emerald-200 hover:bg-emerald-500/25 active:scale-95 transition-all text-lg"
-                        className="text-lg" style={{ fontWeight: 600, lineHeight: 1.2 }}
+                        style={{ fontWeight: 600, lineHeight: 1.2 }}
                       >
                         <ThumbsUp size={22} />
                         정확해요
@@ -446,7 +440,7 @@ export function SeniorAnalyzer() {
                       <button
                         onClick={() => setFeedback("down")}
                         className="flex items-center justify-center gap-3 px-5 py-4 rounded-2xl bg-red-500/15 border-2 border-red-500/35 text-red-700 dark:text-red-200 hover:bg-red-500/25 active:scale-95 transition-all text-lg"
-                        className="text-lg" style={{ fontWeight: 600, lineHeight: 1.2 }}
+                        style={{ fontWeight: 600, lineHeight: 1.2 }}
                       >
                         <ThumbsDown size={22} />
                         틀렸어요
@@ -455,12 +449,12 @@ export function SeniorAnalyzer() {
                   )}
                 </div>
 
-                {/* 3버튼 — 사용자 합의: 신고 / 가족 / 다시검사 */}
+                {/* 3버튼 — 신고 / 가족 / 다시검사 */}
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                   <button
                     onClick={() => nav("/report")}
                     className="flex items-center justify-center gap-2 px-4 py-4 rounded-2xl bg-red-500/20 border-2 border-red-500/50 text-red-700 dark:text-red-100 hover:bg-red-500/30 active:scale-95 transition-all text-lg"
-                    className="text-lg" style={{ fontWeight: 600, lineHeight: 1.2 }}
+                    style={{ fontWeight: 600, lineHeight: 1.2 }}
                   >
                     🚨 이 사이트에 신고
                   </button>
@@ -473,14 +467,14 @@ export function SeniorAnalyzer() {
                       }
                     }}
                     className="flex items-center justify-center gap-2 px-4 py-4 rounded-2xl bg-emerald-500/20 border-2 border-emerald-500/50 text-emerald-700 dark:text-emerald-100 hover:bg-emerald-500/30 active:scale-95 transition-all text-lg"
-                    className="text-lg" style={{ fontWeight: 600, lineHeight: 1.2 }}
+                    style={{ fontWeight: 600, lineHeight: 1.2 }}
                   >
                     👨‍👩‍👧 가족에게 보여주기
                   </button>
                   <button
                     onClick={handleReset}
                     className="flex items-center justify-center gap-2 px-4 py-4 rounded-2xl bg-blue-500/20 border-2 border-blue-500/50 text-blue-700 dark:text-blue-100 hover:bg-blue-500/30 active:scale-95 transition-all text-lg"
-                    className="text-lg" style={{ fontWeight: 600, lineHeight: 1.2 }}
+                    style={{ fontWeight: 600, lineHeight: 1.2 }}
                   >
                     <RotateCcw size={20} />
                     다시 검사

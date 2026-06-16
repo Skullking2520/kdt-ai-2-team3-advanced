@@ -239,19 +239,19 @@ function LoginGate() {
 
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <label className="text-xs text-white/40 mb-2 block">관리자 비밀번호</label>
-              <div className="flex items-center gap-2 px-3 py-2.5 bg-[#0b1120] border border-white/10 rounded-xl focus-within:border-amber-500/40 transition-all">
-                <Lock size={13} className="text-white/30 shrink-0" />
+              <label className="text-xs text-white/60 mb-2 block">관리자 비밀번호</label>
+              <div className="flex items-center gap-3 px-4 py-3 bg-[#0b1120] border border-white/10 rounded-xl focus-within:border-amber-500/40 transition-all">
+                <Lock size={16} className="text-white/40 shrink-0" />
                 <input
                   type={show ? "text" : "password"}
                   value={pw}
                   onChange={(e) => { setPw(e.target.value); setError(false); }}
                   placeholder="비밀번호 입력"
-                  className="flex-1 bg-transparent text-sm text-white/80 placeholder:text-white/20 outline-none"
+                  className="flex-1 bg-transparent text-sm text-white/90 placeholder:text-white/40 outline-none min-w-0 focus:outline-none focus:ring-0"
                   autoFocus
                 />
-                <button type="button" onClick={() => setShow(!show)} className="text-white/30 hover:text-white/60 transition-all">
-                  {show ? <EyeOff size={13} /> : <Eye size={13} />}
+                <button type="button" onClick={() => setShow(!show)} className="text-white/40 hover:text-white/70 transition-all shrink-0">
+                  {show ? <EyeOff size={16} /> : <Eye size={16} />}
                 </button>
               </div>
               <AnimatePresence>
@@ -277,8 +277,8 @@ function LoginGate() {
             </button>
           </form>
 
-          <p className="text-[11px] text-white/20 text-center mt-5">
-            힌트: <span className="font-mono">관리자에게 문의하세요.</span>
+          <p className="text-[11px] text-white/35 text-center mt-5">
+            힌트: <span className="font-mono text-white/40">관리자에게 문의하세요.</span>
           </p>
         </div>
       </motion.div>

@@ -16,6 +16,7 @@ import type { RouteObject } from "react-router";
 
 const AdminPanel = lazy(() => import("./components/AdminPanel").then((m) => ({ default: m.AdminPanel })));
 const Dashboard = lazy(() => import("./components/Dashboard").then((m) => ({ default: m.Dashboard })));
+const AdminFeedback = lazy(() => import("./components/AdminFeedback").then((m) => ({ default: m.AdminFeedback })));
 const SMSSimulator = lazy(() => import("./components/SMSSimulator").then((m) => ({ default: m.SMSSimulator })));
 const LiveFeed = lazy(() => import("./components/LiveFeed").then((m) => ({ default: m.LiveFeed })));
 const ReportExport = lazy(() => import("./components/ReportExport").then((m) => ({ default: m.ReportExport })));
@@ -40,30 +41,47 @@ const SystemHealth = lazy(() => import("./components/SystemHealth").then((m) => 
 /**
  * DEV-only 라우트. vite build 시 import.meta.env.DEV === false 로
  * 인라인되어 이 라우트들은 router 에 포함되지 않음.
+ *
+ * 라우트 가드: nb_admin_auth(localStorage) 체크 → 권한 없으면 "/" redirect.
+ * AdminPanel과 AuditLog는 자체 LoginGate를 가지므로 별도 가드 없이 진입 가능.
+ * 나머지 운영 도구(/dashboard, /patterns, /settings 등)는 라우트 레벨 가드로 보호.
  */
+const STORAGE_KEY = "nb_admin_auth";
+
+function adminGuard({ request }: { request: Request }) {
+  if (import.meta.env.DEV) {
+    const isAdmin = localStorage.getItem(STORAGE_KEY) === "true";
+    if (!isAdmin) {
+      return Response.redirect(new URL("/", request.url), 302);
+    }
+  }
+  return null;
+}
+
 export const adminRoutes: RouteObject[] = import.meta.env.DEV
   ? [
-      { path: "simulator", Component: SMSSimulator },
-      { path: "live-feed", Component: LiveFeed },
-      { path: "export", Component: ReportExport },
-      { path: "attention", Component: AttentionViz },
-      { path: "bulk", Component: BulkAnalysis },
-      { path: "compare", Component: CompareAnalysis },
+      { path: "simulator", Component: SMSSimulator, loader: adminGuard },
+      { path: "live-feed", Component: LiveFeed, loader: adminGuard },
+      { path: "export", Component: ReportExport, loader: adminGuard },
+      { path: "attention", Component: AttentionViz, loader: adminGuard },
+      { path: "bulk", Component: BulkAnalysis, loader: adminGuard },
+      { path: "compare", Component: CompareAnalysis, loader: adminGuard },
       { path: "dashboard", Component: Dashboard },
       { path: "patterns", Component: PatternDB },
-      { path: "benchmark", Component: Benchmark },
-      { path: "dataset", Component: DatasetStats },
-      { path: "model", Component: ModelArchitecture },
-      { path: "zero-day", Component: ZeroDayExplainer },
-      { path: "api", Component: APIExplorer },
+      { path: "benchmark", Component: Benchmark, loader: adminGuard },
+      { path: "dataset", Component: DatasetStats, loader: adminGuard },
+      { path: "model", Component: ModelArchitecture, loader: adminGuard },
+      { path: "zero-day", Component: ZeroDayExplainer, loader: adminGuard },
+      { path: "api", Component: APIExplorer, loader: adminGuard },
       { path: "settings", Component: Settings },
       { path: "admin", Component: AdminPanel },
-      { path: "error-analysis", Component: ErrorAnalysis },
-      { path: "redteam", Component: RedTeam },
+      { path: "error-analysis", Component: ErrorAnalysis, loader: adminGuard },
+      { path: "redteam", Component: RedTeam, loader: adminGuard },
       { path: "audit", Component: AuditLog },
-      { path: "ab-test", Component: ABTest },
-      { path: "feature-importance", Component: FeatureImportance },
-      { path: "ioc", Component: IOCList },
-      { path: "health", Component: SystemHealth },
+      { path: "ab-test", Component: ABTest, loader: adminGuard },
+      { path: "feature-importance", Component: FeatureImportance, loader: adminGuard },
+      { path: "ioc", Component: IOCList, loader: adminGuard },
+      { path: "health", Component: SystemHealth, loader: adminGuard },
+      { path: "feedback", Component: AdminFeedback },
     ]
   : [];

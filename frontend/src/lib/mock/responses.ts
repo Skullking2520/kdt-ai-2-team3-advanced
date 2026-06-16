@@ -16,9 +16,7 @@ import type {
   SenderLookupResult,
   HistoryItem,
   Paginated,
-  ReportRequest,
   ReportResponse,
-  ShareRequest,
   ShareResponse,
   CaseStudy,
   DamageStep,
@@ -108,9 +106,9 @@ function buildSmsResult(req: AnalysisRequest & { content: string }): SmsAnalysis
 
   const reasons: DetectionReason[] = [];
   const actionGuide: ActionGuideItem[] = [];
-  let smishingType: SmsAnalysisResult['smishingType'] = '정상 문자';
-  let riskLevel: SmsAnalysisResult['riskLevel'] = 'low';
-  let riskScore = 15;
+  let smishingType: SmsAnalysisResult['smishingType'];
+  let riskLevel: SmsAnalysisResult['riskLevel'];
+  let riskScore: number;
 
   if (hasFamilyPattern && hasPayment) {
     riskLevel = 'high';
@@ -438,8 +436,7 @@ mockHandle.register('POST', '/api/analyze', (body) => {
 });
 
 // OCR
-mockHandle.register('POST', '/api/ocr', (body) => {
-  const __req = body as { image: string };
+mockHandle.register('POST', '/api/ocr', (_body) => {
   return {
     imageId: `img_${Date.now()}`,
     text: '【CJ대한통운】배송 주소 확인이 필요합니다. 주소 오류로 반송 예정입니다. 확인: http://cj-delivery-check.com/re123',
@@ -467,8 +464,7 @@ mockHandle.register('GET', '/api/history/h3', () => buildSmsResult({ type: 'sms'
 mockHandle.register('GET', '/api/history/h4', () => buildUrlResult({ type: 'url', content: mockHistoryItems[3].content }));
 
 // 신고
-mockHandle.register('POST', '/api/reports', (body) => {
-  const __req = body as ReportRequest;
+mockHandle.register('POST', '/api/reports', (_body) => {
   const id = receiptId();
   // (실제로는 DB에 저장)
   return {
@@ -488,7 +484,7 @@ mockHandle.register('GET', '/api/reports/NB20260605-001234', () => ({
 mockHandle.register('POST', '/api/feedback', () => ({ ok: true as const }));
 
 // 공유
-mockHandle.register('POST', '/api/share', (body) => {
+mockHandle.register('POST', '/api/share', (_body) => {
   return {
     shareId: `shr_${Date.now()}`,
     shortUrl: `https://nb.shield/r/${Date.now().toString(36)}`,

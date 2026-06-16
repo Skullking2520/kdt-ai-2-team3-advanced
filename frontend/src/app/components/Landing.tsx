@@ -2,7 +2,7 @@ import { useNavigate } from "react-router";
 import { motion } from "motion/react";
 import {
   MessageSquareWarning, Link2, ImageIcon, Flag,
-  ShieldCheck, ArrowRight, AlertTriangle, TrendingUp,
+  ShieldCheck, ArrowRight, AlertTriangle,
   Package, Building2, Heart, CreditCard, ChevronRight,
 } from "lucide-react";
 

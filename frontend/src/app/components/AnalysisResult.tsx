@@ -27,7 +27,7 @@ interface AnalysisResult {
 // 레거시 키(danger/warning/normal) 호환을 위해 toLegacyRiskLevel 어댑터 적용.
 
 export function AnalysisResult() {
-  const { _id } = useParams();
+  useParams();
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const text = searchParams.get("text") || "";

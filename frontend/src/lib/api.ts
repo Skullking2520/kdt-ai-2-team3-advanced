@@ -70,7 +70,7 @@ async function request<T>(path: string, options: RequestOptions = {}): Promise<T
 
   // 1. Mock 우선 처리
   if (isMockPath(path, method)) {
-    if (env.DEBUG) console.log(`[api:MOCK] ${method} ${path}`, body);
+    if (env.DEBUG) console.warn(`[api:MOCK] ${method} ${path}`, body);
     await new Promise((r) => setTimeout(r, env.MOCK_DELAY_MS));
     return mockHandle.invoke<T>(path, method, body);
   }

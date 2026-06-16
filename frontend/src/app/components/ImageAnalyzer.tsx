@@ -1,5 +1,5 @@
 import { useState, useRef, useCallback } from "react";
-import { ImageIcon, Upload, FileText, ChevronRight, RotateCcw, CheckCircle2, Loader2, AlertCircle, Edit3, X, Save } from "lucide-react";
+import { ImageIcon, Upload, FileText, ChevronRight, RotateCcw, CheckCircle2, Loader2, AlertCircle, Edit3, Save } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { useNavigate } from "react-router";
 
@@ -129,11 +129,11 @@ export function ImageAnalyzer() {
       <div className="space-y-4">
         {/* 업로드 영역 */}
         {!preview ? (
-          <div
+          <label
+            htmlFor="file-input-image"
             onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
             onDragLeave={() => setDragOver(false)}
             onDrop={handleDrop}
-            onClick={() => fileRef.current?.click()}
             className={`relative rounded-2xl border-2 border-dashed p-8 sm:p-12 flex flex-col items-center gap-4 cursor-pointer transition-all
               ${dragOver
                 ? "border-emerald-500/60 bg-emerald-50 dark:bg-emerald-900/10"
@@ -150,13 +150,14 @@ export function ImageAnalyzer() {
               <p className="text-xs sm:text-sm text-gray-500 dark:text-white/40">PNG, JPG, WEBP 지원 · 최대 10MB</p>
             </div>
             <input
+              id="file-input-image"
               ref={fileRef}
               type="file"
               accept="image/*"
               className="hidden"
               onChange={(e) => { const f = e.target.files?.[0]; if (f) handleFile(f); }}
             />
-          </div>
+          </label>
         ) : (
           <div className="bg-white dark:bg-[#111c30] border border-gray-200 dark:border-white/10 rounded-2xl p-4">
             <div className="flex items-center justify-between mb-3">

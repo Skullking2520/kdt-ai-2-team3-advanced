@@ -37,6 +37,15 @@ export function Quiz() {
 
   const q = QUESTIONS[idx];
 
+  const handleTimeout = () => {
+    if (answered !== null) return;
+    setAnswered(null);
+    setCorrect(false);
+    setTimerActive(false);
+    setStreak(0);
+    setResults((p) => [...p, { correct: false, isPhishing: q.isPhishing }]);
+  };
+
   useEffect(() => {
     if (!timerActive || answered !== null || finished) return;
     if (timeLeft <= 0) {
@@ -46,16 +55,7 @@ export function Quiz() {
     }
     const t = setTimeout(() => setTimeLeft((p) => p - 1), 1000);
     return () => clearTimeout(t);
-  }, [timeLeft, timerActive, answered, finished]);
-
-  const handleTimeout = () => {
-    if (answered !== null) return;
-    setAnswered(null);
-    setCorrect(false);
-    setTimerActive(false);
-    setStreak(0);
-    setResults((p) => [...p, { correct: false, isPhishing: q.isPhishing }]);
-  };
+  }, [timeLeft, timerActive, answered, finished, handleTimeout]);
 
   const handleAnswer = (guess: boolean | null) => {
     if (answered !== null && !isTimeout) return;
