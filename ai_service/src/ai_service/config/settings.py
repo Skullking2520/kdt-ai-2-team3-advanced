@@ -63,6 +63,8 @@ class Settings(BaseSettings):
     model_config = SettingsConfigDict(
         env_file=find_dotenv(),  # 루트 .env까지 찾아 올라감
         env_file_encoding="utf-8",
+        # Modal Secret이 주입한 시스템 환경변수를 에러 없이 곧바로 읽어옵니다.
+        env_ignore_empty=True,
         extra="ignore",  # .env에 다른 변수가 더 있어도 에러 내지 않고 무시
     )
 
