@@ -1,0 +1,16 @@
+{
+  "run_name": "cleanlab_stage3_kfold5",
+  "timestamp": "20260617T120251Z",
+  "mode": "kfold_5",
+  "data_path": "/Users/nyongd/Downloads/final_data (2).jsonl",
+  "n_total": 91500,
+  "n_label_issues": 1608,
+  "issue_rate": 0.0176,
+  "n_clean": 89892,
+  "n_splits": 5,
+  "subsample": null,
+  "epochs": 2,
+  "batch_size": 16,
+  "max_length": 128,
+  "learning_rate": 3e-05
+}
