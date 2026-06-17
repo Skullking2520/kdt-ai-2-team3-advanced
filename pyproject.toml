@@ -7,7 +7,7 @@ dependencies = [
     "backend", # 워크스페이스 내의 backend 패키지를 등록
     "ai_service",
     "ai_monitoring",
-    #"ai_service_deploy",
+    "ai_service_deploy",
     "python-dotenv>=1.2.2",
     "ragas==0.3.9",
     "langchain-community<0.4.0",
@@ -50,7 +50,8 @@ addopts = "-v --durations=10"   # 기본 옵션 (상세 출력, 느린 테스트
 members = [
     "backend",
     "ai_service",
-    "ai_monitoring"
+    "ai_monitoring",
+    "ai_sevice_deploy",
 ]
 
 [dependency-groups]

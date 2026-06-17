@@ -66,5 +66,5 @@ ENTRYPOINT ["./entrypoint.sh"]
 # 클라우드에서 docker run이나 docker compose시 .env로 db url 맞춰서 주입하기
 
 # 필독!: 환경이 linux/amd64이므로 빌드 명령어 (cicd에서 쓰세요.)
-# 맥북에서는 아예 이 도커파일이 빌드가 안됩니다.
+# 맥북에서는 qemu 가상화(aarch64 -> x86/64)를 안 쓰면 아예 이 도커파일이 빌드가 안됩니다.
 # docker buildx build --platform linux/amd64 -t <ECR_CONTAINER_REGISTRY_URL>/smishing-backend:v1 --push .
