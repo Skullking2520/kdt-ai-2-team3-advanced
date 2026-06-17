@@ -1,8 +1,64 @@
 # ollama / openai llm 인스턴스화
-#import os
-from typing import Any
+
+from typing import Any, Union
 from langchain_ollama import ChatOllama
+from langchain_openai import ChatOpenAI
 from ..config.settings import settings
+
+def get_llm(
+    model_name: str,
+    temperature: float = 0.0,
+    max_tokens: int = 1024,
+    json_mode: bool = False,
+    **kwargs: Any
+) -> Union[ChatOllama, ChatOpenAI]:
+    """
+    환경(IS_PROD)에 따라 Ollama 또는 vLLM(ChatOpenAI) 인스턴스를 반환합니다.
+    """
+    # settings 파일이나 환경 변수에서 프로덕션 여부 판단 (기본값 False)
+    APP_ENV = getattr(settings, "APP_ENV", "development")
+
+    is_prod = APP_ENV == "production"
+
+    if is_prod:
+        # ==========================================
+        # 1. 프로덕션 환경: Modal + vLLM (OpenAI 호환)
+        # ==========================================
+        base_url = getattr(settings, "OPENAI_API_BASE", None)
+        api_key = getattr(settings, "OPENAI_API_KEY", "modal-dummy-key")
+        
+        llm_kwargs = {
+            "model": model_name,
+            "openai_api_base": base_url,
+            "openai_api_key": api_key,
+            "temperature": temperature,
+            "max_tokens": max_tokens,
+            **kwargs
+        }
+        
+        if json_mode:
+            llm_kwargs["response_format"] = {"type": "json_object"}
+            
+        return ChatOpenAI(**llm_kwargs)
+        
+    else:
+        # ==========================================
+        # 2. 로컬 개발 환경: Ollama
+        # ==========================================
+        base_url = getattr(settings, "OLLAMA_BASE_URL", "http://localhost:11434")
+        
+        llm_kwargs = {
+            "model": model_name,
+            "base_url": base_url,
+            "temperature": temperature,
+            "num_predict": max_tokens, # Ollama 스펙 맵핑
+            **kwargs
+        }
+        
+        if json_mode:
+            llm_kwargs["format"] = "json"
+            
+        return ChatOllama(**llm_kwargs)
 
 def get_ollama_llm(
     model_name: str,

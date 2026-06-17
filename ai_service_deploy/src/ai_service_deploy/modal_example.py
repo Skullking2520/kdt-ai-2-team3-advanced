@@ -11,5 +11,6 @@ def square(x):
 
 @app.local_entrypoint()
 def main():
+    # simple test for cloud deployment!
     print("the square is", square.remote(42))
 
