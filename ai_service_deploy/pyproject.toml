@@ -1,5 +1,5 @@
 [project]
-name = "ai-sevice-deploy"
+name = "ai-service-deploy"
 version = "0.1.0"
 description = "Add your description here"
 readme = "README.md"
@@ -8,7 +8,7 @@ requires-python = "==3.12.*"
 dependencies = []
 
 [project.scripts]
-ai-sevice-deploy = "ai_sevice_deploy:main"
+ai-service-deploy = "ai_service_deploy:main"
 
 [build-system]
 requires = ["uv_build>=0.11.7,<0.12.0"]
