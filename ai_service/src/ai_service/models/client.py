@@ -4,29 +4,27 @@ from typing import Any, Union
 from langchain_ollama import ChatOllama
 from langchain_openai import ChatOpenAI
 from ..config.settings import settings
+from ..utils.is_prod import is_prod
 
 def get_llm(
     model_name: str,
     temperature: float = 0.0,
-    max_tokens: int = 1024,
+    max_tokens: int = 4096,
     json_mode: bool = False,
     **kwargs: Any
 ) -> Union[ChatOllama, ChatOpenAI]:
     """
     환경(IS_PROD)에 따라 Ollama 또는 vLLM(ChatOpenAI) 인스턴스를 반환합니다.
     """
-    # settings 파일이나 환경 변수에서 프로덕션 여부 판단 (기본값 False)
-    APP_ENV = getattr(settings, "APP_ENV", "development")
-
-    is_prod = APP_ENV == "production"
-
+    
     if is_prod:
         # ==========================================
         # 1. 프로덕션 환경: Modal + vLLM (OpenAI 호환)
         # ==========================================
         base_url = getattr(settings, "OPENAI_API_BASE", None)
         api_key = getattr(settings, "OPENAI_API_KEY", "modal-dummy-key")
-        
+        # OPENAI_API_KEY="modal-dummy-key"처럼 아무 문자열이나 채워 넣어야 랭체인이 에러 없이 Modal 서버로 요청을 전송
+
         llm_kwargs = {
             "model": model_name,
             "openai_api_base": base_url,

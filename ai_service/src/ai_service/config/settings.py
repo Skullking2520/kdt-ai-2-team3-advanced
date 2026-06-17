@@ -55,8 +55,9 @@ class Settings(BaseSettings):
 
     HF_XET_HIGH_PERFORMANCE: int = Field(default=1)
     
-    # 모델 vllm 배포 장소
+    # 모델 vllm 배포 
     OPENAI_API_BASE: str = Field(default="")
+    VLLM_MODEL_NAME: str = Field(default="Qwen/Qwen2.5-7B-Instruct-AWQ")
 
     # .env 파일 로드 설정 (pydantic v2 방식)
     model_config = SettingsConfigDict(
