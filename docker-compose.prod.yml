@@ -11,8 +11,8 @@ services:
     environment:
       - USE_MOCK_MODEL=true
       - USE_MOCK_OCR=true
-    mem_limit: 400m
-    memswap_limit: 400m
+    mem_limit: 2000m
+    memswap_limit: 2000m
     networks:
       - monitoring
     restart: unless-stopped
