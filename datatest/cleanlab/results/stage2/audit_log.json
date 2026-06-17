@@ -1,0 +1,16 @@
+{
+  "run_name": "cleanlab_stage2_direct",
+  "timestamp": "20260617T063810Z",
+  "mode": "direct_inference",
+  "data_path": "/Users/nyongd/Downloads/final_data (2).jsonl",
+  "n_total": 91500,
+  "n_label_issues": 652,
+  "issue_rate": 0.0071,
+  "n_clean": 90848,
+  "n_splits": 5,
+  "subsample": null,
+  "epochs": 2,
+  "batch_size": 16,
+  "max_length": 128,
+  "learning_rate": 3e-05
+}
