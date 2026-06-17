@@ -17,6 +17,23 @@ services:
       - monitoring
     restart: unless-stopped
 
+  url-validator:
+    image: 395120012527.dkr.ecr.ap-northeast-2.amazonaws.com/smishing-server:latest
+    container_name: url-validator
+    command: ["python", "-m", "src.backend.workers.virustotal_worker"]
+    env_file:
+      - .env
+    environment:
+      - USE_MOCK_MODEL=true
+      - USE_MOCK_OCR=true
+    mem_limit: 100m
+    memswap_limit: 100m
+    networks:
+      - monitoring
+    restart: unless-stopped
+    depends_on:
+      - fastapi
+
   prometheus:
     image: prom/prometheus:latest
     container_name: prometheus
