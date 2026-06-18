@@ -7,6 +7,9 @@ import modal
 
 # 1. 컨테이너 이미지 정의 (RAG 필수 최소 C 빌드 가속 툴만 포함, 그래픽 라이브러리 제거)
 rag_image = (
+    # vLLM처럼 C++과 CUDA로 짜여진 무거운 라이브러리들은 PyPI(pip 서비)에 올릴 때, 
+    # 미리 컴파일된 휠(Wheel) 파일을 Python 버전별로 다르게 제공합니다.
+    # 따라서 이와 같은 버전으로 고정합니다.
     modal.Image.debian_slim(python_version="3.12")
     .apt_install("build-essential", "pkg-config", "libgomp1")
     .pip_install("uv")
