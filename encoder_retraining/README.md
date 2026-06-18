@@ -22,6 +22,24 @@ run_cleanlab.py
 compare_encoder_models.py
 ```
 
+전처리/Cleanlab 담당 영역에서 S3에 `cleanlab-audit` 산출물을 먼저 만든 경우에는
+`prepare_from_cleanlab_audit.py`가 `cleaned_dataset.jsonl`을 PR23 workflow가
+기대하는 prepared dataset 형식으로 변환한다.
+
+```text
+Cleanlab audit archive
+        ↓
+prepare_from_cleanlab_audit.py
+        ↓
+prepared/<dataset_version>/
+  ├── cleaned_train.jsonl
+  ├── valid.jsonl
+  ├── test.jsonl
+  └── manifest.json
+        ↓
+run_retraining_pipeline.py
+```
+
 연결되지 않은 운영 데이터나 모델 예측 확률은 각각 수동 CSV와 Cleanlab mock
 mode로 파이프라인 동작을 먼저 확인할 수 있다.
 
@@ -62,6 +80,32 @@ uv run --group encoder python \
 
 학습 후 5번 모델 비교와 6번 Hugging Face 승격 검토를 수행한다. 자세한 데이터
 계약은 [data/README.md](data/README.md)를 참고한다.
+
+## Cleanlab Audit Shortcut
+
+PR #24처럼 Cleanlab 실행 결과가 다음 파일을 포함하는 archive로 전달되는 경우,
+prepared dataset을 수동으로 만들지 않고 변환 스크립트를 먼저 실행한다.
+
+```text
+cleanlab-audit/
+├── pred_probs.npy
+├── label_audit_report.csv
+├── suspected_noisy_labels.csv
+├── cleaned_dataset.jsonl
+└── audit_log.json
+```
+
+```bash
+uv run --group encoder python \
+  encoder_retraining/pipeline/prepare_from_cleanlab_audit.py \
+  --cleaned-data-path <cleanlab-audit>/cleaned_dataset.jsonl \
+  --audit-dir <cleanlab-audit> \
+  --dataset-version encoder-v4 \
+  --output-dir encoder_retraining/data/prepared/encoder-v4
+```
+
+이후 학습은 prepared dataset shortcut과 동일하게
+`encoder_retraining/data/prepared/encoder-v4`를 입력으로 사용한다.
 
 ## 1. Collect Candidates
 

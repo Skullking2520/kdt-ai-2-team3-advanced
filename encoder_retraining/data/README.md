@@ -132,3 +132,44 @@ manifest.json
 workflow는 네 파일이 모두 존재하는지 확인하고, 각 JSONL split에서 최소 1개 행의
 `text`와 `label` 스키마를 검증한다. `label`은 `0 = normal`, `1 = phishing`만
 허용한다.
+
+## Cleanlab Audit To Prepared Dataset
+
+Cleanlab 담당 영역에서 다음과 같은 audit 결과를 전달받는 경우에는
+`prepare_from_cleanlab_audit.py`로 prepared dataset을 생성한다.
+
+```text
+cleanlab-audit/
+├── pred_probs.npy
+├── label_audit_report.csv
+├── suspected_noisy_labels.csv
+├── cleaned_dataset.jsonl
+└── audit_log.json
+```
+
+필수 입력은 `cleaned_dataset.jsonl`이며, 나머지 파일은 `manifest.json`에 감사
+메타데이터를 남기기 위해 사용한다.
+
+```bash
+uv run --group encoder python \
+  encoder_retraining/pipeline/prepare_from_cleanlab_audit.py \
+  --cleaned-data-path <cleanlab-audit>/cleaned_dataset.jsonl \
+  --audit-dir <cleanlab-audit> \
+  --dataset-version encoder-v4 \
+  --output-dir encoder_retraining/data/prepared/encoder-v4
+```
+
+생성 결과는 prepared dataset contract와 동일하다.
+
+```text
+encoder_retraining/data/prepared/encoder-v4/
+├── cleaned_train.jsonl
+├── valid.jsonl
+├── test.jsonl
+└── manifest.json
+```
+
+GitHub Actions에서는 `cleanlab_audit_url` 입력이나
+`ENCODER_CLEANLAB_AUDIT_URL` secret을 설정하면 audit archive를 내려받아 이
+변환 단계를 자동으로 실행한다. 이미 prepared dataset archive가 있으면 기존처럼
+`prepared_dataset_url` 또는 `ENCODER_PREPARED_DATASET_URL`을 사용한다.

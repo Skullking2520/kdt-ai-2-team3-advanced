@@ -29,8 +29,13 @@ labels: self-hosted, macOS, ARM64, encoder, mps
 
 ## Data Input
 
-재학습 데이터는 Git에 커밋하지 않는다. Actions runner는 실행 시점에 prepared
-dataset archive를 내려받아 아래 위치에 압축을 푼다.
+재학습 데이터는 Git에 커밋하지 않는다. Actions runner는 실행 시점에 데이터를
+내려받는다. 입력 방식은 두 가지다.
+
+1. prepared dataset archive를 바로 받는 방식
+2. Cleanlab audit archive를 받아 prepared dataset으로 변환하는 방식
+
+prepared dataset archive를 사용하는 경우에는 아래 위치에 압축을 푼다.
 
 ```text
 encoder_retraining/data/prepared/<dataset_version>/
@@ -50,18 +55,63 @@ test.jsonl
 manifest.json
 ```
 
+Cleanlab audit을 사용하는 경우에는 S3 prefix 또는 archive 안에서
+`cleaned_dataset.jsonl`을 찾고, `prepare_from_cleanlab_audit.py`로 같은 prepared
+dataset 구조를 생성한다.
+
+```text
+cleanlab-audit/
+├── pred_probs.npy
+├── label_audit_report.csv
+├── suspected_noisy_labels.csv
+├── cleaned_dataset.jsonl
+└── audit_log.json
+```
+
 ## Required Secrets
 
 주간 자동 실행에는 다음 repository secrets가 필요하다.
 
 | Secret | Required | Purpose |
 | --- | --- | --- |
-| `ENCODER_PREPARED_DATASET_URL` | yes | prepared dataset `.tar.gz` 다운로드 URL |
+| `ENCODER_PREPARED_DATASET_URL` | one of two | prepared dataset `.tar.gz` 다운로드 URL |
+| `ENCODER_CLEANLAB_AUDIT_URL` | one of two | Cleanlab audit S3 prefix 또는 `.tar.gz` 다운로드 URL |
 | `ENCODER_PREPARED_DATASET_BEARER_TOKEN` | optional | private URL 접근용 bearer token |
+| `AWS_ACCESS_KEY_ID` | S3 only | S3 다운로드용 AWS access key |
+| `AWS_SECRET_ACCESS_KEY` | S3 only | S3 다운로드용 AWS secret key |
+| `AWS_SESSION_TOKEN` | optional | 임시 AWS credential 사용 시 session token |
+| `AWS_REGION` | S3 only | S3 bucket region. 없으면 `ap-northeast-2` 기본값 사용 |
 | `HF_TOKEN` | upload only | Hugging Face model upload token |
 
 `HF_TOKEN`은 실제 업로드 단계에서만 필요하다. dry-run이나 단순 재학습/비교에는
 필수는 아니다.
+`ENCODER_PREPARED_DATASET_URL`과 `ENCODER_CLEANLAB_AUDIT_URL` 중 하나는 필요하다.
+둘 다 있으면 Cleanlab audit URL을 우선 사용한다.
+
+PR #24가 다음처럼 S3 prefix에 Cleanlab 결과 파일 5개를 올리는 경우에는
+`ENCODER_CLEANLAB_AUDIT_URL`에 prefix를 그대로 넣는다.
+
+```text
+s3://smishing-dev-newbies-2026/cleanlab-audit/<run_name>/<timestamp>/
+```
+
+`<run_name>/<timestamp>/`가 매번 바뀌면 상위 prefix만 지정할 수도 있다.
+
+```text
+s3://smishing-dev-newbies-2026/cleanlab-audit/
+```
+
+workflow는 이 값이 `s3://`로 시작하면 해당 prefix 아래에서 가장 최근
+`cleaned_dataset.jsonl`을 찾고, 그 파일이 들어 있는 실행 폴더 전체를
+`aws s3 cp --recursive`로 내려받는다. AWS CLI는 self-hosted runner에서
+`uv tool run --from awscli aws ...` 형태로 실행한다. 따라서 runner에 AWS CLI를
+별도 설치하지 않아도 된다.
+
+prepared dataset을 S3 archive로 받을 때는 `.tar.gz` 객체 경로를 사용한다.
+
+```text
+s3://<bucket>/<path>/encoder-v4.tar.gz
+```
 
 ## Manual Smoke Test
 
@@ -108,6 +158,20 @@ Optional Hugging Face upload
 prepared dataset 다운로드는 일시적인 네트워크 실패를 고려해 3회 retry한다. 반면
 모델 학습 실패는 데이터나 코드 문제일 가능성이 있으므로 자동 retry하지 않고
 workflow를 실패로 종료한다.
+
+Cleanlab audit URL을 사용하는 경우 흐름은 다음과 같다.
+
+```text
+Download Cleanlab audit archive
+↓
+Find cleaned_dataset.jsonl
+↓
+prepare_from_cleanlab_audit.py
+↓
+Validate generated prepared dataset
+↓
+run_retraining_pipeline.py --prepared-dir ...
+```
 
 기본 baseline model:
 

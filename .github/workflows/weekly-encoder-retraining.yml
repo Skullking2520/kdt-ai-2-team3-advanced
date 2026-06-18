@@ -11,6 +11,10 @@ on:
         description: "Optional tar.gz URL containing cleaned_train.jsonl, valid.jsonl, test.jsonl"
         required: false
         default: ""
+      cleanlab_audit_url:
+        description: "Optional S3 prefix or tar.gz URL containing Cleanlab audit artifacts"
+        required: false
+        default: ""
       dry_run:
         description: "Skip actual training and model comparison"
         required: true
@@ -45,7 +49,12 @@ env:
   BASELINE_MODEL: kdt-2-team4-newbiz/kcelectra-smishing-classifier
   DATASET_VERSION: ${{ github.event.inputs.dataset_version || 'encoder-weekly' }}
   PREPARED_DATASET_URL: ${{ github.event.inputs.prepared_dataset_url || secrets.ENCODER_PREPARED_DATASET_URL }}
+  CLEANLAB_AUDIT_URL: ${{ github.event.inputs.cleanlab_audit_url || secrets.ENCODER_CLEANLAB_AUDIT_URL }}
   PREPARED_DATASET_BEARER_TOKEN: ${{ secrets.ENCODER_PREPARED_DATASET_BEARER_TOKEN }}
+  AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+  AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+  AWS_SESSION_TOKEN: ${{ secrets.AWS_SESSION_TOKEN }}
+  AWS_DEFAULT_REGION: ${{ secrets.AWS_REGION || 'ap-northeast-2' }}
   HF_TOKEN: ${{ secrets.HF_TOKEN }}
   HF_REPO_ID: kdt-2-team4-newbiz/kcelectra-smishing-classifier
   UV_CACHE_DIR: /tmp/uv-cache
@@ -104,19 +113,97 @@ jobs:
           }
           JSON
 
+      - name: Download Cleanlab audit and build prepared dataset
+        if: ${{ github.event.inputs.use_smoke_dataset != 'true' && env.CLEANLAB_AUDIT_URL != '' }}
+        run: |
+          set -euo pipefail
+          dataset_dir="encoder_retraining/data/prepared/${DATASET_VERSION}"
+          audit_dir="/tmp/${DATASET_VERSION}-cleanlab-audit"
+          archive_path="/tmp/${DATASET_VERSION}-cleanlab-audit.tar.gz"
+          mkdir -p "${audit_dir}"
+
+          if [[ "${CLEANLAB_AUDIT_URL}" == s3://* ]]; then
+            if [ -z "${AWS_ACCESS_KEY_ID}" ] || [ -z "${AWS_SECRET_ACCESS_KEY}" ]; then
+              echo "AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY secrets are required for s3:// Cleanlab audit downloads."
+              exit 1
+            fi
+            if [[ "${CLEANLAB_AUDIT_URL}" == *.tar.gz ]] || [[ "${CLEANLAB_AUDIT_URL}" == *.tgz ]]; then
+              uv tool run --from awscli aws s3 cp \
+                "${CLEANLAB_AUDIT_URL}" \
+                "${archive_path}"
+              tar -xzf "${archive_path}" -C "${audit_dir}"
+            else
+              cleanlab_prefix="${CLEANLAB_AUDIT_URL%/}/"
+              bucket_and_prefix="${cleanlab_prefix#s3://}"
+              bucket="${bucket_and_prefix%%/*}"
+              latest_cleaned_key="$(
+                uv tool run --from awscli aws s3 ls \
+                  "${cleanlab_prefix}" \
+                  --recursive \
+                  | awk '$4 ~ /(^|\/)cleaned_dataset\.jsonl$/ {print $1" "$2" "$4}' \
+                  | sort \
+                  | tail -n 1 \
+                  | awk '{print $3}'
+              )"
+              if [ -z "${latest_cleaned_key}" ]; then
+                echo "No cleaned_dataset.jsonl was found under ${cleanlab_prefix}."
+                exit 1
+              fi
+              latest_audit_prefix="s3://${bucket}/$(dirname "${latest_cleaned_key}")/"
+              echo "Using latest Cleanlab audit prefix: ${latest_audit_prefix}"
+              uv tool run --from awscli aws s3 cp \
+                "${latest_audit_prefix}" \
+                "${audit_dir}" \
+                --recursive
+            fi
+          elif [ -n "${PREPARED_DATASET_BEARER_TOKEN}" ]; then
+            curl --fail --location --retry 3 --retry-delay 10 --retry-all-errors \
+              --header "Authorization: Bearer ${PREPARED_DATASET_BEARER_TOKEN}" \
+              --output "${archive_path}" \
+              "${CLEANLAB_AUDIT_URL}"
+            tar -xzf "${archive_path}" -C "${audit_dir}"
+          else
+            curl --fail --location --retry 3 --retry-delay 10 --retry-all-errors \
+              --output "${archive_path}" \
+              "${CLEANLAB_AUDIT_URL}"
+            tar -xzf "${archive_path}" -C "${audit_dir}"
+          fi
+
+          cleaned_data="$(find "${audit_dir}" -name cleaned_dataset.jsonl -type f | head -n 1)"
+          if [ -z "${cleaned_data}" ]; then
+            echo "cleaned_dataset.jsonl was not found in the Cleanlab audit archive."
+            exit 1
+          fi
+
+          uv run --group encoder python \
+            encoder_retraining/pipeline/prepare_from_cleanlab_audit.py \
+            --cleaned-data-path "${cleaned_data}" \
+            --audit-dir "$(dirname "${cleaned_data}")" \
+            --dataset-version "${DATASET_VERSION}" \
+            --output-dir "${dataset_dir}" \
+            --overwrite
+
       - name: Download prepared dataset
-        if: ${{ github.event.inputs.use_smoke_dataset != 'true' }}
+        if: ${{ github.event.inputs.use_smoke_dataset != 'true' && env.CLEANLAB_AUDIT_URL == '' }}
         run: |
           set -euo pipefail
           if [ -z "${PREPARED_DATASET_URL}" ]; then
-            echo "ENCODER_PREPARED_DATASET_URL secret or prepared_dataset_url input is required."
+            echo "ENCODER_PREPARED_DATASET_URL secret, ENCODER_CLEANLAB_AUDIT_URL secret, prepared_dataset_url input, or cleanlab_audit_url input is required."
             exit 1
           fi
 
           dataset_dir="encoder_retraining/data/prepared/${DATASET_VERSION}"
           archive_path="/tmp/${DATASET_VERSION}.tar.gz"
 
-          if [ -n "${PREPARED_DATASET_BEARER_TOKEN}" ]; then
+          if [[ "${PREPARED_DATASET_URL}" == s3://* ]]; then
+            if [ -z "${AWS_ACCESS_KEY_ID}" ] || [ -z "${AWS_SECRET_ACCESS_KEY}" ]; then
+              echo "AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY secrets are required for s3:// prepared dataset downloads."
+              exit 1
+            fi
+            uv tool run --from awscli aws s3 cp \
+              "${PREPARED_DATASET_URL}" \
+              "${archive_path}"
+          elif [ -n "${PREPARED_DATASET_BEARER_TOKEN}" ]; then
             curl --fail --location --retry 3 --retry-delay 10 --retry-all-errors \
               --header "Authorization: Bearer ${PREPARED_DATASET_BEARER_TOKEN}" \
               --output "${archive_path}" \

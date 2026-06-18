@@ -44,6 +44,10 @@ runner = load_module(
     "encoder_retraining_pipeline_runner",
     "run_retraining_pipeline.py",
 )
+cleanlab_preparer = load_module(
+    "encoder_cleanlab_prepared_dataset_builder",
+    "prepare_from_cleanlab_audit.py",
+)
 
 
 def write_jsonl(path: Path, rows: list[dict]) -> None:
@@ -517,6 +521,59 @@ def test_pipeline_runner_failed_training_fails_cli() -> None:
 
     assert runner.should_fail_cli(summary, dry_run=False) is True
     assert runner.should_fail_cli(summary, dry_run=True) is False
+
+
+def test_prepare_from_cleanlab_audit_builds_prepared_dataset(
+    tmp_path: Path,
+) -> None:
+    audit_dir = tmp_path / "cleanlab-audit"
+    output_dir = tmp_path / "prepared" / "encoder-v-test"
+    audit_dir.mkdir()
+    cleaned_data_path = audit_dir / "cleaned_dataset.jsonl"
+    rows = [
+        {"text": f"정상 정제 문장 {index}", "label": 0}
+        for index in range(20)
+    ] + [
+        {"text": f"위험 정제 문장 {index}", "label": 1}
+        for index in range(20)
+    ]
+    write_jsonl(cleaned_data_path, rows)
+    (audit_dir / "audit_log.json").write_text(
+        json.dumps({"run_name": "stage3"}, ensure_ascii=False),
+        encoding="utf-8",
+    )
+    (audit_dir / "suspected_noisy_labels.csv").write_text(
+        "text,label,label_quality_score,is_label_issue\n"
+        "검토 대상,1,0.01,True\n",
+        encoding="utf-8-sig",
+    )
+    (audit_dir / "label_audit_report.csv").write_text(
+        "text,label,label_quality_score,is_label_issue\n"
+        "정상 정제 문장 0,0,0.99,False\n"
+        "검토 대상,1,0.01,True\n",
+        encoding="utf-8-sig",
+    )
+
+    manifest = cleanlab_preparer.prepare_dataset(
+        cleaned_data_path=cleaned_data_path,
+        output_dir=output_dir,
+        dataset_version="encoder-v-test",
+        audit_dir=audit_dir,
+        valid_size=0.1,
+        test_size=0.1,
+        overwrite=False,
+    )
+
+    train = read_jsonl(output_dir / "cleaned_train.jsonl")
+    valid = read_jsonl(output_dir / "valid.jsonl")
+    test = read_jsonl(output_dir / "test.jsonl")
+    assert len(train) == 32
+    assert len(valid) == 4
+    assert len(test) == 4
+    assert (output_dir / "manifest.json").exists()
+    assert manifest["source"]["suspected_noisy_label_count"] == 1
+    assert manifest["source"]["label_audit_report_count"] == 2
+    assert manifest["label_counts"]["train"] == {"0": 16, "1": 16}
 
 
 def test_pipeline_runner_resolves_candidate_model() -> None:
