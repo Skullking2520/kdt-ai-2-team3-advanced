@@ -354,6 +354,16 @@ def main() -> None:
         raise ValueError("--batch-size must be at least 1")
     if args.max_length < 1:
         raise ValueError("--max-length must be at least 1")
+    if (
+        args.skip_training
+        and not args.skip_comparison
+        and not args.dry_run
+        and args.candidate_model is None
+    ):
+        raise ValueError(
+            "--candidate-model is required when --skip-training is used "
+            "with comparison enabled."
+        )
 
     summary = run_pipeline(
         prepared_dir=args.prepared_dir,

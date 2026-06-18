@@ -37,7 +37,7 @@ os.environ.setdefault("PYTORCH_ENABLE_MPS_FALLBACK", "1")
 
 DEFAULT_DATA_PATH = Path(__file__).resolve().parents[2] / "cleaned_dataset.jsonl"
 DEFAULT_RESULTS_DIR = Path(__file__).resolve().parents[1] / "results"
-DEFAULT_MODEL_NAME = "beomi/KcELECTRA-base"
+DEFAULT_MODEL_NAME = "kdt-2-team4-newbiz/kcelectra-smishing-classifier"
 TEXT_COL = "text"
 LABEL_COL = "label"
 SEED = 42
@@ -671,8 +671,8 @@ def parse_args() -> argparse.Namespace:
         "--model-name-or-path",
         default=DEFAULT_MODEL_NAME,
         help=(
-            "Initial encoder checkpoint. Use the deployed/baseline model for "
-            "continued fine-tuning, or the base KcELECTRA model for full "
+            "Initial encoder checkpoint. Defaults to the deployed Hugging Face "
+            "baseline. Pass beomi/KcELECTRA-base explicitly for full "
             "retraining from scratch."
         ),
     )

@@ -254,12 +254,14 @@ uv run --group encoder python \
   --train-path encoder_retraining/data/quality/encoder-v2/cleaned_train.jsonl \
   --valid-path encoder_retraining/data/datasets/encoder-v2/valid.jsonl \
   --test-path encoder_retraining/data/datasets/encoder-v2/test.jsonl \
+  --model-name-or-path kdt-2-team4-newbiz/kcelectra-smishing-classifier \
   --results-dir <새_실험_결과_디렉터리>
 ```
 
 기존 `--data-path` 실행 방식도 유지된다. 다만 그 방식은 입력 전체를 다시
 train/validation/test로 나누므로, 운영 수집 데이터를 포함한 재학습에는 위의 고정
-split 옵션을 사용한다.
+split 옵션을 사용한다. 완전한 scratch 학습이 필요할 때만
+`--model-name-or-path beomi/KcELECTRA-base`를 명시한다.
 
 ## 5. Compare Baseline and Candidate
 
@@ -396,7 +398,8 @@ encoder-v2/
 기록된다.
 
 빠르게 연결만 확인하려면 `--dry-run`을 사용한다. `--dry-run`은 실제 학습 명령과
-모델 비교를 건너뛴다.
+모델 비교를 건너뛴다. 이미 학습된 후보 모델만 비교하려면 `--skip-training`과
+`--candidate-model`을 함께 사용한다.
 
 ```bash
 uv run --group encoder python \
