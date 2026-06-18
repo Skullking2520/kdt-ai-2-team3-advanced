@@ -15,7 +15,7 @@ from ..models.static_patterns import (
     PatternType,
 )
 from ..models.url_candidate import UrlCandidate, UrlCandidateStatus
-from ..repository.static_pattern_repository import create_static_patterns_if_new
+from ..repository.static_pattern_repository import upsert_static_patterns
 from ..repository.url_candidate_repository import (
     claim_next_candidate_for_vt_check,
     get_claimed_candidate_for_update,
@@ -253,7 +253,7 @@ async def validate_url_candidate(
         )
 
         if candidate.status is UrlCandidateStatus.APPROVED:
-            await create_static_patterns_if_new(
+            await upsert_static_patterns(
                 db,
                 [
                     {
@@ -342,7 +342,7 @@ async def process_pending_url_candidates() -> dict[str, int]:
         acquired = await lock_connection.scalar(
             text(
                 "SELECT GET_LOCK("
-                "CONCAT(DATABASE(), ':virustotal_url_worker'), 0"
+                "CONCAT(DATABASE(), '_virustotal_url_worker'), 0"
                 ")"
             )
         )
@@ -379,7 +379,7 @@ async def process_pending_url_candidates() -> dict[str, int]:
             await lock_connection.execute(
                 text(
                     "SELECT RELEASE_LOCK("
-                    "CONCAT(DATABASE(), ':virustotal_url_worker')"
+                    "CONCAT(DATABASE(), '_virustotal_url_worker')"
                     ")"
                 )
             )
