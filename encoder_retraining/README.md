@@ -408,3 +408,21 @@ uv run --group encoder python \
   --output-dir encoder_retraining/data/runs/encoder-v2-dry-run \
   --dry-run
 ```
+
+## 8. Weekly GitHub Actions Automation
+
+주 1회 자동 실행은 GitHub Actions workflow로 관리한다.
+
+```text
+.github/workflows/weekly-encoder-retraining.yml
+```
+
+workflow는 prepared dataset archive를 다운로드한 뒤 `--prepared-dir` 기준으로
+재학습 파이프라인을 실행한다. 실제 dataset 파일은 Git에 올리지 않고, repository
+secret인 `ENCODER_PREPARED_DATASET_URL`에서 내려받는다.
+
+처음에는 `workflow_dispatch`에서 `use_smoke_dataset=true`, `dry_run=true`로 실행해
+workflow wiring만 검증한다. 운영 실행에서는 dry-run을 끄고, artifact의
+`promotion_manifest.json`을 확인한 뒤 사람이 Hugging Face 업로드 여부를 결정한다.
+
+자세한 설정은 [automation/README.md](automation/README.md)를 참고한다.
