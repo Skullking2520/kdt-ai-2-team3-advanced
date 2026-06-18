@@ -25,6 +25,15 @@ on:
         required: true
         type: boolean
         default: false
+      allow_not_recommended_upload:
+        description: "Test-only override for uploading a non-recommended candidate"
+        required: true
+        type: boolean
+        default: false
+      hf_repo_id:
+        description: "Target Hugging Face model repo for optional upload"
+        required: true
+        default: "kdt-2-team4-newbiz/kcelectra-smishing-classifier"
       use_smoke_dataset:
         description: "Use a tiny generated dataset for workflow validation only"
         required: true
@@ -56,7 +65,7 @@ env:
   AWS_SESSION_TOKEN: ${{ secrets.AWS_SESSION_TOKEN }}
   AWS_DEFAULT_REGION: ${{ vars.AWS_REGION || vars.AWS_DEFAULT_REGION || secrets.AWS_DEFAULT_REGION || 'ap-northeast-2' }}
   HF_TOKEN: ${{ secrets.HF_TOKEN }}
-  HF_REPO_ID: kdt-2-team4-newbiz/kcelectra-smishing-classifier
+  HF_REPO_ID: ${{ github.event.inputs.hf_repo_id || 'kdt-2-team4-newbiz/kcelectra-smishing-classifier' }}
   UV_CACHE_DIR: /tmp/uv-cache
 
 jobs:
@@ -289,11 +298,17 @@ jobs:
         if: ${{ github.event.inputs.upload_to_hf == 'true' && github.event.inputs.dry_run != 'true' }}
         run: |
           set -euo pipefail
-          uv run --group encoder python \
-            encoder_retraining/pipeline/promote_encoder_model.py \
-            --promotion-manifest \
-            "encoder_retraining/data/runs/${RUN_ID}/evaluation/promotion_manifest.json" \
-            --repo-id "${HF_REPO_ID}" \
-            --model-version "${RUN_ID}" \
-            --private \
+          args=(
+            uv run --group encoder python
+            encoder_retraining/pipeline/promote_encoder_model.py
+            --promotion-manifest
+            "encoder_retraining/data/runs/${RUN_ID}/evaluation/promotion_manifest.json"
+            --repo-id "${HF_REPO_ID}"
+            --model-version "${RUN_ID}"
+            --private
             --upload
+          )
+          if [ "${{ github.event.inputs.allow_not_recommended_upload || 'false' }}" = "true" ]; then
+            args+=(--allow-not-recommended)
+          fi
+          "${args[@]}"
