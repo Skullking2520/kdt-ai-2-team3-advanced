@@ -283,6 +283,13 @@ def run_pipeline(
     return manifest
 
 
+def should_fail_cli(summary: dict[str, Any], *, dry_run: bool) -> bool:
+    if dry_run:
+        return False
+    training_step = summary.get("steps", {}).get("training", {})
+    return training_step.get("succeeded") is False
+
+
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         description="Run the encoder retraining pipeline end to end."
@@ -392,6 +399,13 @@ def main() -> None:
         device=args.device,
     )
     print(json.dumps(summary, ensure_ascii=False, indent=2))
+    if should_fail_cli(summary, dry_run=args.dry_run):
+        print(
+            "Encoder retraining failed. See training stdout/stderr logs in the "
+            "pipeline manifest for details.",
+            file=sys.stderr,
+        )
+        raise SystemExit(1)
 
 
 if __name__ == "__main__":

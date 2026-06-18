@@ -115,12 +115,12 @@ jobs:
           archive_path="/tmp/${DATASET_VERSION}.tar.gz"
 
           if [ -n "${PREPARED_DATASET_BEARER_TOKEN}" ]; then
-            curl --fail --location \
+            curl --fail --location --retry 3 --retry-delay 10 --retry-all-errors \
               --header "Authorization: Bearer ${PREPARED_DATASET_BEARER_TOKEN}" \
               --output "${archive_path}" \
               "${PREPARED_DATASET_URL}"
           else
-            curl --fail --location \
+            curl --fail --location --retry 3 --retry-delay 10 --retry-all-errors \
               --output "${archive_path}" \
               "${PREPARED_DATASET_URL}"
           fi

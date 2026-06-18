@@ -504,6 +504,21 @@ def test_pipeline_runner_failed_training_skips_comparison(
     assert Path(result["stderr_log"]).exists()
 
 
+def test_pipeline_runner_failed_training_fails_cli() -> None:
+    summary = {
+        "steps": {
+            "training": {
+                "skipped": False,
+                "returncode": 7,
+                "succeeded": False,
+            }
+        }
+    }
+
+    assert runner.should_fail_cli(summary, dry_run=False) is True
+    assert runner.should_fail_cli(summary, dry_run=True) is False
+
+
 def test_pipeline_runner_resolves_candidate_model() -> None:
     assert runner.resolve_candidate_model(
         explicit_candidate_model="already-trained/model",
