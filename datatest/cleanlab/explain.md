@@ -1,169 +1,151 @@
-# Cleanlab Label Noise Audit — 설명서
+# Cleanlab Label Noise Audit
 
-## 목적
+SMS 피싱 탐지 데이터셋에서 잘못 레이블된 샘플을 자동 탐지하고, 정제된 데이터를 재학습용 스키마로 변환.
 
-SMS 피싱 탐지 데이터셋에서 **잘못 레이블된 샘플(노이즈 레이블)** 을 자동으로 찾아내고, W&B 모니터링 + S3 로그 보관.
+---
+
+## 전체 파일 구조
+
+```
+datatest/cleanlab/
+├── run_cleanlab_label_audit.py   # 노이즈 탐지 실행
+├── generate_report.py            # HTML 리포트 생성
+├── prepare_dataset.py            # 재학습용 데이터셋 변환
+├── explain.md                    # 이 문서
+└── results/
+    └── stage3/                   # 최종 결과 (91K, 5-fold)
+        ├── fold_0/ ~ fold_4/     # K-fold 학습 과정 로그
+        ├── pred_probs.npy        # out-of-sample 확률값 캐시
+        ├── label_audit_report.csv
+        ├── suspected_noisy_labels.csv
+        ├── cleaned_dataset.jsonl
+        ├── audit_log.json
+        └── report.html
+
+encoder_retraining/data/prepared/
+└── encoder-v4/                   # 재학습 투입용
+    ├── cleaned_train.jsonl
+    ├── valid.jsonl
+    ├── test.jsonl
+    └── manifest.json
+```
+
+> stage1, stage2 결과는 S3에 보관됨 (로컬 삭제).
 
 ---
 
 ## 실행 환경
 
 ```bash
-# Python 인터프리터 (torch 포함된 venv)
-/Users/nyongd/Documents/GitHub/kdt-ai-2-team4-advanced/datatest/test-code/.venv/bin/python3
+PYTHON=/Users/nyongd/Documents/GitHub/kdt-ai-2-team4-advanced/datatest/test-code/.venv/bin/python3
 
 # 의존성 설치
-VIRTUAL_ENV=datatest/test-code/.venv uv pip install cleanlab wandb boto3 datasets accelerate scikit-learn
+VIRTUAL_ENV=datatest/test-code/.venv uv pip install cleanlab boto3 datasets accelerate scikit-learn
 ```
 
 ---
 
 ## 두 가지 실행 모드
 
-### A. K-fold CV (기본, 정확)
+### A. K-fold CV (정확, 느림)
+`beomi/KcELECTRA-base`를 각 fold마다 새로 학습 → val 샘플 예측.
+각 샘플은 자신을 학습하지 않은 모델이 예측 → **out-of-sample** → Cleanlab 신뢰 가능.
 
-```
-beomi/KcELECTRA-base
-        │
-  K-fold 교차검증 (기본 5-fold)
-  각 fold마다:
-    - base 모델 새로 로드
-    - train fold로 fine-tune (2 epoch)
-    - val fold에서 softmax 확률 예측
-        │
-  pred_probs.npy (91500, 2)
-  → 각 샘플: 자신을 학습하지 않은 모델이 예측한 확률 (out-of-sample)
-        │
-  Cleanlab → 노이즈 탐지 (정확)
-```
+- MPS 기준: ~5시간 (91K, 5-fold, 2 epoch)
+- fold별 학습 과정은 `results/stage3/fold_*/` 에 기록
 
-- MPS 기준 속도: ~2.4 it/s → fold당 ~63분 → 5-fold 총 ~5시간
-- 정확: 각 샘플 out-of-sample 예측 → Cleanlab 이론에 부합
+### B. Direct Inference (빠름, 편향 있음)
+`kdt-2-team4-newbiz/kcelectra-smishing-classifier`로 1회 추론.
+같은 데이터로 학습된 모델이 같은 데이터에 예측 → **in-sample 편향** → 노이즈 과소 탐지.
 
-### B. Direct Inference (`--direct-inference`, 빠름)
-
-```
-kdt-2-team4-newbiz/kcelectra-smishing-classifier
-        │
-  전체 데이터셋 1회 추론
-        │
-  pred_probs.npy
-  → 주의: 학습 데이터와 동일하면 in-sample 편향
-        │
-  Cleanlab → 명백한 오류만 탐지 (누락 多)
-```
-
-- 시간: ~5-10분
-- 용도: 빠른 탐색, 노이즈 규모 대략 파악
-
----
-
-## 왜 K-fold가 더 정확한가
-
-Cleanlab은 **out-of-sample 확률**이 필요.
-학습 데이터로 만든 모델 → 과적합 → 모든 레이블 "맞다" → 노이즈 탐지 불가.
-K-fold: 각 fold의 val 샘플을 학습에 사용 안 함 → 진짜 확률 획득.
-
----
-
-## 사용 모델
-
-| 역할 | 모델 |
-|---|---|
-| K-fold base (각 fold 학습 시작점) | `beomi/KcELECTRA-base` |
-| Tokenizer & Direct Inference | `kdt-2-team4-newbiz/kcelectra-smishing-classifier` |
-
----
-
-## 데이터셋
-
-| 항목 | 수치 |
-|---|---|
-| 전체 라인 | 94,897 |
-| label=0 (정상) | 52,095 |
-| label=1 (피싱) | 39,405 |
-| label=None (제외) | 3,397 |
-| 실제 사용 | 91,500 |
+- 시간: ~10분 / 용도: 빠른 규모 파악
 
 ---
 
 ## 실행 명령어
 
-> 아래 모든 명령어는 `PYTHON=datatest/test-code/.venv/bin/python3` 기준.
-
-### Stage 1 — 빠른 테스트 (1,000개, 3-fold, ~10분)
-
 ```bash
+# 1. 동작 확인 (1K, 3-fold, ~10분)
 $PYTHON run_cleanlab_label_audit.py \
     --data-path "/path/to/final_data.jsonl" \
-    --subsample 1000 --n-splits 3 --epochs 2 \
-    --use-wandb --wandb-project smishing-cleanlab-audit \
-    --wandb-run-name cleanlab_stage1_test
+    --output-dir results/stage_test \
+    --subsample 1000 --n-splits 3
+
+# 2. 빠른 전체 탐색 (91K, direct, ~10분)
+$PYTHON run_cleanlab_label_audit.py \
+    --data-path "/path/to/final_data.jsonl" \
+    --output-dir results/stage_direct \
+    --direct-inference
+
+# 3. 정확한 분석 (91K, 5-fold, ~5시간)
+$PYTHON run_cleanlab_label_audit.py \
+    --data-path "/path/to/final_data.jsonl" \
+    --output-dir results/stage3
+
+# pred_probs 캐시 재사용 (Cleanlab만 재실행)
+$PYTHON run_cleanlab_label_audit.py \
+    --data-path "/path/to/final_data.jsonl" \
+    --output-dir results/stage3 \
+    --use-cached-probs
+
+# HTML 리포트 생성
+$PYTHON generate_report.py --results-dir results/stage3
+
+# 재학습용 데이터셋 변환
+$PYTHON prepare_dataset.py \
+    --cleaned-data results/stage3/cleaned_dataset.jsonl \
+    --dataset-version encoder-v4
 ```
 
-### Stage 2 — Direct inference 전체 탐색 (91K, ~10분)
+---
 
-```bash
-$PYTHON run_cleanlab_label_audit.py \
-    --data-path "/path/to/final_data.jsonl" \
-    --direct-inference \
-    --use-wandb --wandb-project smishing-cleanlab-audit \
-    --wandb-run-name cleanlab_stage2_direct
+## 출력 파일
+
+| 파일 | 목적 |
+|---|---|
+| `fold_0/ ~ fold_4/` | K-fold 학습 과정 로그. 재현성 보장 |
+| `pred_probs.npy` | K-fold 결과 캐시. `--use-cached-probs`로 재사용 가능 |
+| `label_audit_report.csv` | 전체 91K + 노이즈 여부 + 품질점수. 수동 검토용 |
+| `suspected_noisy_labels.csv` | 노이즈 의심 샘플만, 품질점수 낮은 순. 레이블 수정 목록 |
+| `cleaned_dataset.jsonl` | 노이즈 제거 데이터. `prepare_dataset.py` 입력 |
+| `audit_log.json` | 실행 파라미터 + 결과 요약. S3 자동 업로드 |
+| `report.html` | 팀원 공유용. 브라우저에서 바로 열림 |
+
+---
+
+## 재학습용 데이터셋 스키마
+
+`prepare_dataset.py`가 `cleaned_dataset.jsonl` → `encoder_retraining/data/prepared/<version>/` 변환.
+
+```
+encoder-v4/
+├── cleaned_train.jsonl   # 71,913개 (80%)
+├── valid.jsonl           #  8,989개 (10%)
+├── test.jsonl            #  8,990개 (10%)
+└── manifest.json         # 버전, 출처, 샘플 수, 레이블 매핑
 ```
 
-### Stage 3 — K-fold 정확 분석 (91K, 5-fold, ~5시간)
+split: 80/10/10 stratified. 레이블 비율 유지.
 
+버전 업 시:
 ```bash
-$PYTHON run_cleanlab_label_audit.py \
-    --data-path "/path/to/final_data.jsonl" \
-    --n-splits 5 --epochs 2 \
-    --use-wandb --wandb-project smishing-cleanlab-audit \
-    --wandb-run-name cleanlab_stage3_kfold5
-```
-
-### pred_probs 캐시 재사용 (K-fold 스킵)
-
-```bash
-$PYTHON run_cleanlab_label_audit.py \
-    --data-path "/path/to/final_data.jsonl" \
-    --use-cached-probs --use-wandb
+$PYTHON prepare_dataset.py --dataset-version encoder-v5
 ```
 
 ---
 
 ## 실제 실행 결과 (2026-06-17)
 
-| 단계 | 모드 | 샘플 수 | 노이즈 의심 | 비율 | label=0 의심 | label=1 의심 | 정제 후 |
-|---|---|---|---|---|---|---|---|
-| Stage 1 | K-fold 3-fold | 1,000 | 79 | 7.90% | 57 | 22 | 921 |
-| Stage 2 | Direct inference | 91,500 | 652 | 0.71% | 317 | 335 | 90,848 |
-| Stage 3 | K-fold 5-fold | 91,500 | 진행 중 | - | - | - | - |
+| 단계 | 모드 | 노이즈 | 비율 | 비고 |
+|---|---|---|---|---|
+| Stage 1 | K-fold 3-fold / 1K | 79 | 7.90% | 샘플 작아 불안정 |
+| Stage 2 | Direct inference / 91K | 652 | 0.71% | in-sample 편향 → 과소 탐지 |
+| **Stage 3** | **K-fold 5-fold / 91K** | **1,608** | **1.76%** | **최종 결과** |
 
-> Stage 2의 낮은 비율(0.71%)은 in-sample 편향 때문. Stage 3 완료 후 실제 비율 확인 예정.
-
----
-
-## 출력 파일 (`results/{stage}/`)
-
-| 파일 | 내용 | 목적 |
-|---|---|---|
-| `pred_probs.npy` | 각 샘플의 softmax 확률 | K-fold는 수 시간 소요 → 캐시 보관. `--use-cached-probs`로 Cleanlab 파라미터만 바꿔 재실험 가능 |
-| `label_audit_report.csv` | 전체 샘플 + 노이즈 여부 + 품질 점수 | 전체 91K 수동 검토용 스프레드시트 |
-| `suspected_noisy_labels.csv` | 노이즈 의심 샘플만 (품질 점수 낮은 순) | 사람이 직접 보고 레이블 수정할 목록 |
-| `cleaned_dataset.jsonl` | 노이즈 제거 정제 데이터셋 | 바로 다음 모델 학습에 투입 가능한 형태 |
-| `audit_log.json` | 실행 메타데이터 (타임스탬프, 파라미터, 결과 요약) | S3 기록 + "어떤 설정으로 돌렸는지" 추적용 |
-
-### stage별 디렉토리를 분리하는 이유
-
-stage마다 모드(subsample/direct/kfold)와 파라미터가 다름 → 같은 폴더 사용 시 파일 덮어씀.
-특히 `pred_probs.npy`는 stage마다 다른 방식으로 생성되므로 혼용 불가:
-
-```
-results/
-├── stage1/   # subsample 1000, 3-fold → pred_probs (1000, 2)
-├── stage2/   # direct inference 91K  → pred_probs (91500, 2), in-sample 편향
-└── stage3/   # kfold 5-fold 91K      → pred_probs (91500, 2), out-of-sample (정확)
-```
+Stage 3 노이즈 1,608개:
+- label=0 (정상) 중 의심: 881개
+- label=1 (피싱) 중 의심: 727개
+- 정제 후: 89,892개 → encoder-v4 학습 데이터 71,913개
 
 ---
 
@@ -179,39 +161,15 @@ s3://smishing-dev-newbies-2026/cleanlab-audit/{run_name}/{timestamp}/
   └── audit_log.json
 ```
 
-버킷 확인:
 ```bash
-aws s3 ls s3://smishing-dev-newbies-2026/cleanlab-audit/
+aws s3 ls s3://smishing-dev-newbies-2026/cleanlab-audit/ --recursive
 ```
 
 ---
 
-## W&B 로깅 항목
+## 사용 모델
 
-| 지표 | 설명 |
+| 역할 | 모델 |
 |---|---|
-| `cleanlab/issue_rate` | 전체 중 노이즈 의심 비율 |
-| `cleanlab/n_label_issues` | 노이즈 의심 샘플 수 |
-| `cleanlab/issues_label_0_normal` | 정상(0) 레이블 중 의심 수 |
-| `cleanlab/issues_label_1_smishing` | 피싱(1) 레이블 중 의심 수 |
-| `cleanlab/label_quality_score_dist` | 품질 점수 분포 히스토그램 |
-| `cleanlab/top_noisy_samples` | 상위 300개 의심 샘플 텍스트 테이블 |
-
-W&B 프로젝트: https://wandb.ai/wcddonggun-pro-ai-/smishing-cleanlab-audit
-
----
-
-## 추천 흐름
-
-1. Stage 1: 동작 확인 (1,000개, 3-fold, ~10분)
-2. Stage 2: 전체 빠른 탐색 (91K, direct, ~10분) → 노이즈 규모 대략 파악
-3. Stage 3: 정확한 분석 (91K, 5-fold, ~5시간) → 신뢰할 수 있는 결과
-4. `--use-cached-probs`로 Stage 3 pred_probs 재사용, Cleanlab 파라미터 조정 실험
-
----
-
-## Stage 3 진행 상황 확인
-
-```bash
-tail -f datatest/cleanlab/results/stage3_run.log
-```
+| K-fold 학습 base | `beomi/KcELECTRA-base` |
+| Tokenizer / Direct Inference | `kdt-2-team4-newbiz/kcelectra-smishing-classifier` |
