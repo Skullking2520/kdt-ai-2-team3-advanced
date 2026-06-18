@@ -174,6 +174,7 @@ export function Analyzer() {
   const [loadingStep, setLoadingStep] = useState(0);
   const [error, setError] = useState("");
   const [feedback, setFeedback] = useState<"up" | "down" | null>(null);
+  const [allowTrainingUse, setAllowTrainingUse] = useState(false);
   const resultRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
@@ -209,7 +210,11 @@ export function Analyzer() {
     }, 600);
 
     try {
-      const apiResult = await api.analyze({ type: "sms", content: textInput });
+      const apiResult = await api.analyze({
+        type: "sms",
+        content: textInput,
+        allowTrainingUse,
+      });
       setResult(adaptApiResult(apiResult));
     } catch (err) {
       setError(err instanceof Error ? err.message : "분석 중 오류가 발생했습니다.");
@@ -273,6 +278,19 @@ export function Analyzer() {
             <XCircle size={12} /> {error}
           </p>
         )}
+
+        <label className="mt-3 flex items-start gap-2 text-xs text-gray-500 dark:text-white/45 cursor-pointer">
+          <input
+            type="checkbox"
+            checked={allowTrainingUse}
+            onChange={(event) => setAllowTrainingUse(event.target.checked)}
+            className="mt-0.5 h-4 w-4 accent-blue-600"
+          />
+          <span>
+            분석 문자를 개인정보가 마스킹된 모델 개선용 데이터로 활용하는 데
+            동의합니다.
+          </span>
+        </label>
 
         <div className="flex items-center gap-2 mt-3">
           <button

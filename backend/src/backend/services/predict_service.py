@@ -4,8 +4,6 @@ import logging
 import time
 from typing import Any
 
-logger = logging.getLogger(__name__)
-
 from fastapi import HTTPException
 from pydantic import TypeAdapter, ValidationError
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -33,6 +31,8 @@ from ..utils.preprocessor import (
     money_pattern,
 )
 from .url_candidate_service import register_model_url_candidates
+
+logger = logging.getLogger(__name__)
 
 SMISHING_LABELS = {"phishing", "smishing", "scam", "spam", "fraud"}
 
@@ -166,9 +166,16 @@ async def request_encoder_prediction(text: str) -> EncoderClassificationOutput:
         response = await _get_encoder_client().text_classification(text=text)
     except Exception as exc:
         logger.error("[encoder] 호출 실패 | %s: %s", type(exc).__name__, exc)
-        raise HTTPException(status_code=502, detail=f"인코더 서비스 응답 오류: {type(exc).__name__}") from exc
+        raise HTTPException(
+            status_code=502,
+            detail=f"인코더 서비스 응답 오류: {type(exc).__name__}",
+        ) from exc
     result = _validate_encoder_response(response)
-    logger.info("[encoder] 응답 완료 | label=%s | score=%.4f", result.label, result.score)
+    logger.info(
+        "[encoder] 응답 완료 | label=%s | score=%.4f",
+        result.label,
+        result.score,
+    )
     return result
 
 
@@ -275,7 +282,10 @@ async def predict_smishing(
     request: PredictRequest,
 ) -> dict:
     if request.type not in ("sms", "url", "image"):
-        raise HTTPException(status_code=501, detail=f"'{request.type}' 분석은 아직 지원하지 않습니다.")
+        raise HTTPException(
+            status_code=501,
+            detail=f"'{request.type}' 분석은 아직 지원하지 않습니다.",
+        )
 
     start_time = time.monotonic()
 
@@ -294,9 +304,17 @@ async def predict_smishing(
 
     if matches:
         await increment_pattern_counts(db, matches)
+        has_static_url_match = any(
+            pattern.pattern_type == PatternType.URL for pattern in matches
+        )
         log = await create_smishing_log(
-            db, masked_content, is_smishing=True, detection_type=DetectionType.STATIC_PATTERN,
+            db,
+            masked_content,
+            is_smishing=True,
+            detection_type=DetectionType.STATIC_PATTERN,
             input_type=input_type,
+            consent_for_training=bool(request.allowTrainingUse),
+            static_url_match=has_static_url_match,
         )
         result = build_static_pattern_response(content, matches)
 
@@ -313,6 +331,7 @@ async def predict_smishing(
                 db, masked_content, is_smishing=False,
                 detection_type=DetectionType.ENCODER, ai_score=encoder_output.score,
                 input_type=input_type,
+                consent_for_training=bool(request.allowTrainingUse),
             )
             result = build_safe_response(content, risk_score)
 
@@ -333,9 +352,14 @@ async def predict_smishing(
                 else DetectionType.RAG_DECODER
             )
             log = await create_smishing_log(
-                db, masked_content, is_smishing=True,
-                detection_type=det_type, ai_score=encoder_output.score, reasoning=reason,
+                db,
+                masked_content,
+                is_smishing=True,
+                detection_type=det_type,
+                ai_score=encoder_output.score,
+                reasoning=reason,
                 input_type=input_type,
+                consent_for_training=bool(request.allowTrainingUse),
             )
             result = build_model_smishing_response(
                 content=content,

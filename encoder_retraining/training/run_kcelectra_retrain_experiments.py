@@ -16,13 +16,20 @@ import optuna
 import pandas as pd
 import torch
 from datasets import Dataset
-from sklearn.metrics import accuracy_score, confusion_matrix
-from sklearn.metrics import precision_recall_fscore_support
+from sklearn.metrics import (
+    accuracy_score,
+    confusion_matrix,
+    precision_recall_fscore_support,
+)
 from sklearn.model_selection import train_test_split
-from transformers import AutoModelForSequenceClassification, AutoTokenizer
-from transformers import DataCollatorWithPadding, Trainer, TrainingArguments
-from transformers import set_seed
-
+from transformers import (
+    AutoModelForSequenceClassification,
+    AutoTokenizer,
+    DataCollatorWithPadding,
+    Trainer,
+    TrainingArguments,
+    set_seed,
+)
 
 warnings.filterwarnings("ignore")
 os.environ.setdefault("PYTORCH_ENABLE_MPS_FALLBACK", "1")
@@ -30,7 +37,7 @@ os.environ.setdefault("PYTORCH_ENABLE_MPS_FALLBACK", "1")
 
 DEFAULT_DATA_PATH = Path(__file__).resolve().parents[2] / "cleaned_dataset.jsonl"
 DEFAULT_RESULTS_DIR = Path(__file__).resolve().parents[1] / "results"
-MODEL_NAME = "beomi/KcELECTRA-base"
+DEFAULT_MODEL_NAME = "beomi/KcELECTRA-base"
 TEXT_COL = "text"
 LABEL_COL = "label"
 SEED = 42
@@ -161,6 +168,32 @@ def split_dataset(df: pd.DataFrame) -> tuple[pd.DataFrame, pd.DataFrame, pd.Data
         stratify=temp_df["label"],
     )
     return train_df, valid_df, test_df
+
+
+def load_dataset_splits(
+    *,
+    data_path: Path,
+    train_path: Path | None,
+    valid_path: Path | None,
+    test_path: Path | None,
+) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
+    split_paths = (train_path, valid_path, test_path)
+    if any(path is not None for path in split_paths):
+        if not all(path is not None for path in split_paths):
+            raise ValueError(
+                "--train-path, --valid-path, and --test-path "
+                "must be provided together"
+            )
+        assert train_path is not None
+        assert valid_path is not None
+        assert test_path is not None
+        return (
+            load_jsonl(train_path),
+            load_jsonl(valid_path),
+            load_jsonl(test_path),
+        )
+
+    return split_dataset(load_jsonl(data_path))
 
 
 def apply_positive_oversampling(
@@ -408,6 +441,7 @@ def run_base_optuna(
     train_df: pd.DataFrame,
     valid_df: pd.DataFrame,
     tokenizer: AutoTokenizer,
+    model_name_or_path: str,
     results_dir: Path,
     n_trials: int,
     epochs: int,
@@ -429,7 +463,7 @@ def run_base_optuna(
                 "phase": "base_optuna",
                 "trial_number": trial.number,
                 "device": DEVICE,
-                "model_name": MODEL_NAME,
+                "model_name_or_path": model_name_or_path,
                 "train_size": len(train_df),
                 "valid_size": len(valid_df),
                 **trial_params,
@@ -443,7 +477,7 @@ def run_base_optuna(
         valid_ds = tokenize_dataframe(tokenizer, valid_df, trial_params["max_length"])
 
         model = AutoModelForSequenceClassification.from_pretrained(
-            MODEL_NAME,
+            model_name_or_path,
             num_labels=NUM_LABELS,
         )
         model.to(DEVICE)
@@ -509,6 +543,7 @@ def train_final_model(
     valid_df: pd.DataFrame,
     test_df: pd.DataFrame,
     tokenizer: AutoTokenizer,
+    model_name_or_path: str,
     results_dir: Path,
     wandb_config: WandbConfig,
 ) -> ExperimentResult:
@@ -530,7 +565,7 @@ def train_final_model(
     test_ds = tokenize_dataframe(tokenizer, test_df, best_params["max_length"])
 
     model = AutoModelForSequenceClassification.from_pretrained(
-        MODEL_NAME,
+        model_name_or_path,
         num_labels=NUM_LABELS,
     )
     model.to(DEVICE)
@@ -551,7 +586,7 @@ def train_final_model(
             "use_focal_loss": experiment.use_focal_loss,
             "positive_oversampling_ratio": experiment.positive_oversampling_ratio,
             "device": DEVICE,
-            "model_name": MODEL_NAME,
+            "model_name_or_path": model_name_or_path,
             "train_size": len(strategy_train_df),
             "valid_size": len(valid_df),
             "test_size": len(test_df),
@@ -632,6 +667,30 @@ def parse_args() -> argparse.Namespace:
         description="Run KcELECTRA retraining experiments with Optuna."
     )
     parser.add_argument("--data-path", type=Path, default=DEFAULT_DATA_PATH)
+    parser.add_argument(
+        "--model-name-or-path",
+        default=DEFAULT_MODEL_NAME,
+        help=(
+            "Initial encoder checkpoint. Use the deployed/baseline model for "
+            "continued fine-tuning, or the base KcELECTRA model for full "
+            "retraining from scratch."
+        ),
+    )
+    parser.add_argument(
+        "--train-path",
+        type=Path,
+        help="Prebuilt training split. Requires valid/test paths.",
+    )
+    parser.add_argument(
+        "--valid-path",
+        type=Path,
+        help="Fixed validation split. Requires train/test paths.",
+    )
+    parser.add_argument(
+        "--test-path",
+        type=Path,
+        help="Fixed test split. Requires train/valid paths.",
+    )
     parser.add_argument("--results-dir", type=Path, default=DEFAULT_RESULTS_DIR)
     parser.add_argument("--n-trials", type=int, default=1)
     parser.add_argument(
@@ -675,8 +734,14 @@ def main() -> None:
     args.results_dir.mkdir(parents=True, exist_ok=True)
 
     print(f"Device: {DEVICE}")
-    print(f"Data path: {args.data_path}")
+    if args.train_path is None:
+        print(f"Data path: {args.data_path}")
+    else:
+        print(f"Train path: {args.train_path}")
+        print(f"Validation path: {args.valid_path}")
+        print(f"Test path: {args.test_path}")
     print(f"Results dir: {args.results_dir}")
+    print(f"Initial model: {args.model_name_or_path}")
     print(f"Base Optuna trials: {args.n_trials}")
     print(f"Epochs per training run: {args.epochs}")
     print("Optuna runs once. Best params are reused for all final experiments.")
@@ -695,15 +760,18 @@ def main() -> None:
             f"project={wandb_config.project}, group={wandb_config.group}"
         )
 
-    df = load_jsonl(args.data_path)
-    print("\nDataset label counts:")
-    print(df["label"].value_counts())
-
-    train_df, valid_df, test_df = split_dataset(df)
+    train_df, valid_df, test_df = load_dataset_splits(
+        data_path=args.data_path,
+        train_path=args.train_path,
+        valid_path=args.valid_path,
+        test_path=args.test_path,
+    )
+    print("\nTraining label counts:")
+    print(train_df["label"].value_counts())
     print("\nSplit sizes:")
     print(f"train={len(train_df):,}, valid={len(valid_df):,}, test={len(test_df):,}")
 
-    tokenizer = AutoTokenizer.from_pretrained(MODEL_NAME)
+    tokenizer = AutoTokenizer.from_pretrained(args.model_name_or_path)
     experiment_names = {experiment.name for experiment in EXPERIMENTS}
     unknown_names = set(args.experiments) - experiment_names
     if unknown_names:
@@ -730,6 +798,7 @@ def main() -> None:
             train_df,
             valid_df,
             tokenizer,
+            args.model_name_or_path,
             args.results_dir,
             args.n_trials,
             args.epochs,
@@ -756,6 +825,7 @@ def main() -> None:
             valid_df,
             test_df,
             tokenizer,
+            args.model_name_or_path,
             args.results_dir,
             wandb_config,
         )
