@@ -136,6 +136,31 @@ jobs:
           test -s "${dataset_dir}/cleaned_train.jsonl"
           test -s "${dataset_dir}/valid.jsonl"
           test -s "${dataset_dir}/test.jsonl"
+          test -s "${dataset_dir}/manifest.json"
+          python - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+
+          dataset_dir = Path(os.environ["DATASET_VERSION"])
+          prepared_dir = Path("encoder_retraining/data/prepared") / dataset_dir
+          for filename in ("cleaned_train.jsonl", "valid.jsonl", "test.jsonl"):
+              path = prepared_dir / filename
+              with path.open("r", encoding="utf-8") as file:
+                  for line_number, line in enumerate(file, start=1):
+                      line = line.strip()
+                      if not line:
+                          continue
+                      row = json.loads(line)
+                      if not str(row.get("text", "")).strip():
+                          raise ValueError(f"{path}:{line_number} has empty text")
+                      if row.get("label") not in (0, 1, 0.0, 1.0, "0", "1", "0.0", "1.0"):
+                          raise ValueError(f"{path}:{line_number} has unsupported label")
+                      break
+                  else:
+                      raise ValueError(f"{path} has no usable rows")
+          json.loads((prepared_dir / "manifest.json").read_text(encoding="utf-8"))
+          PY
 
       - name: Run encoder retraining pipeline
         run: |

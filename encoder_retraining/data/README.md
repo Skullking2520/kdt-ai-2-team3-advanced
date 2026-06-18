@@ -31,6 +31,25 @@ encoder_retraining/data/prepared/<dataset_version>/
 └── manifest.json
 ```
 
+GitHub Actions에 전달하는 prepared dataset archive도 같은 파일 구조를 사용한다.
+압축 파일 안에는 위 네 파일이 archive 루트에 있어야 한다.
+
+예를 들어 PR #24처럼 `encoder-v4/` prepared dataset을 만든 경우, 다음처럼 폴더
+안의 파일만 압축한다.
+
+```bash
+tar -C encoder_retraining/data/prepared/encoder-v4 \
+  -czf encoder-v4.tar.gz \
+  cleaned_train.jsonl valid.jsonl test.jsonl manifest.json
+```
+
+다음처럼 상위 폴더를 포함해 압축하면 workflow가 기대하는 경로와 달라져 실패한다.
+
+```bash
+# 권장하지 않음: 압축 해제 후 encoder-v4/cleaned_train.jsonl 형태가 됨
+tar -czf encoder-v4.tar.gz encoder_retraining/data/prepared/encoder-v4
+```
+
 `cleaned_train.jsonl`, `valid.jsonl`, `test.jsonl`은 JSON Lines 형식이며 각 줄은
 최소한 다음 필드를 포함한다.
 
@@ -96,3 +115,20 @@ uv run --group encoder python \
   --candidate-model encoder_retraining/data/runs/<run_id>/training/focal_no_oversampling/final_model \
   --output-dir encoder_retraining/data/runs/<run_id>/evaluation
 ```
+
+## Compatibility With Cleanlab Prepared Data
+
+PR #24처럼 전처리/Cleanlab 쪽에서 `encoder_retraining/data/prepared/encoder-v4/`를
+생성하는 경우, 파일명이 아래와 같으면 PR #23 workflow의 `prepared-dir` 입력과 바로
+호환된다.
+
+```text
+cleaned_train.jsonl
+valid.jsonl
+test.jsonl
+manifest.json
+```
+
+workflow는 네 파일이 모두 존재하는지 확인하고, 각 JSONL split에서 최소 1개 행의
+`text`와 `label` 스키마를 검증한다. `label`은 `0 = normal`, `1 = phishing`만
+허용한다.
