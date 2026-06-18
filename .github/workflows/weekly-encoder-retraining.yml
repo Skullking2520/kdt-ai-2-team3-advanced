@@ -136,17 +136,21 @@ jobs:
               cleanlab_prefix="${CLEANLAB_AUDIT_URL%/}/"
               bucket_and_prefix="${cleanlab_prefix#s3://}"
               bucket="${bucket_and_prefix%%/*}"
-              latest_cleaned_key="$(
-                uv tool run --from awscli aws s3 ls \
-                  "${cleanlab_prefix}" \
-                  --recursive \
-                  | awk '$4 ~ /(^|\/)cleaned_dataset\.jsonl$/ {print $1" "$2" "$4}' \
-                  | sort \
-                  | tail -n 1 \
-                  | awk '{print $3}'
-              )"
+              listing_path="/tmp/${DATASET_VERSION}-cleanlab-s3-listing.txt"
+              if ! uv tool run --from awscli aws s3 ls \
+                "${cleanlab_prefix}" \
+                --recursive \
+                > "${listing_path}"; then
+                echo "Failed to list Cleanlab audit S3 prefix."
+                echo "Check bucket name, region, and s3:ListBucket permission."
+                exit 1
+              fi
+              listed_count="$(wc -l < "${listing_path}" | tr -d ' ')"
+              echo "Listed ${listed_count} objects under Cleanlab audit prefix."
+              latest_cleaned_key="$(awk '$4 ~ /(^|\/)cleaned_dataset\.jsonl$/ {print $1" "$2" "$4}' "${listing_path}" | sort | tail -n 1 | awk '{print $3}')"
               if [ -z "${latest_cleaned_key}" ]; then
                 echo "No cleaned_dataset.jsonl was found under ${cleanlab_prefix}."
+                echo "Expected a path like cleanlab-audit/<run_name>/<timestamp>/cleaned_dataset.jsonl."
                 exit 1
               fi
               latest_audit_prefix="s3://${bucket}/$(dirname "${latest_cleaned_key}")/"
