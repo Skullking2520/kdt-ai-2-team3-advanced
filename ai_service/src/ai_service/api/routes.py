@@ -1,4 +1,4 @@
-
+import traceback
 from typing import Any
 from urllib.error import URLError
 from urllib.request import urlopen
@@ -86,6 +86,7 @@ def invoke_graph(request: GraphInvokeRequest) -> GraphInvokeResponse:
         try:
             result = langgraph_app.invoke(state)
         except Exception as exc:
+            traceback.print_exc()
             raise HTTPException(status_code=500, detail=f"LangGraph 실행 실패: {exc}") from exc
 
         final_output = result.get("final_output")

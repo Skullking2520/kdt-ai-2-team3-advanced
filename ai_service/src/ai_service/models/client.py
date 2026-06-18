@@ -24,18 +24,18 @@ def get_llm(
         base_url = getattr(settings, "OPENAI_API_BASE", None)
         api_key = getattr(settings, "OPENAI_API_KEY", "modal-dummy-key")
         # OPENAI_API_KEY="modal-dummy-key"처럼 아무 문자열이나 채워 넣어야 랭체인이 에러 없이 Modal 서버로 요청을 전송
-
+        
         llm_kwargs = {
             "model": model_name,
-            "openai_api_base": base_url,
-            "openai_api_key": api_key,
+            "base_url": base_url,
+            "api_key": api_key,
             "temperature": temperature,
             "max_tokens": max_tokens,
             **kwargs
         }
         
         if json_mode:
-            llm_kwargs["response_format"] = {"type": "json_object"}
+            llm_kwargs["model_kwargs"] = {"response_format": {"type": "json_object"}}  # ← model_kwargs로 이동
             
         return ChatOpenAI(**llm_kwargs)
         

@@ -42,7 +42,7 @@ app = modal.App("qwen-vllm-service")
     timeout=60 * MINUTES,  # 1시간 시작 대기
     # timeout: Maximum execution time for inputs 
     # and startup time in seconds.
-    scaledown_window=2 * MINUTES,  
+    scaledown_window=30 * MINUTES,  
     # scaledown_window: Max time (in seconds) a container can 
     # remain idle while scaling down
     volumes={
@@ -80,12 +80,13 @@ class VLLMServer:
             "vllm", "serve", MODEL_NAME, 
             "--port", "8000",
             "--host", "0.0.0.0",
-            # "--quantization", "awq_marlin",
+            "--quantization", "awq_marlin",
             "--dtype", "auto",  # AWQ does not support bfloat16 in vLLM            
             "--max-model-len", "8192",       # KV 캐시 메모리 최적화를 위한 컨텍스트 제한
-            "--gpu-memory-utilization", "0.90", # 비디오 메모리 마진 확보
-            "--disable-log-requests"      # 프로덕션 로그 오버헤드 간소화
-            # "--enforce-eager" # disable CUDA graph and always execute the model in eager mode
+            "--gpu-memory-utilization", "0.90", # vram 마진 확보
+            "--generation-config", "vllm" # Hugging Face 저장소에 등록된 모델 고유의 기본 추론 설정 파일(generation_config.json)을 무시
+            #"--disable-log-requests"      # 프로덕션 로그 오버헤드 간소화 -> deprecated라 주석
+            # "--enforce-eager" # disable CUDA graph and always execute the model in eager mode -> 추론 느려지므로 비권장
         ]
         
         # 프로세스 추적 및 파이프라인 수집을 위해 shell=False 구동

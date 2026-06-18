@@ -9,7 +9,7 @@ from langfuse import propagate_attributes
 from ..config.prompts import RAG_ANSWER_PROMPT, ROUTER_PROMPT, SIMPLE_SMISHING_REASON_PROMPT
 from ..core.singleton_llm import get_singleton_json_llm, get_singleton_llm
 from ..core.state import SmishingGraphState
-from ..core.tools import _search_zeroday_logic
+from ..core.tools import _search_zeroday_logic, _format_zeroday_context
 from ..utils.json_utils import _response_content_into_str, _normalize_json_output
 from ..utils.langfuse_init import get_langfuse_client
 
@@ -67,15 +67,16 @@ def naive_rag_node(state: SmishingGraphState):
     else:
         user_query = str(raw_content)
 
-    context = _search_zeroday_logic(user_query)
+    search_results = _search_zeroday_logic(user_query)
+    context = _format_zeroday_context(search_results)
     prompt = RAG_ANSWER_PROMPT.format_prompt(context=context, messages=messages)
 
     with langfuse.start_as_current_observation(
         name="naive_rag_node",
         as_type="generation",
-        input={"query": user_query, "context_docs": len(context) if isinstance(context, list) else 1},
+        input={"query": user_query, "context_docs": len(search_results)},
         model=getattr(llm, "model", "ollama"),
-        metadata={"node": "naive_rag", "retrieved_context_count": len(context) if isinstance(context, list) else 1},
+        metadata={"node": "naive_rag", "retrieved_context_count": len(search_results)},
     ) as observation:
         response = llm.invoke(prompt)
         content = _response_content_into_str(response.content)
@@ -84,7 +85,8 @@ def naive_rag_node(state: SmishingGraphState):
         observation.update(
             output=final_output,
             usage_details=_extract_response_metrics(response),
-            metadata={"finish_reason": getattr(response, "finish_reason", None)},        )
+            metadata={"finish_reason": getattr(response, "finish_reason", None)},
+        )
 
     return {"messages": [response], "context": context, "final_output": final_output}
 
