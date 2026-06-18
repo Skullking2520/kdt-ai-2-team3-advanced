@@ -259,12 +259,12 @@ async def validate_url_candidate(
                     {
                         "pattern_type": PatternType.URL,
                         "pattern_value": candidate.normalized_url,
-                        "description": (
+                        "category": (
                             "VirusTotal 자동 승인 "
                             f"(malicious={verdict.malicious}, "
                             f"suspicious={verdict.suspicious})"
                         ),
-                        "managed_source": URL_CANDIDATE_MANAGED_SOURCE,
+                        "source": URL_CANDIDATE_MANAGED_SOURCE,
                     }
                 ],
                 commit=False,

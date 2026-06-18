@@ -87,10 +87,10 @@ async def review_url_candidate(
                 {
                     "pattern_type": PatternType.URL,
                     "pattern_value": candidate.normalized_url,
-                    "description": (
+                    "category": (
                         f"관리자 승인 URL 후보 (reviewer={reviewer})"
                     ),
-                    "managed_source": URL_CANDIDATE_MANAGED_SOURCE,
+                    "source": URL_CANDIDATE_MANAGED_SOURCE,
                 }
             ],
             commit=False,
