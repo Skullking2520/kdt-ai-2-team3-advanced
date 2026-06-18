@@ -11,6 +11,17 @@ GitHub Actions workflow:
 .github/workflows/weekly-encoder-retraining.yml
 ```
 
+실행 환경:
+
+```text
+self-hosted runner
+labels: self-hosted, macOS, ARM64, encoder, mps
+```
+
+현재 workflow는 Mac self-hosted runner에서 로컬 `uv`를 사용해 Python 3.12
+환경을 준비한다. `actions/setup-python`은 이 runner에서 `/Users/runner` 권한
+문제로 실패할 수 있어 사용하지 않는다.
+
 지원하는 실행 방식:
 
 - `workflow_dispatch`: 사람이 GitHub UI에서 수동 실행
@@ -138,7 +149,21 @@ encoder_retraining/data/runs/<run_id>/logs/training_stderr.log
 
 ## Notes
 
-- GitHub-hosted runner는 CPU 기반이므로 학습 시간이 길 수 있다.
+- self-hosted runner가 꺼져 있으면 scheduled/manual workflow가 대기 상태에 머문다.
 - 비용과 시간을 줄이려면 먼저 `dry_run=true`로 workflow 자체를 검증한다.
-- GPU 기반 주간 학습이 필요해지면 Modal, RunPod, self-hosted runner로 옮기는 것을
-  검토한다.
+- public repository에서 self-hosted runner를 항상 켜두는 것은 위험할 수 있다.
+  신뢰 가능한 workflow를 실행할 때만 켜는 방식을 권장한다.
+
+## Self-hosted Runner Smoke Result
+
+임시 브랜치 `test/self-hosted-retraining-action`에서 self-hosted runner 연결을
+검증했다.
+
+확인된 내용:
+
+- runner label 매칭 및 job 할당 성공
+- 로컬 `uv` 기반 Python 3.12 환경 준비 성공
+- `uv sync --frozen --group encoder --python 3.12` 성공
+- smoke dataset 생성 및 prepared dataset 검증 성공
+- `dry_run=false` 상태로 실제 `run_retraining_pipeline.py` 학습 단계 진입 확인
+- 장시간 학습 방지를 위해 GitHub Actions run을 의도적으로 취소

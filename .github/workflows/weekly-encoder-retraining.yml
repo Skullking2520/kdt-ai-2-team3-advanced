@@ -52,25 +52,27 @@ env:
 
 jobs:
   retrain:
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, macOS, ARM64, encoder, mps]
     timeout-minutes: 360
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-
-      - name: Set up uv
-        uses: astral-sh/setup-uv@v5
-        with:
-          enable-cache: true
+      - name: Configure local Python tooling
+        run: |
+          set -euo pipefail
+          if [ -x "/opt/anaconda3/bin/uv" ]; then
+            echo "/opt/anaconda3/bin" >> "${GITHUB_PATH}"
+            /opt/anaconda3/bin/uv --version
+            /opt/anaconda3/bin/uv python install 3.12
+          else
+            uv --version
+            uv python install 3.12
+          fi
 
       - name: Install encoder dependencies
-        run: uv sync --frozen --group encoder
+        run: uv sync --frozen --group encoder --python 3.12
 
       - name: Prepare dataset directory
         run: |
