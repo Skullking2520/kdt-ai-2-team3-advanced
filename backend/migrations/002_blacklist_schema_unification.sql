@@ -182,14 +182,23 @@ BEGIN
             PRIMARY KEY (date)
         ) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
-        -- 기존 virustotal_quota 데이터 이전
+        -- 기존 virustotal_quota 데이터 이전 후 삭제
         IF EXISTS (
             SELECT 1 FROM information_schema.tables
             WHERE table_schema = DATABASE() AND table_name = 'virustotal_quota'
         ) THEN
             INSERT IGNORE INTO vt_quota (date, auto_used)
             SELECT quota_date, used_count FROM virustotal_quota;
+            DROP TABLE virustotal_quota;
         END IF;
+    END IF;
+
+    -- virustotal_quota 잔존 시 삭제
+    IF EXISTS (
+        SELECT 1 FROM information_schema.tables
+        WHERE table_schema = DATABASE() AND table_name = 'virustotal_quota'
+    ) THEN
+        DROP TABLE virustotal_quota;
     END IF;
 
     -- ─────────────────────────────────────────────
