@@ -1,5 +1,7 @@
-import { ShieldAlert, ShieldCheck, AlertTriangle, TrendingUp, Activity } from "lucide-react";
+import { ShieldAlert, ShieldCheck, AlertTriangle, TrendingUp, Activity, Flag, MessageSquare, ChevronRight } from "lucide-react";
 import { Card, MetricBig, SectionHeader, FeedItem } from "./ui/Primitives";
+import { useNavigate } from "react-router";
+import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 
 const weeklyData = [
   { day: "월", high: 12, medium: 8, low: 32 },
@@ -34,6 +36,17 @@ const recentAlerts = [
   { time: "31분 전", type: "HIGH", text: "KB국민은행 비정상 접근 감지 즉시 확인 필요", category: "금융 피싱" },
 ];
 
+// 신고/피드백 알림 데이터
+const reportStats = [
+  { label: "미처리 신고", value: 7, color: "text-red-400", bg: "bg-red-500/10 border-red-500/20" },
+  { label: "검토 중", value: 3, color: "text-amber-400", bg: "bg-amber-500/10 border-amber-500/20" },
+  { label: "완료 처리", value: 24, color: "text-emerald-400", bg: "bg-emerald-500/10 border-emerald-500/20" },
+];
+const feedbackStats = [
+  { label: "정확해요", value: 89, color: "text-emerald-400" },
+  { label: "틀렸어요", value: 11, color: "text-red-400" },
+];
+
 const statCards = [
   { label: "오늘 총 분석",     value: 509, sublabel: "+12.4% 전일 대비", icon: Activity,     accent: "cyan"    as const },
   { label: "HIGH 위험 탐지",  value: 118, sublabel: "전체의 23.2%",      icon: ShieldAlert,  accent: "red"     as const },
@@ -41,50 +54,59 @@ const statCards = [
   { label: "정상 판정",       value: 303, sublabel: "전체의 59.5%",      icon: ShieldCheck,  accent: "emerald" as const },
 ];
 
-/* ── Custom Area Chart ─────────────────────────────── */
-const AW = 560, AH = 160, AP = { t: 10, r: 10, b: 24, l: 32 };
-
+/* ── Area Chart (Recharts) ─────────────────────────── */
 function CustomAreaChart({ data }: { data: typeof weeklyData }) {
-  const iW = AW - AP.l - AP.r;
-  const iH = AH - AP.t - AP.b;
-  const maxVal = Math.max(...data.flatMap((d) => [d.high, d.medium, d.low]));
-  const xStep = iW / (data.length - 1);
-  const ys = (v: number) => iH - (v / maxVal) * iH;
-
-  const area = (key: "high" | "medium" | "low") => {
-    const pts = data.map((d, i) => `${i * xStep},${ys(d[key])}`).join(" L ");
-    return `M ${pts} L ${(data.length - 1) * xStep},${iH} L 0,${iH} Z`;
-  };
-  const line = (key: "high" | "medium" | "low") =>
-    data.map((d, i) => `${i === 0 ? "M" : "L"} ${i * xStep},${ys(d[key])}`).join(" ");
-
-  const series = [
-    { key: "low" as const, color: "#22c55e", opacity: 0.13 },
-    { key: "medium" as const, color: "#f97316", opacity: 0.16 },
-    { key: "high" as const, color: "#ef4444", opacity: 0.19 },
-  ];
-
   return (
-    <svg viewBox={`0 0 ${AW} ${AH}`} className="w-full h-[160px]">
-      <g transform={`translate(${AP.l},${AP.t})`}>
-        {[0, 0.25, 0.5, 0.75, 1].map((t) => (
-          <line key={`g${t}`} x1={0} x2={iW} y1={t * iH} y2={t * iH} stroke="rgba(255,255,255,0.04)" strokeWidth={1} />
-        ))}
-        {series.map(({ key, color, opacity }) => (
-          <path key={`a${key}`} d={area(key)} fill={color} fillOpacity={opacity} />
-        ))}
-        {series.map(({ key, color }) => (
-          <path key={`l${key}`} d={line(key)} fill="none" stroke={color}
-            strokeWidth={key === "high" ? 2 : 1.5} strokeLinejoin="round" strokeLinecap="round" />
-        ))}
-        {data.map((d, i) => (
-          <text key={`x${d.day}`} x={i * xStep} y={iH + 16} textAnchor="middle" fontSize={10} fill="rgba(255,255,255,0.3)">{d.day}</text>
-        ))}
-        {[0, Math.round(maxVal / 2), maxVal].map((v, i) => (
-          <text key={`y${i}`} x={-6} y={ys(v) + 4} textAnchor="end" fontSize={10} fill="rgba(255,255,255,0.3)">{v}</text>
-        ))}
-      </g>
-    </svg>
+    <ResponsiveContainer width="100%" height={240}>
+      <AreaChart data={data} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
+        <defs>
+          <linearGradient id="gradLow" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="5%" stopColor="#22c55e" stopOpacity={0.15} />
+            <stop offset="95%" stopColor="#22c55e" stopOpacity={0} />
+          </linearGradient>
+          <linearGradient id="gradMedium" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="5%" stopColor="#f97316" stopOpacity={0.2} />
+            <stop offset="95%" stopColor="#f97316" stopOpacity={0} />
+          </linearGradient>
+          <linearGradient id="gradHigh" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="5%" stopColor="#ef4444" stopOpacity={0.25} />
+            <stop offset="95%" stopColor="#ef4444" stopOpacity={0} />
+          </linearGradient>
+        </defs>
+        <CartesianGrid
+          strokeDasharray="0"
+          vertical={false}
+          stroke="rgba(255,255,255,0.18)"
+          strokeWidth={1}
+        />
+        <XAxis
+          dataKey="day"
+          tick={{ fill: "#ffffff", fontSize: 12, fontFamily: "system-ui" }}
+          axisLine={false}
+          tickLine={false}
+          dy={10}
+        />
+        <YAxis
+          tick={{ fill: "#ffffff", fontSize: 11, fontFamily: "system-ui" }}
+          axisLine={false}
+          tickLine={false}
+          width={36}
+          tickCount={5}
+        />
+        <Tooltip
+          contentStyle={{
+            background: "#0f172a",
+            border: "1px solid rgba(255,255,255,0.1)",
+            borderRadius: 8,
+            fontSize: 11,
+            color: "rgba(255,255,255,0.7)",
+          }}
+        />
+        <Area type="monotone" dataKey="low" stroke="#22c55e" strokeWidth={1.5} fill="url(#gradLow)" />
+        <Area type="monotone" dataKey="medium" stroke="#f97316" strokeWidth={1.5} fill="url(#gradMedium)" />
+        <Area type="monotone" dataKey="high" stroke="#ef4444" strokeWidth={2} fill="url(#gradHigh)" />
+      </AreaChart>
+    </ResponsiveContainer>
   );
 }
 
@@ -110,13 +132,13 @@ function CustomDonutChart({ data }: { data: typeof pieData }) {
     return { ...d, path };
   });
 
-  return (
-    <svg viewBox="0 0 160 160" className="w-full h-[160px]">
+return (
+    <svg viewBox="0 0 160 160" className="w-full h-[160px]" preserveAspectRatio="xMidYMid meet">
       {slices.map((s) => (
         <path key={s.name} d={s.path} fill={s.color} fillOpacity={0.85} />
       ))}
-      <text x={cx} y={cy - 6} textAnchor="middle" fontSize={18} fill="white" fontWeight={700}>{total}</text>
-      <text x={cx} y={cy + 12} textAnchor="middle" fontSize={10} fill="rgba(255,255,255,0.4)">건</text>
+      <text x={cx} y={cy - 6} textAnchor="middle" fontSize={18} fill="white" fontWeight="700" fontFamily="system-ui,sans-serif">{total}</text>
+      <text x={cx} y={cy + 12} textAnchor="middle" fontSize={10} fill="rgba(255,255,255,0.4)" fontFamily="system-ui,sans-serif">건</text>
     </svg>
   );
 }
@@ -126,20 +148,20 @@ function CustomBarChart({ data }: { data: typeof categoryData }) {
   const maxVal = Math.max(...data.map((d) => d.count));
   const barH = 18, gap = 10;
   const chartH = data.length * (barH + gap);
-  const labelW = 82, barAreaW = 220, numW = 30;
+  const labelW = 88, barAreaW = 200, numW = 36;
   const totalW = labelW + barAreaW + numW;
 
   return (
-    <svg viewBox={`0 0 ${totalW} ${chartH}`} className="w-full" style={{ height: `${Math.max(chartH, 120)}px` }}>
+    <svg viewBox={`0 0 ${totalW} ${chartH}`} className="w-full" style={{ height: `${Math.max(chartH, 120)}px` }} preserveAspectRatio="xMidYMid meet">
       {data.map((d, i) => {
         const y = i * (barH + gap);
         const bw = (d.count / maxVal) * barAreaW;
         return (
           <g key={d.category}>
-            <text x={labelW - 6} y={y + barH / 2 + 4} textAnchor="end" fontSize={10} fill="rgba(255,255,255,0.45)">{d.category}</text>
+            <text x={labelW - 8} y={y + barH / 2 + 4} textAnchor="end" fontSize={10} fill="rgba(255,255,255,0.5)" fontFamily="system-ui,sans-serif">{d.category}</text>
             <rect x={labelW} y={y} width={barAreaW} height={barH} rx={4} fill="rgba(255,255,255,0.04)" />
             <rect x={labelW} y={y} width={bw} height={barH} rx={4} fill="#3b82f6" fillOpacity={0.75} />
-            <text x={labelW + bw + 6} y={y + barH / 2 + 4} fontSize={10} fill="rgba(255,255,255,0.5)">{d.count}</text>
+            <text x={labelW + bw + 6} y={y + barH / 2 + 4} fontSize={10} fill="rgba(255,255,255,0.6)" fontFamily="system-ui,sans-serif">{d.count}</text>
           </g>
         );
       })}
@@ -149,6 +171,7 @@ function CustomBarChart({ data }: { data: typeof categoryData }) {
 
 /* ── Dashboard ─────────────────────────────────────── */
 export function Dashboard() {
+  const navigate = useNavigate();
   return (
     <div className="px-4 sm:px-6 py-8 space-y-6 max-w-7xl mx-auto">
       {/* Header */}
@@ -173,6 +196,57 @@ export function Dashboard() {
             accent={card.accent}
           />
         ))}
+      </div>
+
+      {/* 신고/피드백 알림 카드 */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        {/* 신고 알림 */}
+        <Card padding="p-4">
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center gap-2">
+              <Flag size={14} className="text-red-400" />
+              <span className="text-sm text-white/80" style={{ fontWeight: 600 }}>신고 알림</span>
+            </div>
+            <button
+              onClick={() => navigate("/audit")}
+              className="flex items-center gap-1 text-[11px] text-white/40 hover:text-white/70 transition-all"
+            >
+              신고 검토 <ChevronRight size={12} />
+            </button>
+          </div>
+          <div className="grid grid-cols-3 gap-3">
+            {reportStats.map((s) => (
+              <div key={s.label} className={`rounded-xl p-3 border ${s.bg} text-center`}>
+                <p className={`text-xl ${s.color}`} style={{ fontWeight: 700 }}>{s.value}</p>
+                <p className="text-[10px] text-white/40 mt-0.5">{s.label}</p>
+              </div>
+            ))}
+          </div>
+        </Card>
+
+        {/* 피드백 알림 */}
+        <Card padding="p-4">
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center gap-2">
+              <MessageSquare size={14} className="text-cyan-400" />
+              <span className="text-sm text-white/80" style={{ fontWeight: 600 }}>피드백 분석</span>
+            </div>
+            <button
+              onClick={() => navigate("/feedback")}
+              className="flex items-center gap-1 text-[11px] text-white/40 hover:text-white/70 transition-all"
+            >
+              상세 보기 <ChevronRight size={12} />
+            </button>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            {feedbackStats.map((s) => (
+              <div key={s.label} className="rounded-xl p-3 border border-white/10 text-center">
+                <p className={`text-xl ${s.color}`} style={{ fontWeight: 700 }}>{s.value}<span className="text-sm text-white/40">%</span></p>
+                <p className="text-[10px] text-white/40 mt-0.5">{s.label}</p>
+              </div>
+            ))}
+          </div>
+        </Card>
       </div>
 
       {/* Charts row */}

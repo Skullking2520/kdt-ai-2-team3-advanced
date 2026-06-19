@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "motion/react";
-import { BookOpen, ChevronDown, ChevronUp, AlertTriangle, ShieldCheck, TrendingUp, Users, Radio, ExternalLink, RefreshCw, Building2 } from "lucide-react";
+import { BookOpen, ChevronDown, ChevronUp, AlertTriangle, ShieldCheck, Radio, ExternalLink, RefreshCw, Building2 } from "lucide-react";
 import { EmptyState } from "./EmptyState";
 
 interface Case {
@@ -116,12 +116,107 @@ const CASES: Case[] = [
     prevention: ["samsung.com/kr·apple.com/kr 공식 사이트에서 이벤트 확인", "당첨 문자의 도메인 반드시 확인", "배송비 결제 링크는 절대 클릭 금지"],
     outcome: "2024년 2월 검거. 피의자 2명 기소. 소액 피해로 형량 낮아 재범 우려.",
   },
+  {
+    id: "c6", year: "2024", title: "KT·LGU+ 통신요금 미납 사칭 스미싱",
+    category: "통신사 사칭", damage: "약 11억원", victims: "4천 500명",
+    severity: "high", arrested: false,
+    method: "통신사客户服务센터 사칭 + 소액 납부 유도",
+    actualTexts: [
+      "[KT안심通信] 고객님 이번달 요금 87,400원이 미납 상태입니다. 48시간 내 납부하지 않으면 서비스 중단됩니다. 확인: http://kt-bill-pay.com",
+      "[LGU+] 본인 확인이 필요합니다. 아래 링크에서 즉시 확인不然服务将被中断: http://lgu-bill.net/verify",
+    ],
+    howItWorked: [
+      "KT/LGU+/SKT 순환 사칭으로 다양한 이용자 타겟",
+      "소액 요금(5~10만원) 납부 유도하여警戒심 낮춤",
+      "납부 페이지에서 카드 정보 +OTP 탈취",
+      "탈취 카드로 해외的平台 결제 및 통신사 포인트 탈취",
+    ],
+    redFlags: ["kt.com이 아닌 도메인", "48시간 내 납부 압박", "문자 링크로 요금 납부 불가"],
+    prevention: ["통신사 공식 앱( KT-app, 마이LGU+ )에서 직접 조회", "요금 납부는 통신사官方网站에서만", "OTP 공유 금지"],
+    outcome: "현재 수사 중. 해외 서버 이용으로 추적 난항. 피해액 전체 환급 어려움.",
+  },
+  {
+    id: "c7", year: "2023", title: "대학병원 진료비 미납 사칭 피싱",
+    category: "의료 사칭", damage: "약 7억원", victims: "2천 800명",
+    severity: "high", arrested: true,
+    method: "대학병원 사칭 + 진료비 납부 페이지",
+    actualTexts: [
+      "[서울아산병원] 미납 진료비 156,000원이 있습니다. 납부하지 않으면 보험 적용이 중단됩니다. 확인: http://snuh-pay.kr",
+      "[삼성서울병원] 진료비 정산 안내. 본인 확인 후 환급 가능: http://smc-medical.net/refund",
+    ],
+    howItWorked: [
+      "대학병원 명칭 그대로 사용하여 신뢰도 확보",
+      "환급·미납 동시에 사용하여 혼란 유발",
+      "진료비 납부 페이지에서 카드번호·생년월일 탈취",
+      "탈취 정보로 건강보험 환자정보 도용 및 2차 사기",
+    ],
+    redFlags: ["병원 공식 도메인(.kr 등) 확인 필요", "문자 링크로 진료비 납부 불가", "환급은 병원 창구 직접"],
+    prevention: ["병원 공식 홈페이지에서 환자번호로 직접 조회", "진료비 납부는 병원 수납처에서만", "문자 내 링크 절대 클릭 금지"],
+    outcome: "2024년 6월 검거. 피의자 3명 구속. 피해금 일부 환급 완료.",
+  },
+  {
+    id: "c8", year: "2024", title: "정부24 민원확인서 사칭 피싱",
+    category: "관공서 사칭", damage: "약 15억원", victims: "5천명",
+    severity: "critical", arrested: false,
+    method: "정부24·민원24 사칭 + 개인정보 갱신 유도",
+    actualTexts: [
+      "[정부24] 고객님의 민원 처리가 완료되었습니다. 확인서 발급: http://gov24-confirm.kr/doc",
+      "[민원24] 귀하의 행정정보가 만료되었습니다. 즉시 갱신: http://minwon-gov.net/renew",
+    ],
+    howItWorked: [
+      "정부24 공식 CI와 동일한 로고·디자인 사용",
+      "확인서 발급·행정정보 갱신 명목으로 개인정보 입력 유도",
+      "주민등록번호·카드번호·계좌번호 일괄 탈취",
+      "탈취 정보로 국세청·관공서 위장 이메일 발송 및 추가 사기",
+    ],
+    redFlags: ["gov.kr이 아닌 도메인", "확인서 발급을 문자 링크로 요구", "개인정보 갱신 압박"],
+    prevention: ["정부24(gov.kr) 공식 사이트에서 직접 확인", "행정정보는 gov.kr官网에서만 갱신", "민원 관련 전화는 110или 소속 기관 직접"],
+    outcome: "현재 수사 중. 피의자 추정치 있지만 신원 확인 어려운 상황.",
+  },
+  {
+    id: "c9", year: "2023", title: "면세점 포인트 사칭 문자",
+    category: "포인트 사기", damage: "약 3억원", victims: "1만 2천명",
+    severity: "medium", arrested: true,
+    method: "면세점·백화점 포인트 사칭 + 소액 포인트 충전 유도",
+    actualTexts: [
+      "[신세계면세점] 고객님 보유 포인트 28,000원이 만료 예정입니다. 오늘 내 사용否则失效: http://shinsegae-point.com",
+      "[현대백화점] 50만 포인트 당첨! 확인 후 수령 신청: http://hd-mall-point.net/claim",
+    ],
+    howItWorked: [
+      "면세점·백화점 포인트 만료·당첨으로 혼선 유발",
+      "소액 포인트 충전(1~3만원) 명목으로 카드 정보 수집",
+      "충전 완료 후 '오류'로 포인트 미지급 및 연락 두절",
+      "입력한 정보로 해당 카드사 포인트 탈취",
+    ],
+    redFlags: ["면세점 공식 도메인 아닌 경우", "포인트 충전은 공식 앱에서만", "만료·당첨 문자 일괄 스팸"],
+    prevention: ["면세점 공식 앱에서 포인트 확인", "문자 링크로 포인트 충전 불가", "소액이라 하더라도 카드 정보 입력 금지"],
+    outcome: "2024년 4월 검거. 피의자 1명 기소. 피해 규모 소액으로 환급 완료.",
+  },
+  {
+    id: "c10", year: "2024", title: "우체국 택배 사칭 피싱",
+    category: "택배 사기", damage: "약 22억원", victims: "7천 500명",
+    severity: "critical", arrested: false,
+    method: "우체국 EMS 사칭 + 국제배송세 납부 유도",
+    actualTexts: [
+      "[우체국] 고객님 해외배송물에 관세 28,000원이 부과되었습니다. 납부하지 않으면 반송 처리됩니다. 확인: http://post-kr-delivery.com/tax",
+      "[EMS 국제우편] 통관 보류 중. 관세 납부 필수: http://ems-post.net/customs",
+    ],
+    howItWorked: [
+      "우체국·EMS 국제배송 명목으로 추가 비용 요구",
+      "관세·통관비 납부 명목으로 소액 결제 유도",
+      "결제 과정에서 카드번호 +OTP 탈취",
+      "탈취 카드로 고액 해외 결제 및 타인 명의 카드 등록",
+    ],
+    redFlags: [".epost.go.kr이 아닌 도메인", "관세 납부를 문자 링크로 요구", "국제배송 사실 확인 필요"],
+    prevention: ["우체국 공식 앱(우체국앱)에서 직접 배송 조회", "관세 납부는 통관 수수료 없이 진행", "국제배송 확인은 1588-1300 연락"],
+    outcome: "현재 수사 중. 해외 발신_IP 차단되어 추적 난항. 피해자 수 전국 적.",
+  },
 ];
 
 const SEV_STYLE = {
-  critical: { bg: "bg-red-500/10", border: "border-red-500/25", text: "text-red-400", label: "심각" },
-  high:     { bg: "bg-orange-500/10", border: "border-orange-500/25", text: "text-orange-400", label: "높음" },
-  medium:   { bg: "bg-amber-500/10", border: "border-amber-500/25", text: "text-amber-400", label: "보통" },
+  critical: { bg: "bg-red-50 dark:bg-red-500/10", border: "border-red-200 dark:border-red-500/25", text: "text-red-600 dark:text-red-400", label: "심각" },
+  high:     { bg: "bg-orange-50 dark:bg-orange-500/10", border: "border-orange-200 dark:border-orange-500/25", text: "text-orange-600 dark:text-orange-400", label: "높음" },
+  medium:   { bg: "bg-amber-50 dark:bg-amber-500/10", border: "border-amber-200 dark:border-amber-500/25", text: "text-amber-600 dark:text-amber-400", label: "보통" },
 };
 
 interface OfficialAlert {
@@ -179,19 +274,32 @@ const OFFICIAL_ALERTS: OfficialAlert[] = [
 ];
 
 const SEVERITY_STYLE = {
-  urgent:  { bg: "bg-red-500/10", border: "border-red-500/30", text: "text-red-400", dot: "bg-red-400", label: "긴급" },
-  warning: { bg: "bg-orange-500/10", border: "border-orange-500/30", text: "text-orange-400", dot: "bg-orange-400", label: "경고" },
-  info:    { bg: "bg-cyan-500/10", border: "border-cyan-500/30", text: "text-cyan-400", dot: "bg-cyan-400", label: "안내" },
+  urgent:  { bg: "bg-red-50 dark:bg-red-500/10", border: "border-red-200 dark:border-red-500/30", text: "text-red-600 dark:text-red-400", dot: "bg-red-500 dark:bg-red-400", label: "긴급" },
+  warning: { bg: "bg-orange-50 dark:bg-orange-500/10", border: "border-orange-200 dark:border-orange-500/30", text: "text-orange-600 dark:text-orange-400", dot: "bg-orange-500 dark:bg-orange-400", label: "경고" },
+  info:    { bg: "bg-cyan-50 dark:bg-cyan-500/10", border: "border-cyan-200 dark:border-cyan-500/30", text: "text-cyan-600 dark:text-cyan-400", dot: "bg-cyan-500 dark:bg-cyan-400", label: "안내" },
 };
+
+const PAGE_SIZE = 10;
 
 export function CaseStudies() {
   const [expanded, setExpanded] = useState<string | null>("c1");
   const [catFilter, setCatFilter] = useState("전체");
+  const [currentPage, setCurrentPage] = useState(1);
   const [officialFeed, setOfficialFeed] = useState(OFFICIAL_ALERTS);
   const [isRefreshing, setIsRefreshing] = useState(false);
 
   const categories = ["전체", ...Array.from(new Set(CASES.map((c) => c.category)))];
   const filtered = catFilter === "전체" ? CASES : CASES.filter((c) => c.category === catFilter);
+
+  // Reset page when filter changes
+  const handleFilterChange = (cat: string) => {
+    setCatFilter(cat);
+    setCurrentPage(1);
+  };
+
+  const totalPages = Math.ceil(filtered.length / PAGE_SIZE);
+  const paginated = filtered.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
+  const pageNumbers = Array.from({ length: totalPages }, (_, i) => i + 1);
 
   // 실시간 업데이트 시뮬레이션
   useEffect(() => {
@@ -218,30 +326,14 @@ export function CaseStudies() {
   };
 
   return (
-    <div className="px-4 sm:px-6 py-8 max-w-4xl mx-auto">
+    <div className="min-h-[calc(100vh-4rem)] px-4 sm:px-6 py-8 max-w-4xl mx-auto bg-white dark:bg-[#0b1120]">
       <div className="mb-6">
         <div className="flex items-center gap-2 mb-2">
-          <BookOpen size={14} className="text-orange-400" />
-          <span className="text-xs text-orange-400 tracking-widest uppercase">실제 피해 사례</span>
+          <BookOpen size={14} className="text-orange-500 dark:text-orange-400" />
+          <span className="text-xs text-orange-600 dark:text-orange-400 tracking-widest uppercase">실제 피해 사례</span>
         </div>
-        <h1 className="text-white mb-1" style={{ fontWeight: 700, fontSize: "1.5rem" }}>피해 사례집</h1>
-        <p className="text-sm text-white/40">실제 발생한 스미싱 피해 사례 분석 — 수법·피해액·예방법 전문 리포트</p>
-      </div>
-
-      {/* Stats */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
-        {[
-          { label: "수록 사례", value: `${CASES.length}건`, icon: BookOpen, color: "text-orange-400" },
-          { label: "총 피해액", value: "약 136억원", icon: TrendingUp, color: "text-red-400" },
-          { label: "피해자 수", value: "약 6만명", icon: Users, color: "text-amber-400" },
-          { label: "검거율", value: "40%", icon: ShieldCheck, color: "text-emerald-400" },
-        ].map((s) => (
-          <div key={s.label} className="bg-[#111c30] border border-white/10 rounded-xl p-3">
-            <s.icon size={13} className={`${s.color} mb-1`} />
-            <p className={`text-base ${s.color}`} style={{ fontWeight: 700 }}>{s.value}</p>
-            <p className="text-[11px] text-white/30">{s.label}</p>
-          </div>
-        ))}
+        <h1 className="text-gray-900 dark:text-white mb-1" style={{ fontWeight: 700, fontSize: "1.5rem" }}>피해 사례집</h1>
+        <p className="text-sm text-gray-500 dark:text-white/40">실제 발생한 스미싱 피해 사례 분석 — 수법·피해액·예방법 전문 리포트</p>
       </div>
 
       {/* Official Feed Section */}
@@ -254,6 +346,9 @@ export function CaseStudies() {
               <div className="w-1.5 h-1.5 rounded-full bg-cyan-500 dark:bg-cyan-400 animate-pulse" />
               실시간 연동
             </div>
+            <span className="text-[10px] px-2 py-0.5 rounded-full bg-gray-100 dark:bg-white/10 text-gray-500 dark:text-white/40 border border-gray-200 dark:border-white/10">
+              수사·처리 사례 {CASES.length}건
+            </span>
           </div>
           <button onClick={handleRefresh} disabled={isRefreshing}
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-cyan-300 dark:border-cyan-500/20 text-cyan-700 dark:text-cyan-400 text-xs hover:bg-cyan-100 dark:hover:bg-cyan-500/10 transition-all disabled:opacity-50">
@@ -262,16 +357,22 @@ export function CaseStudies() {
           </button>
         </div>
 
-        <p className="text-xs text-white/40 mb-4">
+        <p className="text-xs text-gray-600 dark:text-white/40 mb-4">
           한국인터넷진흥원(KISA), 경찰청, 금융감독원 등 공공기관에서 발표한 최신 피싱 주의보입니다.
         </p>
+        {/* 발표용 Mock 데이터 안내 */}
+        <div className="mb-4 px-3 py-2 rounded-lg bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/20">
+          <p className="text-[10px] text-amber-700 dark:text-amber-400">
+            💡 <strong>발표 시점:</strong> 이 영역은 발표용 Mock 데이터입니다. 실제 환경에서는 KISA·경찰청 RSS/API 연동을 통해 실시간 업데이트 예정입니다.
+          </p>
+        </div>
 
         <div className="space-y-2.5">
           {officialFeed.slice(0, 4).map((alert) => {
             const ss = SEVERITY_STYLE[alert.severity];
             return (
               <motion.div key={alert.id} layout
-                className={`rounded-xl border ${ss.bg} ${ss.border} p-4 hover:bg-white/3 transition-all`}>
+                className={`rounded-xl border ${ss.bg} ${ss.border} p-4 hover:bg-white/3 dark:hover:bg-white/3 transition-all`}>
                 <div className="flex items-start gap-3">
                   <div className={`w-2 h-2 rounded-full ${ss.dot} shrink-0 mt-1.5`} />
                   <div className="flex-1 min-w-0">
@@ -279,16 +380,16 @@ export function CaseStudies() {
                       <span className={`text-[10px] px-2 py-0.5 rounded border ${ss.bg} ${ss.border} ${ss.text} font-mono`}>
                         {ss.label}
                       </span>
-                      <span className="text-[10px] text-white/30">{alert.source}</span>
-                      <span className="text-[10px] text-white/20">·</span>
-                      <span className="text-[10px] text-white/30">{alert.time}</span>
+                      <span className="text-[10px] text-gray-600 dark:text-white/40">{alert.source}</span>
+                      <span className="text-[10px] text-gray-500 dark:text-white/40">·</span>
+                      <span className="text-[10px] text-gray-600 dark:text-white/40">{alert.time}</span>
                     </div>
-                    <p className="text-sm text-white/80 mb-1" style={{ fontWeight: 600 }}>{alert.title}</p>
-                    <p className="text-xs text-white/50 leading-relaxed mb-2">{alert.description}</p>
+                    <p className="text-sm text-gray-900 dark:text-white/80 mb-1" style={{ fontWeight: 600 }}>{alert.title}</p>
+                    <p className="text-xs text-gray-700 dark:text-white/50 leading-relaxed mb-2 line-clamp-2">{alert.description}</p>
                     <div className="flex items-center justify-between flex-wrap gap-2">
-                      <span className="text-[10px] text-white/35">대상: {alert.targetGroup}</span>
+                      <span className="text-[10px] text-gray-500 dark:text-white/40">대상: {alert.targetGroup}</span>
                       <a href={alert.url} target="_blank" rel="noopener noreferrer"
-                        className="flex items-center gap-1 text-[10px] text-cyan-400 hover:underline">
+                        className="flex items-center gap-1 text-[10px] text-cyan-600 dark:text-cyan-400 hover:underline">
                         공식 출처 확인 <ExternalLink size={9} />
                       </a>
                     </div>
@@ -299,12 +400,12 @@ export function CaseStudies() {
           })}
         </div>
 
-        <div className="mt-4 pt-3 border-t border-white/10 flex items-center justify-between">
-          <p className="text-[10px] text-white/30">
+        <div className="mt-4 pt-3 border-t border-gray-200 dark:border-white/10 flex items-center justify-between">
+          <p className="text-[10px] text-gray-500 dark:text-white/40">
             <Building2 size={10} className="inline mr-1" />
             실제 크롤링 환경에서는 공공기관 RSS/API를 통해 실시간으로 업데이트됩니다
           </p>
-          <span className="text-[10px] text-white/20">마지막 업데이트: 방금 전</span>
+          <span className="text-[10px] text-gray-500 dark:text-white/40">마지막 업데이트: 방금 전</span>
         </div>
       </div>
 
@@ -313,11 +414,11 @@ export function CaseStudies() {
         <h2 className="text-sm text-gray-700 dark:text-white/70 mb-3" style={{ fontWeight: 600 }}>과거 주요 피해 사례 아카이브</h2>
         <div className="flex gap-2 flex-wrap">
           {categories.map((c) => (
-            <button key={c} onClick={() => setCatFilter(c)}
+            <button key={c} onClick={() => handleFilterChange(c)}
               className={`px-3 py-1.5 rounded-xl text-xs border transition-all ${
                 catFilter === c
                   ? "bg-blue-50 dark:bg-blue-500/15 border-blue-500 text-blue-700 dark:text-blue-400"
-                  : "border-gray-200 dark:border-white/10 text-gray-600 dark:text-white/35 hover:bg-gray-50 dark:hover:text-white/55"
+                  : "border-gray-200 dark:border-white/10 text-gray-600 dark:text-white/40 hover:bg-gray-50 dark:hover:text-white/55"
               }`}>
               {c}
             </button>
@@ -332,44 +433,43 @@ export function CaseStudies() {
             icon="cases"
             title="이 카테고리에 해당하는 사례가 없어요"
             description="다른 카테고리를 선택하거나 전체 보기를 눌러보세요."
-            action={{ label: "전체 보기로 전환", onClick: () => setCatFilter("전체") }}
+            action={{ label: "전체 보기로 전환", onClick: () => handleFilterChange("전체") }}
           />
         ) : (
-          filtered.map((c) => {
+          paginated.map((c) => {
             const ss = SEV_STYLE[c.severity];
             const isOpen = expanded === c.id;
           return (
             <motion.div key={c.id} layout className={`rounded-2xl border overflow-hidden ${ss.bg} ${ss.border}`}>
-              {/* Header */}
+              {/* Header — P2-9: metadata 축약, title line-clamp */}
               <button onClick={() => setExpanded(isOpen ? null : c.id)}
-                className="w-full flex items-start gap-4 p-5 text-left hover:bg-white/3 transition-all">
+                className="w-full flex items-start gap-4 p-5 text-left hover:bg-white/3 dark:hover:bg-white/3 transition-all">
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 flex-wrap mb-1.5">
                     <span className={`text-[10px] px-2 py-0.5 rounded border ${ss.bg} ${ss.border} ${ss.text} font-mono`}>{ss.label}</span>
-                    <span className="text-[10px] px-2 py-0.5 rounded bg-white/5 border border-white/10 text-white/35">{c.category}</span>
-                    <span className="text-[10px] text-white/25">{c.year}</span>
-                    {c.arrested && <span className="text-[10px] px-1.5 py-0.5 rounded bg-emerald-500/15 border border-emerald-500/25 text-emerald-400">검거</span>}
+                    <span className="text-[10px] px-2 py-0.5 rounded bg-white border border-gray-200 text-gray-700 dark:bg-white/5 dark:border-white/10 dark:text-white/55">{c.category}</span>
+                    {c.arrested && <span className="text-[10px] px-1.5 py-0.5 rounded bg-emerald-50 border border-emerald-200 text-emerald-600 dark:bg-emerald-500/15 dark:border-emerald-500/25 dark:text-emerald-400">검거완료</span>}
                   </div>
-                  <p className="text-sm text-white/80" style={{ fontWeight: 600 }}>{c.title}</p>
+                  <p className="text-sm text-gray-900 dark:text-white/80 line-clamp-2" style={{ fontWeight: 600 }}>{c.title}</p>
                   <div className="flex gap-4 mt-1.5">
-                    <span className="text-xs text-red-400">피해액 {c.damage}</span>
-                    <span className="text-xs text-white/40">피해자 {c.victims}</span>
+                    <span className="text-xs text-red-600 dark:text-red-400">피해액 {c.damage}</span>
+                    <span className="text-xs text-gray-600 dark:text-white/40">피해자 {c.victims}</span>
                   </div>
                 </div>
-                {isOpen ? <ChevronUp size={14} className="text-white/30 shrink-0 mt-0.5" /> : <ChevronDown size={14} className="text-white/30 shrink-0 mt-0.5" />}
+                {isOpen ? <ChevronUp size={14} className="text-gray-500 dark:text-white/30 shrink-0 mt-0.5" /> : <ChevronDown size={14} className="text-gray-500 dark:text-white/30 shrink-0 mt-0.5" />}
               </button>
 
               <AnimatePresence>
                 {isOpen && (
                   <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }}
-                    className="overflow-hidden border-t border-white/8">
+                    className="overflow-hidden border-t border-gray-200 dark:border-white/8">
                     <div className="p-5 space-y-5">
                       {/* Actual texts */}
                       <div>
-                        <p className="text-xs text-white/40 mb-2">실제 피싱 문자 예시</p>
+                        <p className="text-xs text-gray-500 dark:text-white/40 mb-2">실제 피싱 문자 예시</p>
                         <div className="space-y-2">
                           {c.actualTexts.map((t, i) => (
-                            <div key={i} className="bg-[#0b1120] border border-white/10 rounded-xl p-3 text-xs text-white/65 leading-relaxed font-mono">
+                            <div key={i} className="bg-white border border-gray-200 dark:bg-[#0b1120] dark:border-white/10 rounded-xl p-3 text-xs text-gray-800 dark:text-white/65 leading-relaxed font-mono">
                               {t}
                             </div>
                           ))}
@@ -379,11 +479,11 @@ export function CaseStudies() {
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         {/* How it worked */}
                         <div>
-                          <p className="text-xs text-white/40 mb-2 flex items-center gap-1"><AlertTriangle size={10} className="text-red-400" /> 수법 분석</p>
+                          <p className="text-xs text-gray-500 dark:text-white/40 mb-2 flex items-center gap-1"><AlertTriangle size={10} className="text-red-500 dark:text-red-400" /> 수법 분석</p>
                           <ol className="space-y-1.5">
                             {c.howItWorked.map((h, i) => (
-                              <li key={i} className="flex items-start gap-2 text-[11px] text-white/55">
-                                <span className="shrink-0 w-4 h-4 rounded-full bg-red-500/15 border border-red-500/20 text-red-400 flex items-center justify-center text-[9px]">{i + 1}</span>
+                              <li key={i} className="flex items-start gap-2 text-[11px] text-gray-700 dark:text-white/55">
+                                <span className="shrink-0 w-4 h-4 rounded-full bg-red-50 border border-red-200 text-red-600 dark:bg-red-500/15 dark:border-red-500/20 dark:text-red-400 flex items-center justify-center text-[9px]">{i + 1}</span>
                                 {h}
                               </li>
                             ))}
@@ -393,18 +493,18 @@ export function CaseStudies() {
                         {/* Red flags + Prevention */}
                         <div className="space-y-3">
                           <div>
-                            <p className="text-xs text-white/40 mb-2">경고 신호</p>
+                            <p className="text-xs text-gray-500 dark:text-white/40 mb-2">경고 신호</p>
                             <div className="flex flex-wrap gap-1.5">
                               {c.redFlags.map((f, i) => (
-                                <span key={i} className="text-[10px] px-2 py-0.5 rounded bg-red-500/10 border border-red-500/20 text-red-400">{f}</span>
+                                <span key={i} className="text-[10px] px-2 py-0.5 rounded bg-red-50 border border-red-200 text-red-600 dark:bg-red-500/10 dark:border-red-500/20 dark:text-red-400">{f}</span>
                               ))}
                             </div>
                           </div>
                           <div>
-                            <p className="text-xs text-white/40 mb-2">예방법</p>
+                            <p className="text-xs text-gray-500 dark:text-white/40 mb-2">예방법</p>
                             <ul className="space-y-1">
                               {c.prevention.map((p, i) => (
-                                <li key={i} className="text-[11px] text-emerald-400/70 flex items-start gap-1.5">
+                                <li key={i} className="text-[11px] text-emerald-700 dark:text-emerald-400/70 flex items-start gap-1.5">
                                   <ShieldCheck size={10} className="shrink-0 mt-0.5" />{p}
                                 </li>
                               ))}
@@ -414,9 +514,9 @@ export function CaseStudies() {
                       </div>
 
                       {/* Outcome */}
-                      <div className="p-3 rounded-xl bg-white/3 border border-white/8">
-                        <p className="text-[11px] text-white/30 mb-1">수사·처리 결과</p>
-                        <p className="text-xs text-white/55 leading-relaxed">{c.outcome}</p>
+                      <div className="p-3 rounded-xl bg-gray-50 border border-gray-200 dark:bg-white/3 dark:border-white/8">
+                        <p className="text-[11px] text-gray-500 dark:text-white/40 mb-1">수사·처리 결과</p>
+                        <p className="text-xs text-gray-700 dark:text-white/55 leading-relaxed line-clamp-2">{c.outcome}</p>
                       </div>
                     </div>
                    </motion.div>
@@ -426,6 +526,39 @@ export function CaseStudies() {
           );
         }))}
       </div>
+
+      {/* Pagination */}
+      {totalPages > 1 && (
+        <div className="flex items-center justify-center gap-1.5 mt-6">
+          <button
+            onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+            disabled={currentPage === 1}
+            className="px-3 py-1.5 rounded-lg border border-gray-200 dark:border-white/10 text-xs text-gray-600 dark:text-white/40 hover:bg-gray-50 dark:hover:bg-white/5 disabled:opacity-30 transition-all"
+          >
+            이전
+          </button>
+          {pageNumbers.map((p) => (
+            <button
+              key={p}
+              onClick={() => setCurrentPage(p)}
+              className={`w-8 h-8 rounded-lg text-xs border transition-all ${
+                p === currentPage
+                  ? "bg-blue-500 border-blue-500 text-white"
+                  : "border-gray-200 dark:border-white/10 text-gray-600 dark:text-white/40 hover:bg-gray-50 dark:hover:bg-white/5"
+              }`}
+            >
+              {p}
+            </button>
+          ))}
+          <button
+            onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+            disabled={currentPage === totalPages}
+            className="px-3 py-1.5 rounded-lg border border-gray-200 dark:border-white/10 text-xs text-gray-600 dark:text-white/40 hover:bg-gray-50 dark:hover:bg-white/5 disabled:opacity-30 transition-all"
+          >
+            다음
+          </button>
+        </div>
+      )}
     </div>
   );
 }
