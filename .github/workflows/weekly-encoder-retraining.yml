@@ -66,7 +66,7 @@ env:
   AWS_DEFAULT_REGION: ${{ vars.AWS_REGION || vars.AWS_DEFAULT_REGION || secrets.AWS_DEFAULT_REGION || 'ap-northeast-2' }}
   HF_TOKEN: ${{ secrets.HF_TOKEN }}
   HF_REPO_ID: ${{ github.event.inputs.hf_repo_id || 'kdt-2-team4-newbiz/kcelectra-smishing-classifier' }}
-  UV_CACHE_DIR: /tmp/uv-cache
+  UV_LINK_MODE: copy
 
 jobs:
   retrain:
@@ -89,17 +89,46 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Configure local Python tooling
+      - name: Configure writable Python tooling paths
         run: |
           set -euo pipefail
-          if [ -x "/opt/anaconda3/bin/uv" ]; then
-            echo "/opt/anaconda3/bin" >> "${GITHUB_PATH}"
-            /opt/anaconda3/bin/uv --version
-            /opt/anaconda3/bin/uv python install 3.12
-          else
-            uv --version
-            uv python install 3.12
-          fi
+          export UV_CACHE_DIR="${RUNNER_TEMP}/uv-cache"
+          export UV_PYTHON_INSTALL_DIR="${RUNNER_TEMP}/uv-python"
+          export UV_TOOL_DIR="${RUNNER_TEMP}/uv-tools"
+          export UV_PROJECT_ENVIRONMENT="${GITHUB_WORKSPACE}/.venv"
+          export ACTIONS_TOOL_CACHE="${RUNNER_TEMP}/tool-cache"
+          {
+            echo "AGENT_TOOLSDIRECTORY=${ACTIONS_TOOL_CACHE}"
+            echo "RUNNER_TOOL_CACHE=${ACTIONS_TOOL_CACHE}"
+            echo "UV_CACHE_DIR=${UV_CACHE_DIR}"
+            echo "UV_PYTHON_INSTALL_DIR=${UV_PYTHON_INSTALL_DIR}"
+            echo "UV_TOOL_DIR=${UV_TOOL_DIR}"
+            echo "UV_PROJECT_ENVIRONMENT=${UV_PROJECT_ENVIRONMENT}"
+          } >> "${GITHUB_ENV}"
+          mkdir -p \
+            "${ACTIONS_TOOL_CACHE}" \
+            "${UV_CACHE_DIR}" \
+            "${UV_PYTHON_INSTALL_DIR}" \
+            "${UV_TOOL_DIR}" \
+            "${UV_PROJECT_ENVIRONMENT}"
+          echo "AGENT_TOOLSDIRECTORY=${ACTIONS_TOOL_CACHE}"
+          echo "RUNNER_TOOL_CACHE=${ACTIONS_TOOL_CACHE}"
+          echo "UV_CACHE_DIR=${UV_CACHE_DIR}"
+          echo "UV_PYTHON_INSTALL_DIR=${UV_PYTHON_INSTALL_DIR}"
+          echo "UV_TOOL_DIR=${UV_TOOL_DIR}"
+          echo "UV_PROJECT_ENVIRONMENT=${UV_PROJECT_ENVIRONMENT}"
+
+      - name: Setup uv and Python 3.12
+        uses: astral-sh/setup-uv@v5
+        with:
+          python-version: "3.12"
+          enable-cache: false
+
+      - name: Verify Python tooling
+        run: |
+          set -euo pipefail
+          uv --version
+          uv python install 3.12
 
       - name: Install encoder dependencies
         run: uv sync --frozen --group encoder --python 3.12

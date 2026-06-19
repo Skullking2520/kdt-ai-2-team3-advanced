@@ -18,9 +18,28 @@ self-hosted runner
 labels: self-hosted, macOS, ARM64, encoder, mps, team3-advanced-encoder-retraining
 ```
 
-현재 workflow는 Mac self-hosted runner에서 로컬 `uv`를 사용해 Python 3.12
-환경을 준비한다. `actions/setup-python`은 이 runner에서 `/Users/runner` 권한
-문제로 실패할 수 있어 사용하지 않는다.
+현재 workflow는 Mac self-hosted runner에서 `astral-sh/setup-uv@v5`를 사용해
+`uv`와 Python 3.12 환경을 준비한다. `actions/setup-python`은 이 runner에서
+`/Users/runner` 권한 문제로 실패할 수 있어 사용하지 않는다.
+
+권한 충돌을 줄이기 위해 workflow는 `uv`가 사용하는 경로를 명시적으로 고정한다.
+
+```text
+AGENT_TOOLSDIRECTORY=$RUNNER_TEMP/tool-cache
+RUNNER_TOOL_CACHE=$RUNNER_TEMP/tool-cache
+UV_CACHE_DIR=$RUNNER_TEMP/uv-cache
+UV_PYTHON_INSTALL_DIR=$RUNNER_TEMP/uv-python
+UV_TOOL_DIR=$RUNNER_TEMP/uv-tools
+UV_PROJECT_ENVIRONMENT=$GITHUB_WORKSPACE/.venv
+UV_LINK_MODE=copy
+```
+
+이 설정은 self-hosted runner의 홈 디렉터리나 GitHub-hosted runner 기본 tool-cache
+경로에 쓰기 권한이 없을 때도, 현재 job이 접근 가능한 임시 디렉터리와 checkout
+workspace 안에서 `uv`, Python, tool, virtualenv를 준비하게 한다.
+
+`setup-uv`의 GitHub cache는 self-hosted runner 권한 문제를 단순화하기 위해
+비활성화한다. 대신 위의 로컬 writable 경로를 사용한다.
 
 `team3-advanced-encoder-retraining` 라벨은 이 재학습 workflow 전용 라벨이다.
 GitHub runner 설정에서 해당 라벨을 self-hosted runner에 추가해야 job이 할당된다.
