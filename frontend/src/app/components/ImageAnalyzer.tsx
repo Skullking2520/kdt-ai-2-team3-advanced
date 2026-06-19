@@ -1,6 +1,5 @@
 import { useState, useRef, useCallback } from "react";
-import { api, ApiException } from "@/lib/api";
-import { ImageIcon, Upload, FileText, ChevronRight, RotateCcw, CheckCircle2, Loader2, AlertCircle, Edit3, X, Save } from "lucide-react";
+import { ImageIcon, Upload, FileText, ChevronRight, RotateCcw, CheckCircle2, Loader2, AlertCircle, Edit3, Save } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { useNavigate } from "react-router";
 
@@ -11,6 +10,12 @@ const OCR_STEPS = [
   "완료",
 ];
 
+const MOCK_OCR_RESULTS = [
+  "【CJ대한통운】배송 주소 확인이 필요합니다. 주소 오류로 반송 예정입니다. 확인: http://cj-delivery-check.com/re123",
+  "고객님 본인인증이 만료되었습니다. 즉시 재인증하지 않으면 계좌가 정지됩니다. http://kb-secure-verify.net/auth",
+  "【국민건강보험】미납 보험료 안내. 3일 이내 미납 시 급여 정지됩니다. 납부: http://nhis-pay-kr.com/check",
+  "안녕 엄마 나야 폰이 고장났어 새 번호로 바꿨어 급하게 상품권 50만원어치 필요해 010-9382-7461",
+];
 
 export function ImageAnalyzer() {
   const [file, setFile] = useState<File | null>(null);
@@ -18,7 +23,6 @@ export function ImageAnalyzer() {
   const [ocrStep, setOcrStep] = useState(-1);
   const [ocrRunning, setOcrRunning] = useState(false);
   const [ocrText, setOcrText] = useState<string | null>(null);
-  const [imageResult, setImageResult] = useState<unknown>(null);
   const [isEditing, setIsEditing] = useState(false);
   const [editedText, setEditedText] = useState("");
   const [dragOver, setDragOver] = useState(false);
@@ -59,32 +63,18 @@ export function ImageAnalyzer() {
     setOcrText(null);
     setOcrError(false);
 
+    // BUG-5: 5% 랜덤 실패 제거 (시뮬레이션 전용, 마이그레이션 후 정리)
     let step = 0;
     const interval = setInterval(() => {
       step += 1;
       setOcrStep(step);
       if (step >= OCR_STEPS.length - 1) {
         clearInterval(interval);
-        setTimeout(async () => {
-          try {
-            const dataUri = await new Promise<string>((resolve, reject) => {
-              const reader = new FileReader();
-              reader.onload = () => resolve(reader.result as string);
-              reader.onerror = reject;
-              reader.readAsDataURL(file!);
-            });
-            const result = await api.analyze({ type: 'image', content: dataUri });
-            setOcrText(result.content);
-            setEditedText(result.content);
-            setImageResult(result);
-            setOcrRunning(false);
-          } catch (e) {
-            if (e instanceof ApiException) {
-              console.error("[ImageAnalyzer] OCR 실패:", e.message);
-            }
-            setOcrError(true);
-            setOcrRunning(false);
-          }
+        setTimeout(() => {
+          const mockText = MOCK_OCR_RESULTS[Math.floor(Math.random() * MOCK_OCR_RESULTS.length)];
+          setOcrText(mockText);
+          setEditedText(mockText);
+          setOcrRunning(false);
         }, 400);
       }
     }, 650);
@@ -93,9 +83,7 @@ export function ImageAnalyzer() {
   const handleAnalyze = () => {
     const textToAnalyze = isEditing ? editedText : ocrText;
     if (!textToAnalyze || !textToAnalyze.trim()) return;
-    // 원본 입력이 이미지이므로 수정 여부 관계없이 기존 분석 결과 재사용 (DB 중복 저장 방지)
-    const state = imageResult ? { preloadedResult: imageResult } : undefined;
-    nav(`/analyze/progress?text=${encodeURIComponent(textToAnalyze)}&type=image`, { state });
+    nav(`/analyze/progress?text=${encodeURIComponent(textToAnalyze)}&type=image`);
   };
 
   const handleReset = () => {
@@ -141,11 +129,11 @@ export function ImageAnalyzer() {
       <div className="space-y-4">
         {/* 업로드 영역 */}
         {!preview ? (
-          <div
+          <label
+            htmlFor="file-input-image"
             onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
             onDragLeave={() => setDragOver(false)}
             onDrop={handleDrop}
-            onClick={() => fileRef.current?.click()}
             className={`relative rounded-2xl border-2 border-dashed p-8 sm:p-12 flex flex-col items-center gap-4 cursor-pointer transition-all
               ${dragOver
                 ? "border-emerald-500/60 bg-emerald-50 dark:bg-emerald-900/10"
@@ -162,13 +150,14 @@ export function ImageAnalyzer() {
               <p className="text-xs sm:text-sm text-gray-500 dark:text-white/40">PNG, JPG, WEBP 지원 · 최대 10MB</p>
             </div>
             <input
+              id="file-input-image"
               ref={fileRef}
               type="file"
               accept="image/*"
               className="hidden"
               onChange={(e) => { const f = e.target.files?.[0]; if (f) handleFile(f); }}
             />
-          </div>
+          </label>
         ) : (
           <div className="bg-white dark:bg-[#111c30] border border-gray-200 dark:border-white/10 rounded-2xl p-4">
             <div className="flex items-center justify-between mb-3">

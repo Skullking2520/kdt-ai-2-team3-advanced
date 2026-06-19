@@ -125,9 +125,9 @@ export function analyzeSms(text: string): SmsAnalysis {
   const hasPersonalInfoRequest = PERSONAL_INFO_KEYWORDS.some((k) => text.includes(k));
 
   // ── 분기별 결과 (점수 / 사유 / 가이드) ──
-  let risk_level: RiskLevel = 'low';
-  let risk_score = 18;
-  let smishing_type = '정상 문자';
+  let risk_level: RiskLevel;
+  let risk_score: number;
+  let smishing_type: string;
   const reasons: string[] = [];
   const action_guide: string[] = [];
 

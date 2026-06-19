@@ -37,13 +37,12 @@ function Toggle({ checked, onChange }: { checked: boolean; onChange: (v: boolean
   return (
     <button
       onClick={() => onChange(!checked)}
-      className={`relative w-10 h-5.5 rounded-full transition-all duration-200 ${checked ? "bg-cyan-500" : "bg-white/15"}`}
-      style={{ height: "22px" }}
+      className={`relative w-11 h-6 rounded-full transition-all duration-200 ${checked ? "bg-cyan-500" : "bg-white/30 border border-white/20"}`}
     >
       <motion.div
-        animate={{ x: checked ? 20 : 2 }}
+        animate={{ x: checked ? 22 : 2 }}
         transition={{ type: "spring", stiffness: 500, damping: 30 }}
-        className="absolute top-0.5 w-4 h-4 rounded-full bg-white shadow-sm"
+        className={`absolute top-0.5 w-5 h-5 rounded-full shadow-sm ${checked ? "bg-white" : "bg-white/60"}`}
       />
     </button>
   );
@@ -82,14 +81,22 @@ export function Settings() {
   };
 
   const handleSave = () => {
-    localStorage.setItem("newbiz-settings", JSON.stringify(cfg));
-    setSaved(true);
-    setTimeout(() => setSaved(false), 2000);
+    try {
+      localStorage.setItem("newbiz-settings", JSON.stringify(cfg));
+      setSaved(true);
+      setTimeout(() => setSaved(false), 2000);
+    } catch {
+      // localStorage quota 초과 / private mode → 인메모리 state에만 반영
+      setSaved(true);
+      setTimeout(() => setSaved(false), 2000);
+    }
   };
 
   const handleReset = () => {
     setCfg(DEFAULT);
-    localStorage.removeItem("newbiz-settings");
+    try {
+      localStorage.removeItem("newbiz-settings");
+    } catch { /* 무시 */ }
   };
 
   const thresholdLabel = cfg.threshold < 30 ? "보수적 (오탐 증가)" : cfg.threshold < 60 ? "균형 (권장)" : "관대적 (미탐 증가)";

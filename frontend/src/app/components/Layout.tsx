@@ -1,9 +1,11 @@
 import {Outlet, NavLink, useLocation, useNavigate} from "react-router";
 import {
-ShieldCheck, Menu, X, MessageSquareWarning, Link2, ImageIcon,
-Flag, ChevronDown, Bell, Search, Sun, Moon, BookOpen,
-History, TrendingUp, Phone, HelpCircle, Zap, Type,
-AlertTriangle, 
+  ShieldCheck, Menu, X, MessageSquareWarning, Link2, ImageIcon,
+  Flag, ChevronDown, Bell, Search, Sun, Moon, BookOpen,
+  History, TrendingUp, Phone, HelpCircle, Zap, Type,
+  AlertTriangle,
+  LayoutDashboard, Database, ClipboardList, Settings2,
+  LogOut, MessageSquare,
 } from "lucide-react";
 import {useState, useEffect, useRef} from "react";
 import {useAdmin} from "../context/AdminContext";
@@ -12,6 +14,8 @@ import {SeniorBottomBar} from "./senior/SeniorBottomBar";
 import {motion, AnimatePresence} from "motion/react";
 
 const TREND_ALERT = "이번 주 택배·공공기관 사칭 스미싱 급증 — 링크 클릭 전 꼭 확인하세요";
+
+const ADMIN_PATH_PREFIXES = ["/admin", "/dashboard", "/patterns", "/audit", "/feedback", "/settings", "/simulator", "/live-feed", "/export", "/attention", "/bulk", "/compare", "/benchmark", "/dataset", "/model", "/zero-day", "/api", "/error-analysis", "/redteam", "/ab-test", "/feature-importance", "/ioc", "/health"];
 
 /* ─── 실시간 검사 드롭다운 ─── */
 const SCAN_ITEMS = [
@@ -144,7 +148,13 @@ function NavDropdown({
       onMouseEnter={hoverOpen}
       onMouseLeave={hoverClose}
     >
-      <button className={navCls(isActive)}>
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        onFocus={() => setOpen(true)}
+        onBlur={() => setOpen(false)}
+        className={navCls(isActive)}
+      >
         {TIcon && <TIcon size={14} />}
         {label}
         <ChevronDown
@@ -214,21 +224,49 @@ function NavDropdown({
 export function Layout() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [alertVisible, setAlertVisible] = useState(true);
-  const [isDark, setIsDark] = useState(() => localStorage.getItem("nb-theme") === "dark");
+  const [isDark, setIsDark] = useState(() => {
+    try {
+      return localStorage.getItem("nb-theme") === "dark";
+    } catch {
+      return false; // private mode / quota / 비활성 환경 모두 라이트로 fallback
+    }
+  });
 
   const location = useLocation();
   const navigate = useNavigate();
-  const { isAdmin } = useAdmin();
-  const { senior: seniorMode, toggle: setSeniorMode } = useSenior();
+  const { isAdmin, logout } = useAdmin();
+  const { senior: seniorMode, toggle: setSeniorMode, setSenior } = useSenior();
+
+  // 시니어 모드 진입/해제 시 다크 강제 (SeniorHome/SeniorAnalyzer 다크 전용 디자인)
+  // 진입: 다크 강제 / 해제: 라이트로 복귀 (어르신 친화 = 다크, 일반 = 라이트)
+  useEffect(() => {
+    if (seniorMode) {
+      setIsDark(true);
+    } else {
+      setIsDark(false);
+    }
+  }, [seniorMode]);
 
   useEffect(() => {
     document.documentElement.classList.toggle("dark", isDark);
-    localStorage.setItem("nb-theme", isDark ? "dark" : "light");
+    try {
+      localStorage.setItem("nb-theme", isDark ? "dark" : "light");
+    } catch {
+      /* localStorage 사용 불가 환경 무시 (private mode / quota 초과) */
+    }
   }, [isDark]);
 
   useEffect(() => {
     setMobileOpen(false);
   }, [location.pathname]);
+
+  // 어드민 라우트 진입 시 시니어 모드 자동 해제 (admin UI는 senior-mode CSS 무효화)
+  const isAdminRoute = ADMIN_PATH_PREFIXES.some((p) => location.pathname === p || location.pathname.startsWith(p + "/"));
+  useEffect(() => {
+    if (isAdminRoute && seniorMode) {
+      setSenior(false);
+    }
+  }, [isAdminRoute, seniorMode, setSenior]);
 
   const scanPaths = SCAN_ITEMS.map((s) => s.to);
   const isScanActive = scanPaths.includes(location.pathname);
@@ -245,7 +283,10 @@ export function Layout() {
     }`;
 
   return (
-    <div className="min-h-screen flex flex-col bg-[#F8FAFC] dark:bg-[#0b1120]">
+    <div
+      className="min-h-screen flex flex-col bg-[#F8FAFC] dark:bg-[#0b1120]"
+      style={seniorMode && !isAdminRoute ? { paddingBottom: "84px" } : undefined}
+    >
 
       {/* 알림 배너 */}
       <AnimatePresence>
@@ -266,12 +307,18 @@ export function Layout() {
       </AnimatePresence>
 
       {/* 헤더 */}
-      <header className="bg-white dark:bg-[#0d1526] border-b border-gray-200 dark:border-white/10 sticky top-0 z-40">
+      <header className="bg-white dark:bg-[#0d1526] border-b border-gray-200 dark:border-white/10 sticky top-0 z-50 shadow-sm shadow-black/5">
         <div className="max-w-7xl mx-auto px-6">
           <div className="flex items-center h-16 gap-8">
 
-            {/* 로고 */}
-            <button onClick={() => navigate("/")} className="flex items-center gap-2.5 shrink-0">
+            {/* 로고 — 클릭 가능 명시 + 시니어 모드 시 senior-home으로 이동 */}
+            <button
+              type="button"
+              onClick={() => navigate(seniorMode ? "/senior-home" : "/", { replace: false })}
+              aria-label="NewBiz Shield 홈으로 이동"
+              title="홈으로"
+              className="flex items-center gap-2.5 shrink-0 cursor-pointer rounded-lg px-1.5 py-1 hover:bg-gray-50 dark:hover:bg-white/5 transition-colors"
+            >
               <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ backgroundColor: "#2563EB" }}>
                 <ShieldCheck size={16} style={{ color: "white" }} />
               </div>
@@ -284,13 +331,25 @@ export function Layout() {
             {/* 데스크톱 GNB — 시니어 ON 시 메뉴 압축 (검사/신고/도움 4개) */}
             <nav className="hidden lg:flex items-center gap-0.5 flex-1">
 
-              <NavLink to="/" end className={({ isActive }) => navCls(isActive)}>홈</NavLink>
+              <NavLink to={seniorMode ? "/senior-home" : "/"} end className={({ isActive }) => navCls(isActive)}>홈</NavLink>
 
               {seniorMode ? (
                 <>
-                  <NavLink to="/analyze" className={({ isActive }) => navCls(isActive)}>
+                  <NavLink to="/senior-analyze" className={({ isActive }) => navCls(isActive)}>
                     <MessageSquareWarning size={14} />
-                    문자 검사
+                    문자 검사하기
+                  </NavLink>
+                  <NavLink to="/url" className={({ isActive }) => navCls(isActive)}>
+                    <Link2 size={14} />
+                    링크 검사하기
+                  </NavLink>
+                  <NavLink to="/senior-image" className={({ isActive }) => navCls(isActive)}>
+                    <ImageIcon size={14} />
+                    사진으로 검사하기
+                  </NavLink>
+                  <NavLink to="/sender" className={({ isActive }) => navCls(isActive)}>
+                    <Phone size={14} />
+                    전화번호 조회
                   </NavLink>
                   <NavLink to="/report" className={({ isActive }) => navCls(isActive)}>
                     <Flag size={14} />
@@ -321,13 +380,42 @@ export function Layout() {
                     items={GUIDE_ITEMS}
                     isActive={isGuideActive}
                   />
+
+                  <NavLink to="/report" className={({ isActive }) => navCls(isActive)}>
+                    <Flag size={14} />
+                    신고하기
+                  </NavLink>
+
+                  {/* 어드민 메뉴 — isAdmin일 때만 표시 */}
+                  {isAdmin && (
+                    <>
+                      <div className="w-px h-5 bg-white/15 mx-1" />
+                      <NavDropdown
+                        label="운영 도구"
+                        isActive={ADMIN_PATH_PREFIXES.some((p: string) => location.pathname === p || location.pathname.startsWith(p + "/"))}
+                        triggerIcon={LayoutDashboard}
+                        items={[
+                          { to: "/admin", icon: LayoutDashboard, label: "모델 성능", desc: "모델 비교 분석" },
+                          { to: "/dashboard", icon: LayoutDashboard, label: "대시보드", desc: "탐지 현황 대시보드" },
+                          { to: "/patterns", icon: Database, label: "패턴 DB", desc: "피싱 패턴 라이브러리" },
+                          { to: "/audit", icon: ClipboardList, label: "보안 감사", desc: "감사 로그 및 신고 검토" },
+                          { to: "/feedback", icon: MessageSquare, label: "피드백 분석", desc: "정확도 피드백 분석" },
+                          { to: "/settings", icon: Settings2, label: "설정", desc: "시스템 설정" },
+                        ]}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => { logout(); navigate("/"); }}
+                        className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs text-amber-400/80 hover:text-red-400 hover:bg-red-500/5 transition-all ml-1 border border-amber-500/20 hover:border-red-500/30"
+                        title="어드민 모드 해제"
+                      >
+                        <LogOut size={12} />
+                        종료
+                      </button>
+                    </>
+                  )}
                 </>
               )}
-
-              <NavLink to="/report" className={({ isActive }) => navCls(isActive)}>
-                <Flag size={14} />
-                신고하기
-              </NavLink>
 
             </nav>
 
@@ -339,30 +427,42 @@ export function Layout() {
                 </span>
               )}
 
-              {/* 큰 글씨 모드 토글 */}
+              {/* 시니어 모드 토글 — OFF면 ON + SeniorHome, ON이면 OFF + / */}
               <button
-                onClick={() => setSeniorMode()}
-                title={seniorMode ? "큰 글씨 모드 끄기" : "큰 글씨 모드 켜기"}
-                aria-label={seniorMode ? "큰 글씨 모드 끄기" : "큰 글씨 모드 켜기"}
+                type="button"
+                onClick={() => {
+                  if (seniorMode) {
+                    setSenior(false);
+                    navigate("/");
+                  } else {
+                    setSeniorMode();
+                    navigate("/senior-home");
+                  }
+                }}
+                title={seniorMode ? "시니어 모드 끄기 (일반 모드로)" : "시니어 모드 켜기 (큰 글씨 페이지)"}
+                aria-label={seniorMode ? "시니어 모드 끄고 일반 페이지로 이동" : "시니어 모드 켜고 시니어 페이지로 이동"}
                 aria-pressed={seniorMode}
                 className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg transition-colors ${
                   seniorMode
-                    ? "bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400"
-                    : "text-gray-500 dark:text-white/50 hover:bg-gray-100 dark:hover:bg-white/5"
-                }`}
+                    ? "bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-900/30"
+                    : "text-gray-600 dark:text-white/60 hover:bg-gray-100 dark:hover:bg-white/5 hover:text-gray-900 dark:hover:text-white"
+                } cursor-pointer`}
+                style={{ fontWeight: 500 }}
               >
                 <Type size={14} />
-                <span className="text-xs" style={{ fontWeight: 500 }}>큰글씨</span>
+                <span className="text-xs">{seniorMode ? "일반" : "시니어"}</span>
               </button>
 
-              {/* 다크/라이트 토글 */}
-              <button
-                onClick={() => setIsDark((v) => !v)}
-                className="p-2 rounded-lg text-gray-500 dark:text-white/50 hover:bg-gray-100 dark:hover:bg-white/5 transition-colors"
-                title={isDark ? "라이트 모드로 전환" : "다크 모드로 전환"}
-              >
-                {isDark ? <Sun size={16} /> : <Moon size={16} />}
-              </button>
+              {/* 다크/라이트 토글 — 시니어 모드일 때는 다크 고정 (SeniorHome/SeniorAnalyzer 다크 전용 디자인) */}
+              {!seniorMode && (
+                <button
+                  onClick={() => setIsDark((v) => !v)}
+                  className="p-2 rounded-lg text-gray-500 dark:text-white/50 hover:bg-gray-100 dark:hover:bg-white/5 transition-colors"
+                  title={isDark ? "라이트 모드로 전환" : "다크 모드로 전환"}
+                >
+                  {isDark ? <Sun size={16} /> : <Moon size={16} />}
+                </button>
+              )}
 
               {/* 세로 구분선 */}
               <div className="hidden sm:block w-px h-5 bg-gray-200 dark:bg-white/10 mx-2" />
@@ -406,9 +506,9 @@ export function Layout() {
                 {seniorMode ? (
                   <>
                     {/* 시니어 모드: 4개 메뉴만 */}
-                    <NavLink to="/analyze" className={({ isActive }) => `flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm transition-colors ${isActive ? "bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400 font-semibold" : "text-gray-700 dark:text-white/60 hover:bg-gray-50 dark:hover:bg-white/5"}`}>
+                    <NavLink to="/senior-analyze" className={({ isActive }) => `flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm transition-colors ${isActive ? "bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400 font-semibold" : "text-gray-700 dark:text-white/60 hover:bg-gray-50 dark:hover:bg-white/5"}`}>
                       <MessageSquareWarning size={14} className="shrink-0" />
-                      문자 검사
+검사하기
                     </NavLink>
                     <NavLink to="/report" className={({ isActive }) => `flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm transition-colors ${isActive ? "bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400 font-semibold" : "text-gray-700 dark:text-white/60 hover:bg-gray-50 dark:hover:bg-white/5"}`}>
                       <Flag size={14} className="shrink-0" />
@@ -458,14 +558,28 @@ export function Layout() {
                   </>
                 )}
 
-                {/* 시니어 모드 + 큰글씨 토글 (항상) */}
+                {/* 시니어 모드 토글 */}
                 <div className="pt-1 border-t border-gray-100 dark:border-white/8 mt-2 space-y-0.5">
                   <button
-                    onClick={() => setSeniorMode()}
-                    className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm transition-colors ${seniorMode ? "bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400 font-semibold" : "text-gray-700 dark:text-white/60 hover:bg-gray-50 dark:hover:bg-white/5"}`}
+                    type="button"
+                    onClick={() => {
+                      if (seniorMode) {
+                        setSenior(false);
+                        navigate("/");
+                      } else {
+                        setSeniorMode();
+                        navigate("/senior-home");
+                      }
+                    }}
+                    aria-pressed={seniorMode}
+                    className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm transition-colors ${
+                      seniorMode
+                        ? "bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400"
+                        : "text-gray-700 dark:text-white/60 hover:bg-gray-50 dark:hover:bg-white/5 hover:text-gray-900 dark:hover:text-white"
+                    }`}
                   >
                     <Type size={14} className="shrink-0" />
-                    큰 글씨 모드 {seniorMode ? "(켜짐)" : "(꺼짐)"}
+                    {seniorMode ? "일반 모드로 전환" : "시니어 모드 (큰 글씨)"}
                   </button>
                 </div>
 
@@ -486,10 +600,15 @@ export function Layout() {
       </header>
 
       {/* 콘텐츠 */}
-      <main className="flex-1" style={seniorMode ? { paddingBottom: "84px" } : undefined}><Outlet /></main>
+      <main className="flex-1"><Outlet /></main>
 
-      {/* 시니어 모드 고정 바 (어디서든 뒤로/처음/도움) */}
-      {seniorMode && <SeniorBottomBar />}
+      {/* 시니어 모드 고정 바 (어디서든 뒤로/처음/도움).
+          단, /senior-home·/senior-analyze 자체에는 이미 Senior 헤더 nav(문자/신고/도움)와
+          자체 뒤로/처음 컨트롤이 있어 SeniorBottomBar가 보조 버튼을 가리므로 숨김. */}
+      {seniorMode && !isAdminRoute
+        && location.pathname !== "/senior-home"
+        && location.pathname !== "/senior-analyze"
+        && <SeniorBottomBar />}
 
       {/* 푸터 */}
       <footer className="border-t border-gray-200 dark:border-white/10 bg-white dark:bg-[#0d1526] mt-auto">

@@ -177,7 +177,7 @@ function PatternCard({ pattern }: { pattern: PatternCase }) {
             <p className="text-xs text-white/40 mt-0.5 truncate">{pattern.exampleText.slice(0, 60)}...</p>
           </div>
           <div className="shrink-0 flex items-center gap-3">
-            <div className="text-center">
+            <div className="flex items-baseline gap-0.5">
               <p className={`text-lg ${pattern.riskLevel === "HIGH" ? "text-red-400" : pattern.riskLevel === "MEDIUM" ? "text-orange-400" : "text-emerald-400"}`} style={{ fontWeight: 700 }}>
                 {pattern.score}
               </p>

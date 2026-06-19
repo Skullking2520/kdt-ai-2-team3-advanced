@@ -15,7 +15,6 @@ interface GovernmentCriteriaCardProps {
 }
 
 export function GovernmentCriteriaCard({
-  riskLevel,
   hasUrl,
   hasImpersonation,
   hasPaymentRequest,
