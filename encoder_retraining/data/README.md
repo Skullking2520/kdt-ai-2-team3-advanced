@@ -11,8 +11,6 @@
 | `collected/<run_id>/` | 운영 DB와 수동 사례에서 수집한 incremental data | no |
 | `datasets/<dataset_version>/` | 기준 데이터와 incremental data를 합친 fixed split | no |
 | `prepared/<dataset_version>/` | 전처리/Cleanlab 팀이 넘긴 최종 재학습 데이터 | no |
-| `pred_probs/<dataset_version>/` | Cleanlab용 예측 확률 산출물 | no |
-| `quality/<dataset_version>/` | Cleanlab 정제 결과 | no |
 | `runs/<run_id>/` | end-to-end 재학습 실행 결과 | no |
 | `evaluations/<run_id>/` | baseline/candidate 모델 비교 결과 | no |
 
@@ -75,7 +73,7 @@ tar -czf encoder-v4.tar.gz encoder_retraining/data/prepared/encoder-v4
 {
   "dataset_version": "encoder-v2-preprocessed-YYYYMMDD",
   "preprocess_version": "preprocess-v1",
-  "cleanlab_mode": "pred-probs",
+  "cleanlab_source": "external_cleanlab_audit",
   "train_count": 0,
   "valid_count": 0,
   "test_count": 0,

@@ -75,23 +75,28 @@ cleanlab-audit/
 
 주간 자동 실행에는 다음 repository secrets가 필요하다.
 
-| Secret | Required | Purpose |
-| --- | --- | --- |
-| `ENCODER_PREPARED_DATASET_URL` | one of two | prepared dataset `.tar.gz` 다운로드 URL |
-| `ENCODER_CLEANLAB_AUDIT_URL` | one of two | Cleanlab audit S3 prefix 또는 `.tar.gz` 다운로드 URL |
-| `ENCODER_PREPARED_DATASET_BEARER_TOKEN` | optional | private URL 접근용 bearer token |
-| `S3_AWS_ACCESS_KEY_ID` | S3 only | S3 다운로드용 AWS access key |
-| `S3_AWS_SECRET_ACCESS_KEY` | S3 only | S3 다운로드용 AWS secret key |
-| `AWS_ACCESS_KEY_ID` | optional fallback | 기존 호환용 S3 access key fallback |
-| `AWS_SECRET_ACCESS_KEY` | optional fallback | 기존 호환용 S3 secret key fallback |
-| `AWS_SESSION_TOKEN` | optional | 임시 AWS credential 사용 시 session token |
-| `AWS_REGION` | S3 only | Repository variable 권장. 없으면 `ap-northeast-2` 기본값 사용 |
-| `HF_TOKEN` | upload only | Hugging Face model upload token |
+| Name | Type | Required | Purpose |
+| --- | --- | --- | --- |
+| `ENCODER_CLEANLAB_AUDIT_URL` | secret | current required | Cleanlab audit S3 prefix 또는 `.tar.gz` 다운로드 URL |
+| `S3_AWS_ACCESS_KEY_ID` | secret | S3 required | S3 다운로드용 AWS access key |
+| `S3_AWS_SECRET_ACCESS_KEY` | secret | S3 required | S3 다운로드용 AWS secret key |
+| `AWS_REGION` | variable | S3 required | S3 bucket region. 현재 값은 `ap-northeast-2` |
 
-`HF_TOKEN`은 실제 업로드 단계에서만 필요하다. dry-run이나 단순 재학습/비교에는
-필수는 아니다.
-`ENCODER_PREPARED_DATASET_URL`과 `ENCODER_CLEANLAB_AUDIT_URL` 중 하나는 필요하다.
-둘 다 있으면 Cleanlab audit URL을 우선 사용한다.
+현재 repository에 설정된 값은 위 네 가지가 기준이다. 아래 값들은 workflow가
+호환성이나 선택 기능을 위해 읽을 수 있지만, 현재 repository에는 설정되어 있지 않다.
+
+| Name | Type | Purpose |
+| --- | --- | --- |
+| `ENCODER_PREPARED_DATASET_URL` | secret | prepared dataset `.tar.gz`를 직접 받을 때 사용 |
+| `ENCODER_PREPARED_DATASET_BEARER_TOKEN` | secret | private URL 접근용 bearer token |
+| `AWS_ACCESS_KEY_ID` | secret | 기존 호환용 S3 access key fallback |
+| `AWS_SECRET_ACCESS_KEY` | secret | 기존 호환용 S3 secret key fallback |
+| `AWS_SESSION_TOKEN` | secret | 임시 AWS credential 사용 시 session token |
+| `HF_TOKEN` | secret | Hugging Face model upload token |
+
+`HF_TOKEN`은 실제 Hugging Face 업로드 단계에서만 필요하다. 현재 repository에는
+설정되어 있지 않으므로, `upload_to_hf=true`를 사용하려면 먼저 secret을 추가해야 한다.
+현재 자동 재학습 입력은 `ENCODER_CLEANLAB_AUDIT_URL`을 우선 사용한다.
 
 PR #24가 다음처럼 S3 prefix에 Cleanlab 결과 파일 5개를 올리는 경우에는
 `ENCODER_CLEANLAB_AUDIT_URL`에 prefix를 그대로 넣는다.

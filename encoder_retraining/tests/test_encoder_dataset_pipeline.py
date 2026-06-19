@@ -24,10 +24,6 @@ builder = load_module(
     "encoder_dataset_builder",
     "build_training_dataset.py",
 )
-quality = load_module(
-    "encoder_cleanlab_runner",
-    "run_cleanlab.py",
-)
 pred_probs = load_module(
     "encoder_pred_probs_generator",
     "generate_cleanlab_pred_probs.py",
@@ -115,55 +111,6 @@ def test_builder_adds_incremental_rows_only_to_train(tmp_path: Path) -> None:
     assert "신규 피해 사례" not in held_out_texts
     assert manifest["valid_count"] == 4
     assert manifest["test_count"] == 4
-
-
-def test_mock_quality_check_drops_only_pseudo_label_issue(
-    tmp_path: Path,
-) -> None:
-    train_path = tmp_path / "train.jsonl"
-    output_dir = tmp_path / "quality-v1"
-    write_jsonl(
-        train_path,
-        [
-            {
-                "text": "모델이 잘못 고른 정상 후보",
-                "label": 0,
-                "source": "HIGH_CONFIDENCE_NORMAL",
-                "mock_pred_probs": [0.05, 0.95],
-            },
-            {
-                "text": "검토가 필요한 수동 피해 사례",
-                "label": 1,
-                "source": "MANUAL_INCIDENT",
-                "mock_pred_probs": [0.9, 0.1],
-            },
-            {
-                "text": "정상적인 기존 학습 문장",
-                "label": 0,
-                "source": "BASE_DATASET",
-            },
-        ],
-    )
-
-    summary = quality.run_quality_check(
-        train_path=train_path,
-        output_dir=output_dir,
-        mode="mock",
-        pred_probs_path=None,
-        drop_all_issues=False,
-    )
-
-    cleaned = read_jsonl(output_dir / "cleaned_train.jsonl")
-    with (output_dir / "cleanlab_issues.csv").open(
-        encoding="utf-8",
-        newline="",
-    ) as file:
-        issues = list(csv.DictReader(file))
-    assert summary["issue_count"] == 2
-    assert summary["dropped_count"] == 1
-    assert summary["review_count"] == 1
-    assert len(cleaned) == 2
-    assert {row["action"] for row in issues} == {"drop", "review"}
 
 
 def test_pred_probs_generator_resolves_label_indices() -> None:
@@ -423,9 +370,26 @@ def test_promoter_prepares_staging_model_card(tmp_path: Path) -> None:
     assert "Score Meaning" in readme
 
 
+def test_hf_upload_requires_token(monkeypatch, tmp_path: Path) -> None:
+    monkeypatch.delenv("HF_TOKEN", raising=False)
+    monkeypatch.delenv("HUGGING_FACE_HUB_TOKEN", raising=False)
+
+    try:
+        promoter.upload_to_hf(
+            staging_dir=tmp_path,
+            repo_id="team/model",
+            private=True,
+            commit_message="test",
+        )
+    except promoter.PromotionError as exc:
+        assert "HF_TOKEN" in str(exc)
+    else:
+        raise AssertionError("Expected PromotionError")
+
+
 def test_pipeline_runner_builds_training_command() -> None:
     command = runner.build_training_command(
-        train_path=Path("quality/cleaned_train.jsonl"),
+        train_path=Path("dataset/train.jsonl"),
         valid_path=Path("dataset/valid.jsonl"),
         test_path=Path("dataset/test.jsonl"),
         model_name_or_path="baseline/model",
@@ -439,7 +403,7 @@ def test_pipeline_runner_builds_training_command() -> None:
 
     command_text = " ".join(command)
     assert "run_kcelectra_retrain_experiments.py" in command_text
-    assert "--train-path quality/cleaned_train.jsonl" in command_text
+    assert "--train-path dataset/train.jsonl" in command_text
     assert "--valid-path dataset/valid.jsonl" in command_text
     assert "--test-path dataset/test.jsonl" in command_text
     assert "--model-name-or-path baseline/model" in command_text
@@ -493,7 +457,6 @@ def test_pipeline_runner_prepared_dir_skips_dataset_steps(
         candidate_model=None,
         candidate_experiment="focal_no_oversampling",
         max_per_source=None,
-        cleanlab_mode="pred-probs",
         skip_training=False,
         skip_comparison=False,
         dry_run=True,

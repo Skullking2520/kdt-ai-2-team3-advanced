@@ -10,8 +10,6 @@ from typing import Any
 
 from build_training_dataset import build_dataset
 from compare_encoder_models import compare_models
-from generate_cleanlab_pred_probs import generate_pred_probs
-from run_cleanlab import run_quality_check
 
 DEFAULT_BASELINE_MODEL = "kdt-2-team4-newbiz/kcelectra-smishing-classifier"
 
@@ -118,7 +116,6 @@ def run_pipeline(
     candidate_model: str | None,
     candidate_experiment: str,
     max_per_source: int | None,
-    cleanlab_mode: str,
     skip_training: bool,
     skip_comparison: bool,
     dry_run: bool,
@@ -137,8 +134,6 @@ def run_pipeline(
 ) -> dict[str, Any]:
     output_dir.mkdir(parents=True, exist_ok=False)
     dataset_dir = output_dir / "dataset"
-    pred_probs_dir = output_dir / "pred_probs"
-    quality_dir = output_dir / "quality"
     training_results_dir = output_dir / "training"
     evaluation_dir = output_dir / "evaluation"
 
@@ -195,29 +190,15 @@ def run_pipeline(
         )
         manifest["steps"]["build_dataset"] = dataset_manifest
 
-        pred_probs_path: Path | None = None
-        if cleanlab_mode == "pred-probs":
-            pred_probs_summary = generate_pred_probs(
-                train_path=dataset_dir / "train.jsonl",
-                output_dir=pred_probs_dir,
-                model_name_or_path=baseline_model,
-                batch_size=batch_size,
-                max_length=max_length,
-                device=device,
-                preview_limit=200,
-            )
-            pred_probs_path = pred_probs_dir / "pred_probs.npy"
-            manifest["steps"]["generate_pred_probs"] = pred_probs_summary
-
-        quality_summary = run_quality_check(
-            train_path=dataset_dir / "train.jsonl",
-            output_dir=quality_dir,
-            mode=cleanlab_mode,
-            pred_probs_path=pred_probs_path,
-            drop_all_issues=False,
-        )
-        manifest["steps"]["cleanlab"] = quality_summary
-        train_path = quality_dir / "cleaned_train.jsonl"
+        manifest["steps"]["generate_pred_probs"] = {
+            "skipped": True,
+            "reason": "cleanlab_is_external",
+        }
+        manifest["steps"]["cleanlab"] = {
+            "skipped": True,
+            "reason": "cleanlab_is_external",
+        }
+        train_path = dataset_dir / "train.jsonl"
         valid_path = dataset_dir / "valid.jsonl"
         test_path = dataset_dir / "test.jsonl"
 
@@ -310,11 +291,6 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--candidate-model")
     parser.add_argument("--candidate-experiment", default="focal_no_oversampling")
     parser.add_argument("--max-per-source", type=int)
-    parser.add_argument(
-        "--cleanlab-mode",
-        choices=("pred-probs", "mock"),
-        default="pred-probs",
-    )
     parser.add_argument("--skip-training", action="store_true")
     parser.add_argument("--skip-comparison", action="store_true")
     parser.add_argument("--dry-run", action="store_true")
@@ -381,7 +357,6 @@ def main() -> None:
         candidate_model=args.candidate_model,
         candidate_experiment=args.candidate_experiment,
         max_per_source=args.max_per_source,
-        cleanlab_mode=args.cleanlab_mode,
         skip_training=args.skip_training,
         skip_comparison=args.skip_comparison,
         dry_run=args.dry_run,
