@@ -26,6 +26,9 @@ export const env = {
   /** true면 Mock 응답, false면 실제 백엔드 호출 */
   USE_MOCK: bool(envRaw.VITE_USE_MOCK, true),
 
+  /** OCR 모드 — true: mock OCR 텍스트 반환, false: 실제 OCR 엔진 호출 (VITE_USE_MOCK=false일 때만 사용) */
+  USE_MOCK_OCR: bool(envRaw.VITE_USE_MOCK_OCR, false),
+
   /** 백엔드 base URL (VITE_USE_MOCK=false일 때만 사용) */
   API_BASE_URL: str(envRaw.VITE_API_BASE_URL, 'http://localhost:8000'),
 

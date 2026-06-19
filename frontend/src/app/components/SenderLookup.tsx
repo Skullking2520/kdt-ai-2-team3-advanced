@@ -77,7 +77,7 @@ export function SenderLookup() {
     setResult(null);
     setError(null);
     try {
-      const data = await api.sender(target);
+      const data = await api.lookupSender(target);
       setResult({
         number: data.number,
         trustScore: data.trustScore === 0 ? 1 : data.trustScore === 100 ? 9 : data.trustScore,
