@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, ReactNode } from "react"
+import { createContext, useContext, useState, type ReactNode } from "react"
 
 interface AdminContextType {
   isAdmin: boolean;
@@ -28,7 +28,6 @@ export function AdminProvider({ children }: { children: ReactNode }) {
 
   const login = (password: string) => {
     if (!ADMIN_PASSWORD) {
-      // eslint-disable-next-line no-console
       console.warn("[AdminContext] VITE_ADMIN_PASSWORD not set; admin login disabled.");
       return false;
     }

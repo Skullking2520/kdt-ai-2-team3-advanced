@@ -32,7 +32,7 @@ export function SeniorBottomBar() {
           뒤로
         </button>
         <button
-          onClick={() => nav("/")}
+          onClick={() => nav("/senior-home")}
           className="flex items-center justify-center gap-2 py-3 rounded-xl bg-white dark:bg-white/5 border-2 border-gray-200 dark:border-white/15 text-gray-700 dark:text-white/80 hover:bg-gray-50 dark:hover:bg-white/10 active:scale-95 transition-all"
           style={{ fontSize: "1.05rem", fontWeight: 600 }}
         >

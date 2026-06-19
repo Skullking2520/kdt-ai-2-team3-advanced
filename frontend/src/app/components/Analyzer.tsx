@@ -1,14 +1,14 @@
 import { useState, useRef, useEffect } from "react";
-import { useLocation } from "react-router";
-import type { AnalysisResult as ApiAnalysisResult } from "@/types/api";
+import { useLocation, useNavigate } from "react-router";
 import {
   ShieldAlert, ShieldCheck, AlertTriangle, Send, RotateCcw,
   CheckCircle2, XCircle, ChevronRight, ArrowRight, ThumbsUp,
   ThumbsDown, BookOpen, Phone, Flag,
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
-import { analyzeSms, toLegacyRiskLevel, URGENCY_KEYWORDS } from "@/lib/smsAnalysis";
-import { api } from "@/lib/api";
+import { URGENCY_KEYWORDS } from "@/lib/smsAnalysis";
+// analyzeSms/toLegacyRiskLevel/URGENCY_KEYWORDS: 검사하기 버튼 → /analyze/progress 분석에 사용됨
+// (미리보기 useEffect는 제거됨 — UX-04)
 
 interface AnalysisResult {
   risk_level: "danger" | "warning" | "normal";
@@ -16,25 +16,6 @@ interface AnalysisResult {
   smishing_type: string;
   reasons: string[];
   action_guide: string[];
-}
-
-// 백엔드 응답(camelCase, types/api.ts 기준)을 컴포넌트 로컬 인터페이스(snake_case)로 변환
-// riskLevel: "high"|"medium"|"low" → risk_level: "danger"|"warning"|"normal"
-// reasons[].label → reasons: string[] (UI에는 라벨 문자열만 표시)
-// actionGuide[].action → action_guide: string[]
-function adaptApiResult(api: ApiAnalysisResult): AnalysisResult {
-  const riskMap: Record<string, "danger" | "warning" | "normal"> = {
-    high: "danger",
-    medium: "warning",
-    low: "normal",
-  };
-  return {
-    risk_level: riskMap[api.riskLevel] ?? "normal",
-    risk_score: api.riskScore,
-    smishing_type: api.smishingType,
-    reasons: api.reasons.map((r) => r.label),
-    action_guide: api.actionGuide.map((a) => a.action),
-  };
 }
 
 const SAMPLE_TEXTS = [
@@ -166,6 +147,7 @@ function HighlightedText({ text }: { text: string }) {
 
 export function Analyzer() {
   const location = useLocation();
+  const navigate = useNavigate();
   const prefill = (location.state as { prefillText?: string } | null)?.prefillText ?? "";
 
   const [textInput, setTextInput] = useState(prefill);
@@ -179,50 +161,35 @@ export function Analyzer() {
 
   useEffect(() => { textareaRef.current?.focus(); }, []);
 
-  // 입력 중 오프라인 즉시 미리보기 — 타이핑할 때마다 로컬 분석 결과 표시
-  // "검사하기" 클릭 시 handleAnalyze가 이 결과를 백엔드 응답으로 덮어씀
-  useEffect(() => {
-    if (!textInput.trim()) { setResult(null); return; }
-    const sms = analyzeSms(textInput);
-    setResult({
-      risk_level: toLegacyRiskLevel(sms.risk_level),
-      risk_score: sms.risk_score,
-      smishing_type: sms.smishing_type,
-      reasons: sms.reasons,
-      action_guide: sms.action_guide,
-    });
-  }, [textInput]);
+  // 입력 중 미리보기 분석 제거 — 사용자가 "검사하기"를 명시적으로 눌러야 분석이 시작되고
+  // 결과는 /analyze/progress 페이지로 이동해 표시됨 (UX-04).
+  // (이전에는 입력 변경 시 즉시 setResult가 호출되어 "검사하기" 버튼이 무의미하게 느껴졌음)
 
-  // "검사하기" 클릭 → 백엔드 POST /predict 호출 → adaptApiResult로 변환 → setResult
-  // 로딩 중 ANALYSIS_STEPS 애니메이션을 600ms 간격으로 진행
-  const handleAnalyze = async () => {
+  const handleAnalyze = () => {
     setError("");
     if (!textInput.trim()) { setError("문자 내용을 입력해주세요."); return; }
     if (textInput.trim().length < 5) { setError("분석할 문자를 조금 더 입력해주세요."); return; }
 
+    // 로딩 애니메이션 시작 — 검사하기 버튼 클릭 직후 결과 영역에 로딩 UI 표시
     setLoading(true);
-    setResult(null);
     setLoadingStep(0);
+    let step = 0;
+    const interval = setInterval(() => {
+      step += 1;
+      setLoadingStep(step);
+      if (step >= ANALYSIS_STEPS.length - 1) clearInterval(interval);
+    }, 400);
 
-    const stepInterval = setInterval(() => {
-      setLoadingStep((prev) => Math.min(prev + 1, ANALYSIS_STEPS.length - 1));
-    }, 600);
-
-    try {
-      const apiResult = await api.analyze({ type: "sms", content: textInput });
-      setResult(adaptApiResult(apiResult));
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "분석 중 오류가 발생했습니다.");
-    } finally {
-      clearInterval(stepInterval);
-      setLoading(false);
-      setLoadingStep(0);
-    }
+    // 새로운 플로우: AnalysisProgress로 이동
+    navigate(`/analyze/progress?text=${encodeURIComponent(textInput)}&type=sms`);
+    // progress 페이지에서 분석이 실제로 진행되므로, Analyzer의 로딩은 애니메이션용으로만 사용
+    setTimeout(() => { clearInterval(interval); setLoading(false); }, 1500);
   };
 
   const handleReset = () => {
     setTextInput("");
     setResult(null);
+    setLoading(false);
     setError("");
     setFeedback(null);
     textareaRef.current?.focus();
@@ -244,7 +211,7 @@ export function Analyzer() {
       <div className="bg-white dark:bg-[#111c30] border border-gray-200 dark:border-white/10 rounded-2xl p-5 mb-4 shadow-sm dark:shadow-none">
         {/* Sample buttons */}
         <div className="flex items-center gap-2 mb-3 flex-wrap">
-          <span className="text-xs text-gray-400 dark:text-white/35">예시 문자:</span>
+          <span className="text-xs text-gray-500 dark:text-white/35">예시 문자:</span>
           {SAMPLE_TEXTS.map((s) => (
             <button
               key={s.label}
@@ -265,7 +232,7 @@ export function Analyzer() {
             className="w-full resize-none bg-gray-50 dark:bg-[#0d1526] border border-gray-200 dark:border-white/10 rounded-xl px-4 py-3 text-sm text-gray-800 dark:text-white/80 placeholder-gray-400 dark:placeholder-white/25 focus:outline-none focus:border-blue-400 dark:focus:border-blue-500 focus:bg-white dark:focus:bg-[#111c30] transition-all leading-relaxed"
             rows={5}
           />
-          <span className="absolute bottom-3 right-3 text-[11px] text-gray-400 dark:text-white/30">{textInput.length}/500</span>
+          <span className="absolute bottom-3 right-3 text-[11px] text-gray-500 dark:text-white/30">{textInput.length}/500</span>
         </div>
 
         {error && (
@@ -278,11 +245,20 @@ export function Analyzer() {
           <button
             onClick={handleAnalyze}
             disabled={loading || !textInput.trim()}
-            className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm transition-all hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed shadow-sm"
-            style={{ backgroundColor: "#2563EB", fontWeight: 600, color: "white" }}
+            className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm transition-all shadow-sm disabled:bg-gray-300 disabled:text-gray-500 dark:disabled:bg-white/10 dark:disabled:text-white/30 disabled:cursor-not-allowed disabled:shadow-none"
+            style={loading || !textInput.trim() ? undefined : { backgroundColor: "#3B82F6", fontWeight: 600, color: "white" }}
           >
-            <Send size={14} style={{ color: "white" }} />
-            {loading ? "분석 중..." : "검사하기"}
+            {loading ? (
+              <>
+                <div className="w-3.5 h-3.5 border-2 border-white/40 border-t-white rounded-full animate-spin" />
+                분석 중...
+              </>
+            ) : (
+              <>
+                <Send size={14} style={{ color: "white" }} />
+                검사하기
+              </>
+            )}
           </button>
           {(textInput || result) && (
             <button
@@ -321,7 +297,7 @@ export function Analyzer() {
                       />
                     )}
                   </div>
-                  <span className={`text-sm ${i <= loadingStep ? "text-gray-800 dark:text-white/80" : "text-gray-400 dark:text-white/30"}`}>{step}</span>
+                  <span className={`text-sm ${i <= loadingStep ? "text-gray-800 dark:text-white/80" : "text-gray-500 dark:text-white/40"}`}>{step}</span>
                 </div>
               ))}
             </div>
@@ -380,10 +356,10 @@ export function Analyzer() {
               </div>
               {/* 입력 텍스트 하이라이트 */}
               <div className="mt-3 p-3 bg-gray-50 dark:bg-[#0d1526] border border-gray-100 dark:border-white/8 rounded-xl">
-                <p className="text-[10px] text-gray-400 dark:text-white/30 mb-2 uppercase tracking-wider">분석된 문자</p>
+                <p className="text-[10px] text-gray-500 dark:text-white/40 mb-2 uppercase tracking-wider">분석된 문자</p>
                 <HighlightedText text={textInput} />
               </div>
-              <div className="flex gap-3 mt-3 text-xs text-gray-400 dark:text-white/30">
+              <div className="flex gap-3 mt-3 text-xs text-gray-500 dark:text-white/40">
                 <span className="flex items-center gap-1"><span className="w-3 h-3 rounded bg-yellow-100 border border-yellow-300 inline-block" /> URL</span>
                 <span className="flex items-center gap-1"><span className="w-3 h-3 rounded bg-red-100 border border-red-200 inline-block" /> 위험 키워드</span>
               </div>
@@ -410,7 +386,7 @@ export function Analyzer() {
 
               {/* 정부기관 기준 체크리스트 */}
               <div className="mt-4 pt-4 border-t border-gray-100 dark:border-white/8">
-                <p className="text-xs text-gray-400 dark:text-white/30 mb-2">정부기관 스미싱 판단 기준</p>
+                <p className="text-xs text-gray-500 dark:text-white/40 mb-2">정부기관 스미싱 판단 기준</p>
                 <div className="grid grid-cols-2 gap-1.5">
                   {GOV_CRITERIA[result.risk_level].map((c) => (
                     <div key={c.label} className={`flex items-center gap-2 px-3 py-2 rounded-lg text-xs ${
@@ -441,7 +417,7 @@ export function Analyzer() {
                       }`}>
                         {step}
                       </span>
-                      {i < DAMAGE_STEPS.length - 1 && <ChevronRight size={12} className="text-gray-300 dark:text-white/20 shrink-0" />}
+                      {i < DAMAGE_STEPS.length - 1 && <ChevronRight size={12} className="text-gray-300 dark:text-white/40 shrink-0" />}
                     </div>
                   ))}
                 </div>
@@ -487,10 +463,10 @@ export function Analyzer() {
                 <div className="space-y-2">
                   {SIMILAR_CASES[result.risk_level].map((c) => (
                     <div key={c.title} className="flex items-center gap-3 p-3 rounded-xl bg-gray-50 dark:bg-[#0d1526] border border-gray-100 dark:border-white/8">
-                      <BookOpen size={13} className="text-gray-400 dark:text-white/35 shrink-0" />
+                      <BookOpen size={13} className="text-gray-500 dark:text-white/35 shrink-0" />
                       <div className="flex-1 min-w-0">
                         <p className="text-sm text-gray-800 dark:text-white/80 truncate">{c.title}</p>
-                        <p className="text-[11px] text-gray-400 dark:text-white/30">{c.year}년 사례</p>
+                        <p className="text-[11px] text-gray-500 dark:text-white/40">{c.year}년 사례</p>
                       </div>
                       <span className="text-xs font-semibold px-2 py-0.5 rounded bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400 border border-blue-100 dark:border-blue-700/30 shrink-0">
                         유사도 {c.similarity}%
@@ -527,7 +503,7 @@ export function Analyzer() {
                 >
                   <ThumbsDown size={12} /> 아님
                 </button>
-                {feedback && <span className="text-xs text-gray-400 dark:text-white/30 ml-1">피드백 감사합니다.</span>}
+                {feedback && <span className="text-xs text-gray-500 dark:text-white/40 ml-1">피드백 감사합니다.</span>}
               </div>
             </div>
           </motion.div>

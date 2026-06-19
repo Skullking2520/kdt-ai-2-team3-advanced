@@ -174,7 +174,7 @@ export function SMSSimulator() {
           <button
             onClick={handleScanAll}
             disabled={scanAll || messages.every((m) => m.result)}
-            className="flex items-center gap-2 px-4 py-2 rounded-xl bg-indigo-500/15 border border-indigo-500/25 text-indigo-400 text-sm hover:bg-indigo-500/20 disabled:opacity-40 disabled:cursor-not-allowed transition-all"
+            className="flex items-center gap-2 px-4 py-2 rounded-xl bg-indigo-500/15 border border-indigo-500/25 text-indigo-400 text-[clamp(0.8125rem,2.5vw,0.9375rem)] whitespace-nowrap min-w-fit hover:bg-indigo-500/20 disabled:opacity-40 disabled:cursor-not-allowed transition-all"
           >
             {scanAll ? (
               <div className="w-4 h-4 border-2 border-indigo-400/30 border-t-indigo-400 rounded-full animate-spin" />
