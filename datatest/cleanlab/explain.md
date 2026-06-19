@@ -74,42 +74,44 @@ PYTHON=datatest/test-code/.venv/bin/python3
 
 ## 실행 명령어
 
+> 파일 분리 후 패키지 구조가 되어 **프로젝트 루트에서** `-m` 플래그로 실행해야 합니다.
+
 ```bash
 # 1. 동작 확인 (1K, 3-fold, ~10분)
-$PYTHON run_cleanlab_label_audit.py \
+$PYTHON -m datatest.cleanlab.run_cleanlab_label_audit \
     --data-path "/path/to/final_data.jsonl" \
     --output-dir results/stage_test \
     --subsample 1000 --n-splits 3
 
 # 2. 빠른 전체 탐색 (91K, direct, ~10분)
-$PYTHON run_cleanlab_label_audit.py \
+$PYTHON -m datatest.cleanlab.run_cleanlab_label_audit \
     --data-path "/path/to/final_data.jsonl" \
-    --output-dir results/stage_direct \
+    --output-dir datatest/cleanlab/results/stage_direct \
     --direct-inference
 
 # 3. 정확한 분석 (91K, 5-fold, ~5시간) — 로컬 저장만
-$PYTHON run_cleanlab_label_audit.py \
+$PYTHON -m datatest.cleanlab.run_cleanlab_label_audit \
     --data-path "/path/to/final_data.jsonl" \
-    --output-dir results/stage3
+    --output-dir datatest/cleanlab/results/stage3
 
 # S3 업로드 포함 (AWS 권한 필요, opt-in)
-$PYTHON run_cleanlab_label_audit.py \
+$PYTHON -m datatest.cleanlab.run_cleanlab_label_audit \
     --data-path "/path/to/final_data.jsonl" \
-    --output-dir results/stage3 \
+    --output-dir datatest/cleanlab/results/stage3 \
     --upload-s3
 
 # pred_probs 캐시 재사용 (Cleanlab만 재실행)
-$PYTHON run_cleanlab_label_audit.py \
+$PYTHON -m datatest.cleanlab.run_cleanlab_label_audit \
     --data-path "/path/to/final_data.jsonl" \
-    --output-dir results/stage3 \
+    --output-dir datatest/cleanlab/results/stage3 \
     --use-cached-probs
 
 # HTML 리포트 생성
-$PYTHON generate_report.py --results-dir results/stage3
+$PYTHON -m datatest.cleanlab.generate_report --results-dir datatest/cleanlab/results/stage3
 
 # 재학습용 데이터셋 변환
-$PYTHON prepare_dataset.py \
-    --cleaned-data results/stage3/cleaned_dataset.jsonl \
+$PYTHON -m datatest.cleanlab.prepare_dataset \
+    --cleaned-data datatest/cleanlab/results/stage3/cleaned_dataset.jsonl \
     --dataset-version encoder-v4
 ```
 
@@ -145,7 +147,7 @@ split: 80/10/10 stratified. 레이블 비율 유지.
 
 버전 업 시:
 ```bash
-$PYTHON prepare_dataset.py --dataset-version encoder-v5
+$PYTHON -m datatest.cleanlab.prepare_dataset --dataset-version encoder-v5
 ```
 
 ---

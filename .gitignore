@@ -65,6 +65,7 @@ my_local_model/
 node_modules/
 frontend/web_mvp/node_modules/
 frontend/web_mvp/dist/
+datatest/pr folder
 
 # 학습 데이터 (S3 백업, Git 제외)
 encoder_retraining/data/

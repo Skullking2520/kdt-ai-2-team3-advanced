@@ -19,11 +19,19 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import os
 from datetime import datetime, timezone
 from pathlib import Path
 
+import boto3
 import pandas as pd
+from dotenv import load_dotenv
 from sklearn.model_selection import train_test_split
+
+load_dotenv(override=True)
+
+S3_BUCKET     = os.environ.get("S3_BUCKET", "smishing-s3-bucket")
+S3_DATA_ROOT  = "encoder_retraining"
 
 SEED = 42
 # train 80% / valid 10% / test 10%
@@ -137,6 +145,21 @@ def prepare(cleaned_data: Path, dataset_version: str, output_root: Path) -> None
     print(f"  valid : {len(valid_df):,}개")
     print(f"  test  : {len(test_df):,}개")
     print(f"  manifest: {manifest_path}")
+
+    # S3 업로드
+    s3_prefix = f"{S3_DATA_ROOT}/{dataset_version}"
+    s3 = boto3.client("s3")
+    for local_file in [
+        out_dir / "cleaned_train.jsonl",
+        out_dir / "valid.jsonl",
+        out_dir / "test.jsonl",
+        manifest_path,
+    ]:
+        s3_key = f"{s3_prefix}/{local_file.name}"
+        s3.upload_file(str(local_file), S3_BUCKET, s3_key)
+        print(f"  S3 업로드: s3://{S3_BUCKET}/{s3_key}")
+
+    print(f"\nS3: s3://{S3_BUCKET}/{s3_prefix}/")
 
 
 def main() -> None:
