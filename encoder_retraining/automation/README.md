@@ -15,12 +15,15 @@ GitHub Actions workflow:
 
 ```text
 self-hosted runner
-labels: self-hosted, macOS, ARM64, encoder, mps
+labels: self-hosted, macOS, ARM64, encoder, mps, team3-advanced-encoder-retraining
 ```
 
 현재 workflow는 Mac self-hosted runner에서 로컬 `uv`를 사용해 Python 3.12
 환경을 준비한다. `actions/setup-python`은 이 runner에서 `/Users/runner` 권한
 문제로 실패할 수 있어 사용하지 않는다.
+
+`team3-advanced-encoder-retraining` 라벨은 이 재학습 workflow 전용 라벨이다.
+GitHub runner 설정에서 해당 라벨을 self-hosted runner에 추가해야 job이 할당된다.
 
 지원하는 실행 방식:
 
@@ -77,10 +80,12 @@ cleanlab-audit/
 | `ENCODER_PREPARED_DATASET_URL` | one of two | prepared dataset `.tar.gz` 다운로드 URL |
 | `ENCODER_CLEANLAB_AUDIT_URL` | one of two | Cleanlab audit S3 prefix 또는 `.tar.gz` 다운로드 URL |
 | `ENCODER_PREPARED_DATASET_BEARER_TOKEN` | optional | private URL 접근용 bearer token |
-| `AWS_ACCESS_KEY_ID` | S3 only | S3 다운로드용 AWS access key |
-| `AWS_SECRET_ACCESS_KEY` | S3 only | S3 다운로드용 AWS secret key |
+| `S3_AWS_ACCESS_KEY_ID` | S3 only | S3 다운로드용 AWS access key |
+| `S3_AWS_SECRET_ACCESS_KEY` | S3 only | S3 다운로드용 AWS secret key |
+| `AWS_ACCESS_KEY_ID` | optional fallback | 기존 호환용 S3 access key fallback |
+| `AWS_SECRET_ACCESS_KEY` | optional fallback | 기존 호환용 S3 secret key fallback |
 | `AWS_SESSION_TOKEN` | optional | 임시 AWS credential 사용 시 session token |
-| `AWS_REGION` | S3 only | S3 bucket region. 없으면 `ap-northeast-2` 기본값 사용 |
+| `AWS_REGION` | S3 only | Repository variable 권장. 없으면 `ap-northeast-2` 기본값 사용 |
 | `HF_TOKEN` | upload only | Hugging Face model upload token |
 
 `HF_TOKEN`은 실제 업로드 단계에서만 필요하다. dry-run이나 단순 재학습/비교에는
@@ -183,7 +188,10 @@ kdt-2-team4-newbiz/kcelectra-smishing-classifier
 
 workflow는 후보 모델이 더 좋다고 판단될 때만 Hugging Face 업로드가 가능하다.
 `promote_encoder_model.py`는 `promotion_manifest.json`의
-`promotion_recommended=true`를 확인한다.
+`promotion_recommended=true`를 확인한다. 후보 모델이 추천되지 않으면
+`promotion_log.json`에 `skipped=true`와 `skip_reason=promotion_not_recommended`를
+남기고 업로드 없이 성공 종료한다. 따라서 주간 자동 실행에서 "이번 주에는 교체할
+모델이 없음"은 실패가 아니라 정상 상태로 기록된다.
 
 권장 운영 방식:
 
@@ -215,8 +223,11 @@ encoder_retraining/data/runs/<run_id>/logs/training_stderr.log
 
 - self-hosted runner가 꺼져 있으면 scheduled/manual workflow가 대기 상태에 머문다.
 - 비용과 시간을 줄이려면 먼저 `dry_run=true`로 workflow 자체를 검증한다.
+- workflow는 `schedule` 또는 repository owner 실행만 허용한다. 현재 owner 계정과
+  `Skullking2520`만 수동 실행할 수 있게 job-level `if` 조건을 둔다.
 - public repository에서 self-hosted runner를 항상 켜두는 것은 위험할 수 있다.
-  신뢰 가능한 workflow를 실행할 때만 켜는 방식을 권장한다.
+  private repository에서 운용하거나, public repository라면 외부 collaborator workflow
+  승인 정책을 강화하고 신뢰 가능한 workflow를 실행할 때만 runner를 켠다.
 
 ## Self-hosted Runner Smoke Result
 

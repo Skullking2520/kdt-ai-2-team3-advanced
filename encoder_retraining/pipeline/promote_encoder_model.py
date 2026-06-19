@@ -216,22 +216,26 @@ def prepare_staging_dir(
 def build_promotion_record(
     *,
     manifest_path: Path,
-    candidate_dir: Path,
-    staging_dir: Path,
+    candidate_dir: Path | None,
+    staging_dir: Path | None,
     repo_id: str,
     model_version: str,
     dry_run: bool,
     uploaded: bool,
+    skipped: bool = False,
+    skip_reason: str | None = None,
 ) -> dict[str, Any]:
     return {
         "created_at": datetime.now(timezone.utc).isoformat(),
         "manifest_path": str(manifest_path),
-        "candidate_dir": str(candidate_dir),
-        "staging_dir": str(staging_dir),
+        "candidate_dir": str(candidate_dir) if candidate_dir is not None else None,
+        "staging_dir": str(staging_dir) if staging_dir is not None else None,
         "repo_id": repo_id,
         "model_version": model_version,
         "dry_run": dry_run,
         "uploaded": uploaded,
+        "skipped": skipped,
+        "skip_reason": skip_reason,
     }
 
 
@@ -271,8 +275,39 @@ def promote_model(
     dry_run: bool,
     allow_not_recommended: bool,
     overwrite_staging: bool,
+    skip_not_recommended: bool = False,
 ) -> dict[str, Any]:
     manifest = load_json(manifest_path)
+    if (
+        manifest.get("promotion_recommended") is not True
+        and not allow_not_recommended
+        and skip_not_recommended
+    ):
+        resolved_version = infer_version(
+            explicit_version=model_version,
+            manifest_path=manifest_path,
+        )
+        resolved_output_log = output_log or (
+            manifest_path.parents[1] / "promotion_log.json"
+        )
+        record = build_promotion_record(
+            manifest_path=manifest_path,
+            candidate_dir=None,
+            staging_dir=None,
+            repo_id=repo_id,
+            model_version=resolved_version,
+            dry_run=dry_run,
+            uploaded=False,
+            skipped=True,
+            skip_reason="promotion_not_recommended",
+        )
+        record["promotion_recommended"] = manifest.get("promotion_recommended")
+        record["candidate_f1"] = manifest["candidate"]["f1"]
+        record["baseline_f1"] = manifest["baseline"]["f1"]
+        record["f1_delta"] = manifest["deltas"]["f1_delta"]
+        write_json(resolved_output_log, record)
+        return record
+
     ensure_promotable(manifest, allow_not_recommended=allow_not_recommended)
 
     resolved_candidate_dir = resolve_candidate_dir(
@@ -347,6 +382,14 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--private", action="store_true")
     parser.add_argument("--upload", action="store_true")
     parser.add_argument("--allow-not-recommended", action="store_true")
+    parser.add_argument(
+        "--skip-not-recommended",
+        action="store_true",
+        help=(
+            "Write a skipped promotion log and exit successfully when the "
+            "candidate is not recommended."
+        ),
+    )
     parser.add_argument("--overwrite-staging", action="store_true")
     return parser.parse_args()
 
@@ -364,6 +407,7 @@ def main() -> None:
         dry_run=not args.upload,
         allow_not_recommended=args.allow_not_recommended,
         overwrite_staging=args.overwrite_staging,
+        skip_not_recommended=args.skip_not_recommended,
     )
     print(json.dumps(record, ensure_ascii=False, indent=2))
 

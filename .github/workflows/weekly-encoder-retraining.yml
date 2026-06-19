@@ -70,7 +70,19 @@ env:
 
 jobs:
   retrain:
-    runs-on: [self-hosted, macOS, ARM64, encoder, mps]
+    if: >-
+      ${{
+        github.event_name == 'schedule' ||
+        github.actor == github.repository_owner ||
+        github.actor == 'Skullking2520'
+      }}
+    runs-on:
+      - self-hosted
+      - macOS
+      - ARM64
+      - encoder
+      - mps
+      - team3-advanced-encoder-retraining
     timeout-minutes: 360
 
     steps:
@@ -307,6 +319,7 @@ jobs:
             --model-version "${RUN_ID}"
             --private
             --upload
+            --skip-not-recommended
           )
           if [ "${{ github.event.inputs.allow_not_recommended_upload || 'false' }}" = "true" ]; then
             args+=(--allow-not-recommended)

@@ -341,6 +341,35 @@ def test_promoter_blocks_not_recommended_manifest(tmp_path: Path) -> None:
         raise AssertionError("Expected PromotionError")
 
 
+def test_promoter_skips_not_recommended_manifest_when_requested(
+    tmp_path: Path,
+) -> None:
+    manifest_path = tmp_path / "run" / "evaluation" / "promotion_manifest.json"
+    output_log = tmp_path / "promotion_log.json"
+    make_promotion_manifest(manifest_path, recommended=False)
+
+    record = promoter.promote_model(
+        manifest_path=manifest_path,
+        repo_id="team/model",
+        candidate_dir=None,
+        staging_dir=tmp_path / "staging",
+        output_log=output_log,
+        model_version="v-test",
+        private=True,
+        dry_run=False,
+        allow_not_recommended=False,
+        overwrite_staging=False,
+        skip_not_recommended=True,
+    )
+
+    saved = json.loads(output_log.read_text(encoding="utf-8"))
+    assert record["uploaded"] is False
+    assert record["skipped"] is True
+    assert record["skip_reason"] == "promotion_not_recommended"
+    assert saved["promotion_recommended"] is False
+    assert not (tmp_path / "staging").exists()
+
+
 def test_promoter_dry_run_writes_promotion_log(tmp_path: Path) -> None:
     manifest_path = tmp_path / "run" / "evaluation" / "promotion_manifest.json"
     candidate_dir = tmp_path / "run" / "final_model"
