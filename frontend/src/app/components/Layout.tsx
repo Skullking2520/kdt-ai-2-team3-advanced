@@ -4,8 +4,8 @@ import {
   Flag, ChevronDown, Bell, Search, Sun, Moon, BookOpen,
   History, TrendingUp, Phone, HelpCircle, Zap, Type,
   AlertTriangle,
-  LayoutDashboard, Database, ClipboardList, Settings2,
-  LogOut, MessageSquare,
+  LayoutDashboard,
+  LogOut,
 } from "lucide-react";
 import {useState, useEffect, useRef} from "react";
 import {useAdmin} from "../context/AdminContext";
@@ -15,7 +15,7 @@ import {motion, AnimatePresence} from "motion/react";
 
 const TREND_ALERT = "이번 주 택배·공공기관 사칭 스미싱 급증 — 링크 클릭 전 꼭 확인하세요";
 
-const ADMIN_PATH_PREFIXES = ["/admin", "/dashboard", "/patterns", "/audit", "/feedback", "/settings", "/simulator", "/live-feed", "/export", "/attention", "/bulk", "/compare", "/benchmark", "/dataset", "/model", "/zero-day", "/api", "/error-analysis", "/redteam", "/ab-test", "/feature-importance", "/ioc", "/health"];
+const ADMIN_PATH_PREFIXES = ["/dashboard", "/compare", "/benchmark", "/ab-test", "/health"];
 
 /* ─── 실시간 검사 드롭다운 ─── */
 const SCAN_ITEMS = [
@@ -395,12 +395,7 @@ export function Layout() {
                         isActive={ADMIN_PATH_PREFIXES.some((p: string) => location.pathname === p || location.pathname.startsWith(p + "/"))}
                         triggerIcon={LayoutDashboard}
                         items={[
-                          { to: "/admin", icon: LayoutDashboard, label: "모델 성능", desc: "모델 비교 분석" },
                           { to: "/dashboard", icon: LayoutDashboard, label: "대시보드", desc: "탐지 현황 대시보드" },
-                          { to: "/patterns", icon: Database, label: "패턴 DB", desc: "피싱 패턴 라이브러리" },
-                          { to: "/audit", icon: ClipboardList, label: "보안 감사", desc: "감사 로그 및 신고 검토" },
-                          { to: "/feedback", icon: MessageSquare, label: "피드백 분석", desc: "정확도 피드백 분석" },
-                          { to: "/settings", icon: Settings2, label: "설정", desc: "시스템 설정" },
                         ]}
                       />
                       <button

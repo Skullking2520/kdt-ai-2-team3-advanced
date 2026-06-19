@@ -1,6 +1,5 @@
-import { ShieldAlert, ShieldCheck, AlertTriangle, TrendingUp, Activity, Flag, MessageSquare, ChevronRight } from "lucide-react";
+import { ShieldAlert, ShieldCheck, AlertTriangle, TrendingUp, Activity, Flag, MessageSquare } from "lucide-react";
 import { Card, MetricBig, SectionHeader, FeedItem } from "./ui/Primitives";
-import { useNavigate } from "react-router";
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 
 const weeklyData = [
@@ -171,7 +170,6 @@ function CustomBarChart({ data }: { data: typeof categoryData }) {
 
 /* ── Dashboard ─────────────────────────────────────── */
 export function Dashboard() {
-  const navigate = useNavigate();
   return (
     <div className="px-4 sm:px-6 py-8 space-y-6 max-w-7xl mx-auto">
       {/* Header */}
@@ -207,12 +205,6 @@ export function Dashboard() {
               <Flag size={14} className="text-red-400" />
               <span className="text-sm text-white/80" style={{ fontWeight: 600 }}>신고 알림</span>
             </div>
-            <button
-              onClick={() => navigate("/audit")}
-              className="flex items-center gap-1 text-[11px] text-white/40 hover:text-white/70 transition-all"
-            >
-              신고 검토 <ChevronRight size={12} />
-            </button>
           </div>
           <div className="grid grid-cols-3 gap-3">
             {reportStats.map((s) => (
@@ -231,12 +223,6 @@ export function Dashboard() {
               <MessageSquare size={14} className="text-cyan-400" />
               <span className="text-sm text-white/80" style={{ fontWeight: 600 }}>피드백 분석</span>
             </div>
-            <button
-              onClick={() => navigate("/feedback")}
-              className="flex items-center gap-1 text-[11px] text-white/40 hover:text-white/70 transition-all"
-            >
-              상세 보기 <ChevronRight size={12} />
-            </button>
           </div>
           <div className="grid grid-cols-2 gap-3">
             {feedbackStats.map((s) => (
