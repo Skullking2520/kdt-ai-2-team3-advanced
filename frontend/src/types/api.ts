@@ -62,6 +62,7 @@ export interface AnalysisRequest {
   sender?: string;            // SMS에서 발신번호 (선택)
   receivedAt?: string;        // ISO 8601 (선택)
   imageId?: string;           // image에서 OCR 선행 시 발급된 ID
+  allowTrainingUse?: boolean; // 모델 개선용 학습 데이터 활용 동의
 }
 
 // ───────────────────────────────────────────

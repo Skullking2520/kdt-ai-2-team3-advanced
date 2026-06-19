@@ -56,18 +56,27 @@
 
 ## Training Code
 
-학습 코드는 [training/run_kcelectra_retrain_experiments.py](training/run_kcelectra_retrain_experiments.py)에 있다.
+학습 코드는 [encoder_retraining/training/run_kcelectra_retrain_experiments.py](../../encoder_retraining/training/run_kcelectra_retrain_experiments.py)에 있다.
+
+운영 DB의 동의된 SMS와 수동 피해 사례 수집, 고정 평가셋 생성, Cleanlab 품질
+검사 방법은 [encoder_retraining/README.md](../../encoder_retraining/README.md)를 참고한다.
+재학습 입력 데이터의 위치와 파일 형식은 [encoder_retraining/data/README.md](../../encoder_retraining/data/README.md)에
+정리한다.
 
 실행 전 필요한 패키지:
 
 ```bash
-python -m pip install -r ai_service/encoder/training/requirements.txt
+python -m pip install -r encoder_retraining/training/requirements.txt
 ```
+
+uv workspace를 사용할 때는 별도 pip 설치 대신 명령에 `--group encoder`를
+추가할 수 있다.
 
 예시 실행:
 
 ```bash
-python ai_service/encoder/training/run_kcelectra_retrain_experiments.py \
+uv run --group encoder python \
+  encoder_retraining/training/run_kcelectra_retrain_experiments.py \
   --data-path <cleaned_dataset.jsonl path> \
   --results-dir ai_service/encoder/results
 ```
@@ -75,12 +84,30 @@ python ai_service/encoder/training/run_kcelectra_retrain_experiments.py \
 빠른 smoke run:
 
 ```bash
-python ai_service/encoder/training/run_kcelectra_retrain_experiments.py \
+uv run --group encoder python \
+  encoder_retraining/training/run_kcelectra_retrain_experiments.py \
   --data-path <cleaned_dataset.jsonl path> \
   --results-dir ai_service/encoder/results \
   --n-trials 1 \
   --epochs 1 \
   --experiments ce_no_oversampling
+```
+
+전처리와 Cleanlab이 별도 담당 영역에서 완료된 경우에는
+`encoder_retraining/data/prepared/<dataset_version>/` 아래의 고정 split을
+사용한다.
+
+```bash
+uv run --group encoder python \
+  encoder_retraining/training/run_kcelectra_retrain_experiments.py \
+  --train-path encoder_retraining/data/prepared/<dataset_version>/cleaned_train.jsonl \
+  --valid-path encoder_retraining/data/prepared/<dataset_version>/valid.jsonl \
+  --test-path encoder_retraining/data/prepared/<dataset_version>/test.jsonl \
+  --model-name-or-path kdt-2-team4-newbiz/kcelectra-smishing-classifier \
+  --results-dir encoder_retraining/data/runs/<run_id>/training \
+  --experiments focal_no_oversampling \
+  --n-trials 1 \
+  --epochs 3
 ```
 
 ## Preprocessing Notes
