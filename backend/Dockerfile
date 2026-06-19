@@ -1,5 +1,6 @@
 # 프로젝트 루트 경로에서 실행 가정
-# 빌드 방법: docker build -f backend/Dockerfile -t smishing-backend .
+# 빌드 방법: docker buildx build --platform linux/amd64 -f backend/Dockerfile -t smishing-backend .
+# paddleocr이 x86/64 wheel밖에 없어서 wheel이 안됩니다. 맥북에서는 러닝이 아닌 빌드만 테스트해봅니다. 
 # 1단계: 빌드 환경
 FROM python:3.12-slim AS builder
 
