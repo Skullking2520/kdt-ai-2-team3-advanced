@@ -66,8 +66,8 @@ FINETUNED_MODEL = "kdt-2-team4-newbiz/kcelectra-smishing-classifier"
 NUM_LABELS = 2
 SEED = 42
 DEFAULT_OUTPUT_DIR = Path(__file__).resolve().parent / "results"
-S3_BUCKET = "smishing-dev-newbies-2026"
-S3_PREFIX = "cleanlab-audit"
+S3_BUCKET = os.getenv("CLEANLAB_S3_BUCKET", "smishing-dev-newbies-2026")
+S3_PREFIX = os.getenv("CLEANLAB_S3_PREFIX", "cleanlab-audit")
 
 
 def get_device() -> str:
@@ -275,12 +275,8 @@ def save_artifacts(report_df: pd.DataFrame, output_dir: Path) -> None:
 
 def upload_to_s3(output_dir: Path, run_name: str, summary: dict[str, Any]) -> None:
     s3 = boto3.client("s3")
-    timestamp = datetime.datetime.now(datetime.timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+    timestamp = summary.get("timestamp") or datetime.datetime.now(datetime.timezone.utc).strftime("%Y%m%dT%H%M%SZ")
     s3_run_prefix = f"{S3_PREFIX}/{run_name}/{timestamp}"
-
-    log_data = {"run_name": run_name, "timestamp": timestamp, **summary}
-    with (output_dir / "audit_log.json").open("w", encoding="utf-8") as f:
-        json.dump(log_data, f, ensure_ascii=False, indent=2, default=str)
 
     print(f"\n=== S3 업로드: s3://{S3_BUCKET}/{s3_run_prefix}/ ===")
     for filename in ("pred_probs.npy", "label_audit_report.csv", "suspected_noisy_labels.csv", "cleaned_dataset.jsonl", "audit_log.json"):
@@ -306,6 +302,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--use-cached-probs", action="store_true")
     parser.add_argument("--subsample", type=int, default=None)
     parser.add_argument("--run-name", default=None, help="S3 업로드 run 이름. 기본값: audit_{mode}")
+    parser.add_argument("--upload-s3", action="store_true", help="결과를 S3에 업로드 (기본값: 로컬 저장만)")
     return parser.parse_args()
 
 
@@ -365,21 +362,31 @@ def main() -> None:
 
     n_issues = int(report_df["is_label_issue"].sum())
     n_total = len(report_df)
-    upload_to_s3(
-        args.output_dir,
-        run_name=run_name,
-        summary={
-            "mode": mode,
-            "data_path": str(args.data_path),
-            "n_total": n_total,
-            "n_label_issues": n_issues,
-            "issue_rate": round(n_issues / n_total, 4),
-            "n_clean": n_total - n_issues,
-            "n_splits": args.n_splits,
-            "subsample": args.subsample,
-            **params,
-        },
-    )
+    summary = {
+        "mode": mode,
+        "data_path": str(args.data_path),
+        "n_total": n_total,
+        "n_label_issues": n_issues,
+        "issue_rate": round(n_issues / n_total, 4),
+        "n_clean": n_total - n_issues,
+        "n_splits": args.n_splits,
+        "subsample": args.subsample,
+        **params,
+    }
+
+    import datetime as _dt
+    timestamp = _dt.datetime.now(_dt.timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+    log_data = {"run_name": run_name, "timestamp": timestamp, **summary}
+    with (args.output_dir / "audit_log.json").open("w", encoding="utf-8") as f:
+        json.dump(log_data, f, ensure_ascii=False, indent=2, default=str)
+    print(f"감사 로그: {args.output_dir / 'audit_log.json'}")
+
+    if args.upload_s3:
+        upload_to_s3(args.output_dir, run_name=run_name, summary={**summary, "timestamp": timestamp})
+    else:
+        print("\nS3 업로드 스킵 (--upload-s3 플래그 없음). 로컬 저장만 완료.")
+        if S3_BUCKET:
+            print(f"업로드하려면: python run_cleanlab_label_audit.py ... --upload-s3")
 
     print("\n완료.")
 

@@ -37,11 +37,21 @@ encoder_retraining/data/prepared/
 ## 실행 환경
 
 ```bash
-PYTHON=/Users/nyongd/Documents/GitHub/kdt-ai-2-team4-advanced/datatest/test-code/.venv/bin/python3
+# uv dependency group으로 설치 (프로젝트 루트에서)
+uv sync --group cleanlab
 
-# 의존성 설치
+# 또는 기존 venv에 직접 설치
 VIRTUAL_ENV=datatest/test-code/.venv uv pip install cleanlab boto3 datasets accelerate scikit-learn
+
+PYTHON=datatest/test-code/.venv/bin/python3
 ```
+
+### 환경변수 (선택)
+
+| 변수 | 기본값 | 설명 |
+|---|---|---|
+| `CLEANLAB_S3_BUCKET` | `smishing-dev-newbies-2026` | S3 버킷명 |
+| `CLEANLAB_S3_PREFIX` | `cleanlab-audit` | S3 키 prefix |
 
 ---
 
@@ -77,10 +87,16 @@ $PYTHON run_cleanlab_label_audit.py \
     --output-dir results/stage_direct \
     --direct-inference
 
-# 3. 정확한 분석 (91K, 5-fold, ~5시간)
+# 3. 정확한 분석 (91K, 5-fold, ~5시간) — 로컬 저장만
 $PYTHON run_cleanlab_label_audit.py \
     --data-path "/path/to/final_data.jsonl" \
     --output-dir results/stage3
+
+# S3 업로드 포함 (AWS 권한 필요, opt-in)
+$PYTHON run_cleanlab_label_audit.py \
+    --data-path "/path/to/final_data.jsonl" \
+    --output-dir results/stage3 \
+    --upload-s3
 
 # pred_probs 캐시 재사용 (Cleanlab만 재실행)
 $PYTHON run_cleanlab_label_audit.py \

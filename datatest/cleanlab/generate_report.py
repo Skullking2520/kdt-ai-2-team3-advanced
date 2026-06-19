@@ -5,6 +5,7 @@ Stage 3 Cleanlab 결과 → HTML 리포트 생성
 from __future__ import annotations
 
 import argparse
+import html as _html
 import json
 from pathlib import Path
 
@@ -40,9 +41,11 @@ def generate_html_report(results_dir: Path, output_path: Path) -> None:
             else '<span style="background:#dbeafe;color:#2563eb;padding:2px 8px;border-radius:9999px;font-size:12px">정상(0)</span>'
         )
         score_color = "#dc2626" if row["label_quality_score"] < 0.1 else "#d97706" if row["label_quality_score"] < 0.3 else "#374151"
+        safe_text = _html.escape(str(row["text"]))
+        display_text = safe_text[:120] + ("…" if len(str(row["text"])) > 120 else "")
         table_rows += f"""
         <tr>
-            <td style="max-width:400px;padding:8px 12px;font-size:13px;color:#374151;border-bottom:1px solid #f3f4f6">{row['text'][:120]}{'…' if len(str(row['text'])) > 120 else ''}</td>
+            <td style="max-width:400px;padding:8px 12px;font-size:13px;color:#374151;border-bottom:1px solid #f3f4f6">{display_text}</td>
             <td style="padding:8px 12px;text-align:center;border-bottom:1px solid #f3f4f6">{label_badge}</td>
             <td style="padding:8px 12px;text-align:center;font-weight:600;color:{score_color};border-bottom:1px solid #f3f4f6">{row['label_quality_score']:.4f}</td>
             <td style="padding:8px 12px;text-align:center;font-size:13px;color:#6b7280;border-bottom:1px solid #f3f4f6">{row['pred_prob_normal']:.3f}</td>

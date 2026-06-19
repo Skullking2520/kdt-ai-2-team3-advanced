@@ -17,6 +17,7 @@ Usage:
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 from datetime import datetime, timezone
 from pathlib import Path
@@ -46,6 +47,14 @@ def save_jsonl(df: pd.DataFrame, path: Path) -> None:
             f.write(json.dumps({"text": row.text, "label": int(row.label)}, ensure_ascii=False) + "\n")
 
 
+def _file_sha256(path: Path) -> str:
+    h = hashlib.sha256()
+    with path.open("rb") as f:
+        for chunk in iter(lambda: f.read(65536), b""):
+            h.update(chunk)
+    return h.hexdigest()
+
+
 def prepare(cleaned_data: Path, dataset_version: str, output_root: Path) -> None:
     df = load_jsonl(cleaned_data)
     print(f"로드: {len(df):,}개")
@@ -73,11 +82,25 @@ def prepare(cleaned_data: Path, dataset_version: str, output_root: Path) -> None
     save_jsonl(valid_df, out_dir / "valid.jsonl")
     save_jsonl(test_df, out_dir / "test.jsonl")
 
+    # audit_log.json이 같은 디렉터리에 있으면 run_id 추출
+    audit_log_path = cleaned_data.parent / "audit_log.json"
+    audit_run_id: str | None = None
+    if audit_log_path.exists():
+        try:
+            log = json.loads(audit_log_path.read_text(encoding="utf-8"))
+            audit_run_id = f"{log.get('run_name','')}_{log.get('timestamp','')}"
+        except Exception:
+            pass
+
     manifest = {
         "dataset_version": dataset_version,
         "created_at": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
         "created_by": "preprocessing_cleanlab_pipeline",
-        "source": str(cleaned_data.resolve()),
+        "source": {
+            "filename": cleaned_data.name,
+            "sha256": _file_sha256(cleaned_data),
+            "cleanlab_run_id": audit_run_id,
+        },
         "label_mapping": {"0": "normal", "1": "phishing"},
         "split_ratio": {"train": 0.80, "valid": 0.10, "test": 0.10},
         "files": {
