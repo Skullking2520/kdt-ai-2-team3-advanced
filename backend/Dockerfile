@@ -63,6 +63,8 @@ EXPOSE 8000
 
 # 빌드 타임의 크래시를 피하고, EC2 인스턴스가 활성화될 때 모델을 안전하게 다운로드
 ENTRYPOINT ["./entrypoint.sh"]
+# 도커파일을 macbook에 맞춰서 paddleocr 로딩 로직을 바꾸다 보니 sh파일을 썼습니다.
+# paddleocr을 wsl로 빌드할때는 dockerfile.windows로 별도로 만들어주세요/
 
 # 클라우드에서 docker run이나 docker compose시 .env로 db url 맞춰서 주입하기
 

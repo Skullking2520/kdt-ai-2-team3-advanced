@@ -21,7 +21,34 @@ def _response_content_into_str(content: str | list | dict) -> str:
         raw_content = str(content)
     return raw_content
 
+def _remove_think_blocks(text: str) -> str:
+    """Qwen 계열 thinking 출력에서 <think>...</think> 블록을 제거한다."""
+    if not isinstance(text, str):
+        text = str(text)
+
+    # 정상적으로 닫힌 <think>...</think> 제거
+    text = re.sub(
+        r"<think>.*?</think>",
+        "",
+        text,
+        flags=re.DOTALL | re.IGNORECASE
+    )
+
+    # 닫히지 않은 <think> 이후 내용 제거
+    text = re.sub(
+        r"<think>.*",
+        "",
+        text,
+        flags=re.DOTALL | re.IGNORECASE
+    )
+
+    # 혹시 남은 닫는 태그 제거
+    text = text.replace("</think>", "")
+
+    return text.strip()
+
 def _normalize_json_output(content: str) -> str:
+    content = _remove_think_blocks(content)
     """LLM 응답에서 마지막 JSON 객체를 추출해 표준 JSON 문자열로 변환한다."""
     """
     네, 분석 결과는 다음과 같습니다:

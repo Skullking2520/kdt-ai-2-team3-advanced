@@ -38,26 +38,42 @@ class PineconeClient(BaseVectorDB):
     def similarity_search(self, query: str, k: int = 4) -> List[Dict[str, Any]]:
         # 쿼리 문장 임베딩 변환
         query_vector = self.embedding_model.embed_query(query)
-        
+
         # 검색 수행 (메타데이터 포함 설정 필수)
         results = self.index.query(
             vector=query_vector,
             top_k=k,
             include_metadata=True
         )
-        
+
         # 결과를 표준화된 List[Dict] 형태로 가공하여 반환
         formatted_results = []
         for match in results.get("matches", []):
+<<<<<<< HEAD
             metadata = match.get("metadata") or {}
             page_content = metadata.get("text") or metadata.get("page_content") or ""
             if not page_content:
                 # fallback for unexpected Pinecone metadata shapes
                 page_content = metadata.get("source", "") or match.get("id", "")
+=======
+            metadata = dict(match.get("metadata", {}))
+
+            # Pinecone에 저장된 원본 텍스트 추출
+            # 기존 add_documents()는 "text"에 저장하지만,
+            # 현재 인덱스 데이터는 "document"에 저장되어 있을 수 있음
+            page_content = (
+                metadata.get("text")
+                or metadata.get("document")
+                or metadata.get("page_content")
+                or metadata.get("content")
+                or ""
+            )
+>>>>>>> 862e4e726b03fe5448d1eb264e07293aef7d3b53
 
             formatted_results.append({
                 "page_content": page_content,
                 "metadata": metadata,
                 "score": match.get("score"),
             })
+
         return formatted_results
