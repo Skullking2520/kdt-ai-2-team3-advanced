@@ -222,8 +222,9 @@ export interface SenderLookupResult {
   lastReportedAt: string | null;    // ISO 8601
   categories: string[];
   history: { date: string; type: string; count: number }[];
-  isp: string;
-  region: string;
+  // 정직성: 통신사(isp)와 추정 지역(region)은 우리 백엔드가 정직하게 알 수 있는 정보가 아님.
+  // 실제 통신사/지역 조회는 외부 API (KISA 번호 정보 조회, 통신사 DB 등) 연동이 필요하며
+  // mock에서 추측해 채우면 거짓 데이터가 됨. 정직하게 필드 자체를 제거.
 }
 
 // ───────────────────────────────────────────

@@ -13,16 +13,16 @@ interface SenderResult {
   lastSeen: string;
   categories: string[];
   history: { date: string; type: string; count: number }[];
-  isp: string;
-  region: string;
+  // 정직성: 통신사(isp)·추정 지역(region)은 mock에서 추측해 채우는 거짓.
+  // 실제 조회는 외부 API (KISA 번호 정보 조회, 통신사 DB 등) 연동 필요. 정직하게 제거.
 }
 
 const KNOWN: Record<string, Partial<SenderResult>> = {
-  "010-8821-3947": { trustScore: 1, status: "위험", reportCount: 342, categories: ["공공기관 사칭", "보험 피싱"], isp: "KT", region: "서울" },
-  "010-3392-1847": { trustScore: 2, status: "위험", reportCount: 218, categories: ["보이스피싱", "기관 사칭"], isp: "SKT", region: "경기" },
-  "010-5571-2938": { trustScore: 3, status: "위험", reportCount: 156, categories: ["대출 사기"], isp: "LGU+", region: "부산" },
-  "02-1234-5678": { trustScore: 8, status: "안전", reportCount: 0, categories: [], isp: "KT", region: "서울" },
-  "1588-1234": { trustScore: 9, status: "안전", reportCount: 0, categories: [], isp: "SKT", region: "서울" },
+  "010-8821-3947": { trustScore: 1, status: "위험", reportCount: 342, categories: ["공공기관 사칭", "보험 피싱"] },
+  "010-3392-1847": { trustScore: 2, status: "위험", reportCount: 218, categories: ["보이스피싱", "기관 사칭"] },
+  "010-5571-2938": { trustScore: 3, status: "위험", reportCount: 156, categories: ["대출 사기"] },
+  "02-1234-5678": { trustScore: 8, status: "안전", reportCount: 0, categories: [] },
+  "1588-1234": { trustScore: 9, status: "안전", reportCount: 0, categories: [] },
 };
 
 function mockLookup(number: string): SenderResult {
@@ -46,8 +46,6 @@ function mockLookup(number: string): SenderResult {
     lastSeen: reportCount > 0 ? "2025.04.28" : "-",
     categories: known?.categories ?? (trustScore < 5 ? ["금융 피싱"] : []),
     history,
-    isp: known?.isp ?? ["SKT", "KT", "LGU+"][Math.floor(Math.random() * 3)],
-    region: known?.region ?? ["서울", "경기", "부산", "인천"][Math.floor(Math.random() * 4)],
   };
 }
 
@@ -77,7 +75,7 @@ export function SenderLookup() {
     setResult(null);
     setError(null);
     try {
-      const data = await api.sender(target);
+      const data = await api.lookupSender(target);
       setResult({
         number: data.number,
         trustScore: data.trustScore === 0 ? 1 : data.trustScore === 100 ? 9 : data.trustScore,
@@ -86,8 +84,6 @@ export function SenderLookup() {
         lastSeen: data.lastReportedAt ? new Date(data.lastReportedAt).toLocaleDateString("ko-KR") : "-",
         categories: data.categories,
         history: data.history,
-        isp: data.isp,
-        region: data.region,
       });
     } catch (e) {
       if (e instanceof ApiException) {
@@ -166,13 +162,11 @@ export function SenderLookup() {
               </div>
             </div>
 
-            {/* Info grid */}
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            {/* Info grid — 정직 처리: 통신사/추정 지역 카드 제거 (mock에서 추측한 거짓) */}
+            <div className="grid grid-cols-2 gap-3">
               {[
                 { label: "신고 건수", value: result.reportCount > 0 ? `${result.reportCount}건` : "없음" },
                 { label: "마지막 신고", value: result.lastSeen },
-                { label: "통신사", value: result.isp },
-                { label: "추정 지역", value: result.region },
               ].map((s) => (
                 <Card key={s.label} padding="p-3" className="text-center">
                   <p className="text-[10px] text-white/30">{s.label}</p>

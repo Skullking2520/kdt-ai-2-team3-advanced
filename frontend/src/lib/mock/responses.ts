@@ -274,8 +274,6 @@ const senderDb: Record<string, SenderLookupResult> = {
       { date: '2026.05.28', type: '보험 피싱', count: 31 },
       { date: '2026.05.21', type: '공공기관 사칭', count: 28 },
     ],
-    isp: 'KT',
-    region: '서울',
   },
   '010-3392-1847': {
     number: '010-3392-1847',
@@ -288,8 +286,6 @@ const senderDb: Record<string, SenderLookupResult> = {
       { date: '2026.06.05', type: '보이스피싱', count: 22 },
       { date: '2026.05.29', type: '기관 사칭', count: 18 },
     ],
-    isp: 'SKT',
-    region: '경기',
   },
   '1588-1234': {
     number: '1588-1234',
@@ -299,8 +295,6 @@ const senderDb: Record<string, SenderLookupResult> = {
     lastReportedAt: null,
     categories: [],
     history: [],
-    isp: 'SKT',
-    region: '서울',
   },
 };
 
@@ -314,8 +308,6 @@ function mockSenderLookup(number: string): SenderLookupResult {
       lastReportedAt: null,
       categories: [],
       history: [],
-      isp: ['SKT', 'KT', 'LGU+'][Math.floor(Math.random() * 3)],
-      region: ['서울', '경기', '부산'][Math.floor(Math.random() * 3)],
     }
   );
 }

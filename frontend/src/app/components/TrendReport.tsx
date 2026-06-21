@@ -3,14 +3,10 @@ import {motion} from "motion/react";
 import {BarChart2, TrendingUp, CalendarDays, AlertCircle, ChevronDown} from "lucide-react";
 
 /* ── Data ─────────────────────────────────────────────── */
-const TIMELINE = [
-  { date: "2025.04", title: "AI 합성 발신번호 피싱", tag: "신규", color: "text-red-600 dark:text-red-400", border: "border-red-200 dark:border-red-500/20", bg: "bg-red-50 dark:bg-red-500/8", desc: "AI로 생성된 가짜 공공기관 발신번호 사용. 기존 패턴으로 탐지 어려움." },
-  { date: "2025.03", title: "단축URL 이중 리다이렉션", tag: "진화", color: "text-orange-600 dark:text-orange-400", border: "border-orange-200 dark:border-orange-500/20", bg: "bg-orange-50 dark:bg-orange-500/8", desc: "bit.ly → 중간 정상 도메인 → 최종 피싱 도메인으로 2단계 리다이렉션하여 URL 검사 우회." },
-  { date: "2025.02", title: "전화 유도형 피싱 증가", tag: "증가", color: "text-amber-700 dark:text-amber-400", border: "border-amber-200 dark:border-amber-500/20", bg: "bg-amber-50 dark:bg-amber-500/8", desc: "URL 없이 전화번호만 포함해 AI 탐지 회피. 보이스피싱과 연계." },
-  { date: "2025.01", title: "QR코드 피싱 (큐싱)", tag: "신규", color: "text-purple-600 dark:text-purple-400", border: "border-purple-200 dark:border-purple-500/20", bg: "bg-purple-50 dark:bg-purple-500/8", desc: "문자 내 QR코드 이미지 삽입. 텍스트 기반 탐지 완전 우회. 모델 확장 필요." },
-  { date: "2024.12", title: "명절 택배 사기 급증", tag: "시즌형", color: "text-blue-600 dark:text-blue-400", border: "border-blue-200 dark:border-blue-500/20", bg: "bg-blue-50 dark:bg-blue-500/8", desc: "설·추석 전후 택배 위장 스미싱 400% 급증. 계절성 패턴 확인." },
-  { date: "2024.11", title: "정부지원금 사칭 캠페인", tag: "대규모", color: "text-cyan-600 dark:text-cyan-400", border: "border-cyan-200 dark:border-cyan-500/20", bg: "bg-cyan-50 dark:bg-cyan-500/8", desc: "동일 인프라에서 3,200건 동시 발송된 조직적 피싱 캠페인 탐지." },
-];
+// 정직한 처리: 트렌드 데이터는 KISA·경찰청 RSS/API에서만 적재 가능.
+// mock에서 "2025.04 AI 합성 발신번호", "QR코드 피싱 (큐싱)", "400% 급증", "3,200건 동시 발송" 같은
+// 출처 없는 가짜 트렌드를 만들면 정직하지 않음. 빈 배열로 두고 UI에서 "KISA·경찰청 RSS/API 미연동" 안내.
+const TIMELINE: { date: string; title: string; tag: string; color: string; border: string; bg: string; desc: string }[] = [];
 
 /* ── Main Component ────────────────────────────────────── */
 export function TrendReport() {
@@ -112,12 +108,13 @@ export function TrendReport() {
         )}
       </div>
 
-      {/* Insight banner */}
-      <div className="p-4 rounded-xl bg-indigo-50 border border-indigo-200 dark:bg-indigo-500/5 dark:border-indigo-500/15 flex gap-3">
-        <AlertCircle size={14} className="text-indigo-500 dark:text-indigo-400 shrink-0 mt-0.5" />
+      {/* Insight banner — 정직한 안내로 교체 (가짜 인사이트 제거) */}
+      <div className="p-4 rounded-xl bg-amber-50 border border-amber-200 dark:bg-amber-500/5 dark:border-amber-500/15 flex gap-3">
+        <AlertCircle size={14} className="text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
         <p className="text-xs text-gray-700 dark:text-white/50 leading-relaxed">
-          <strong className="text-indigo-700 dark:text-indigo-300/80">분석 인사이트:</strong> 2025년 들어 URL을 포함하지 않는 전화 유도형 및 QR코드 피싱이 증가하고 있습니다.
-          현재 텍스트 기반 탐지 모델의 보완을 위해 멀티모달 입력(이미지 + 텍스트) 확장이 권고됩니다.
+          <strong className="text-amber-700 dark:text-amber-300/80">정직한 안내:</strong>
+          {' '}트렌드 데이터는 KISA 공공데이터·경찰청 사이버범죄 통계 RSS에서만 적재 가능합니다.
+          mock에서 가짜 트렌드(연도·증가율·캠페인 규모)를 추측해 표시하면 정직하지 않으므로 비워두었습니다.
         </p>
       </div>
     </div>

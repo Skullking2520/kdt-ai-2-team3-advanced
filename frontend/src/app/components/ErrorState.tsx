@@ -6,7 +6,6 @@ import {
   ServerCrash,
   RefreshCw,
   Home,
-  type LucideIcon,
 } from "lucide-react";
 
 /* ────────────────────────── 에러 상태 (공통) ────────────────────────── */

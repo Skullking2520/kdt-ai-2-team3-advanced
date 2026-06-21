@@ -122,8 +122,27 @@ export function AnalysisResult() {
         {/* 2. 탐지 근거 카드 */}
         <DetectionReasonsCard reasons={result.reasons} riskLevel={result.risk_level} />
 
-        {/* 3. 유사 사례 카드 */}
-        {result.similar_cases.length > 0 && <SimilarCasesCard cases={result.similar_cases} />}
+        {/* 3. 유사 사례 카드 — RAG 미연동 시 정직한 안내 표시 (가짜 사례 X) */}
+        {result.similar_cases.length > 0 ? (
+          <SimilarCasesCard cases={result.similar_cases} />
+        ) : (
+          <div className="rounded-xl border border-dashed border-amber-500/40 bg-amber-500/5 p-4">
+            <div className="flex items-start gap-3">
+              <div className="mt-0.5 grid h-6 w-6 place-items-center rounded-full bg-amber-500/15 text-amber-700 text-xs" style={{ fontWeight: 700 }}>
+                !
+              </div>
+              <div>
+                <p className="text-sm text-amber-800 dark:text-amber-200" style={{ fontWeight: 600 }}>
+                  유사 사례 검색 (RAG 미연동)
+                </p>
+                <p className="mt-1 text-xs text-amber-700/80 dark:text-amber-300/80 leading-relaxed">
+                  과거 스미싱 사례 검색은 Pinecone RAG 시스템이 백엔드에 연동되면 자동으로 활성화됩니다.
+                  현재는 추측성 사례를 표시하지 않습니다.
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* 4. 예상 피해 시나리오 카드 */}
         <DamageScenarioCard riskLevel={result.risk_level} />
