@@ -1,21 +1,3 @@
-/**
- * NewBiz Shield API Contract v1.0
- * ─────────────────────────────────
- * Frontend ↔ Backend ↔ AI Model 합의 명세
- *
- * 작성일: 2026-06-05
- * 프론트엔드: NewBiz Shield (Figma Make export 기반)
- * 백엔드:    TBD (초안 도착 후 합의)
- * AI 모델:   TBD (kc-electra / KoBERT 등)
- *
- * 합스 원칙:
- * 1. riskLevel = "high" | "medium" | "low" (소문자, 통일)
- * 2. riskScore = 0~100 (정수, 통일)
- * 3. 날짜 = ISO 8601 문자열
- * 4. 에러 = { code, message, details? } 구조
- * 5. 사용자 노출 한국어 (smishingType) / 로직 영문 (enum) 분리
- */
-
 // ───────────────────────────────────────────
 // 1. 공통 Enum / 상수
 // ───────────────────────────────────────────
