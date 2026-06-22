@@ -79,7 +79,6 @@ export interface AnalysisResultBase {
   reasons: DetectionReason[];
   actionGuide: ActionGuideItem[];
   similarCases: SimilarCase[];
-  governmentCriteria: GovernmentCriterion[];
   damageScenario?: DamageStep[];    // high/medium일 때만
   modelVersion: string;             // 백엔드 모델 ID (정직: dev 측정 불가, 실제 모델 ID는 백엔드 응답으로만)
   processingTime?: number;          // ms (정직: dev 측정 불가, 백엔드 응답 시 채워짐)
@@ -195,14 +194,7 @@ export interface SimilarCase {
 }
 
 // ───────────────────────────────────────────
-// 9. 정부기관 기준
-// ───────────────────────────────────────────
 
-export interface GovernmentCriterion {
-  id: string;                       // 'url_included', 'impersonation' 등
-  label: string;
-  matched: boolean;
-}
 
 // ───────────────────────────────────────────
 // 10. 피해 시나리오

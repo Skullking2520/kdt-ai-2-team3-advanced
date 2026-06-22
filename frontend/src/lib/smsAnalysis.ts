@@ -80,7 +80,7 @@ export interface SmsAnalysis {
   reasons: string[];
   /** 사용자에게 보여줄 대응 가이드 (한국어) */
   action_guide: string[];
-  /** 시그널 플래그 (GovernmentCriteriaCard 등에서 사용) */
+  /** 시그널 플래그 (탐지 근거 카드 + 정부 기준 정직 처리 후 제거됨) */
   has_url: boolean;
   has_impersonation: boolean;
   has_payment_request: boolean;

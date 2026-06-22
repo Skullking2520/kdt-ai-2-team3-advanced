@@ -22,7 +22,6 @@ import type {
   DamageStep,
   DetectionReason,
   SimilarCase,
-  GovernmentCriterion,
   ActionGuideItem,
 } from '@/types/api';
 
@@ -75,12 +74,7 @@ const damageSteps: DamageStep[] = [
   { step: 5, icon: 'damage', title: '금전 피해', description: '계좌 이체, 카드 부정사용 등 금전 피해 발생' },
 ];
 
-const govCriteria: GovernmentCriterion[] = [
-  { id: 'url_included', label: '의심 URL 포함', matched: false },
-  { id: 'impersonation', label: '기관 또는 지인 사칭', matched: false },
-  { id: 'payment_request', label: '금전 또는 결제 요구', matched: false },
-  { id: 'personal_info_request', label: '개인정보 입력 유도', matched: false },
-];
+
 
 // ───────────────────────────────────────────
 // SMS 분석 응답 생성
@@ -170,11 +164,10 @@ function buildSmsResult(req: AnalysisRequest & { content: string }): SmsAnalysis
           ]
         : [];
 
-  const governmentCriteria: GovernmentCriterion[] = govCriteria.map((c) => {
-    if (c.id === 'url_included') return { ...c, matched: !!url };
-    if (c.id === 'impersonation') return { ...c, matched: impersonation };
-    if (c.id === 'payment_request') return { ...c, matched: hasPayment };
-    if (c.id === 'personal_info_request') return { ...c, matched: hasPersonalInfo };
+  const reasonsWithMatched: DetectionReason[] = reasons.map((c) => {
+    if (c.code === 'impersonation') return { ...c, matched: impersonation };
+    if (c.code === 'payment_request') return { ...c, matched: hasPayment };
+    if (c.code === 'personal_info_request') return { ...c, matched: hasPersonalInfo };
     return c;
   });
 
@@ -185,10 +178,9 @@ function buildSmsResult(req: AnalysisRequest & { content: string }): SmsAnalysis
     riskLevel,
     riskScore,
     smishingType,
-    reasons,
+    reasons: reasonsWithMatched,
     actionGuide,
     similarCases,
-    governmentCriteria,
     damageScenario: riskLevel !== 'low' ? damageSteps : undefined,
     modelVersion: 'kc-electra-v1.2.3',
     processingTime: 800 + Math.floor(Math.random() * 800),
@@ -231,7 +223,6 @@ function buildUrlResult(req: AnalysisRequest & { content: string }): UrlAnalysis
           { id: 'c1', title: '피싱 도메인 사칭 사례', similarity: 82, year: '2025', category: '기타 사기' },
         ]
       : [],
-    governmentCriteria: govCriteria,
     damageScenario: isDanger ? damageSteps : undefined,
     modelVersion: 'url-classifier-v1.0',
     processingTime: 600 + Math.floor(Math.random() * 500),

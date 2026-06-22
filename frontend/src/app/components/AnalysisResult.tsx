@@ -7,7 +7,6 @@ import {DetectionReasonsCard} from "./result/DetectionReasonsCard";
 import {SimilarCasesCard} from "./result/SimilarCasesCard";
 import {DamageScenarioCard} from "./result/DamageScenarioCard";
 import {ActionGuideCard} from "./result/ActionGuideCard";
-import {GovernmentCriteriaCard} from "./result/GovernmentCriteriaCard";
 import {analyzeSms, toLegacyRiskLevel} from "@/lib/smsAnalysis";
 import {api, ApiException} from "@/lib/api";
 import type {SmsAnalysisResult} from "@/types/api";
@@ -191,15 +190,6 @@ export function AnalysisResult() {
 
         {/* 5. 대응 가이드 카드 */}
         <ActionGuideCard actionGuide={result.action_guide} riskLevel={result.risk_level} />
-
-        {/* 6. 정부기관 기준 카드 */}
-        <GovernmentCriteriaCard
-          riskLevel={result.risk_level}
-          hasUrl={result.has_url}
-          hasImpersonation={result.has_impersonation}
-          hasPaymentRequest={result.has_payment_request}
-          hasPersonalInfoRequest={result.has_personal_info_request}
-        />
       </div>
 
       {/* 피드백 섹션 */}
