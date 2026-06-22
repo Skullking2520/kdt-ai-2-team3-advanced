@@ -260,7 +260,7 @@ async def generate_explanation(
             # 2. 예상 답변 구조에 맞춰 parsed_output -> reason 추출
             reason = data.get("parsed_output", {}).get("reason")
             if reason:
-                logger.info("[decoder] 응답 성공 및 추론 이유 추출 완료")
+                logger.info("[decoder] 응답 성공 | reason=%s", reason)
                 return reason
                 
             logger.warning("[decoder] 응답은 성공했으나 parsed_output.reason 필드가 없습니다: %s", data)
