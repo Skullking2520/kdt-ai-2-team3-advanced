@@ -9,8 +9,6 @@ import { SeniorHome } from "./components/SeniorHome";
 import { URLAnalyzer } from "./components/URLAnalyzer";
 import { ImageAnalyzer } from "./components/ImageAnalyzer";
 import { SeniorImageAnalyzer } from "./components/SeniorImageAnalyzer";
-import { SenderLookup } from "./components/SenderLookup";
-import { CaseStudies } from "./components/CaseStudies";
 import { VulnerableGuide } from "./components/VulnerableGuide";
 import { ReportPage } from "./components/ReportPage";
 import { AnalysisProgress } from "./components/AnalysisProgress";
@@ -29,8 +27,6 @@ export const publicRoutes: RouteObject[] = [
   { path: "url", Component: URLAnalyzer },
   { path: "image", Component: ImageAnalyzer },
   { path: "senior-image", Component: SeniorImageAnalyzer },
-  { path: "sender", Component: SenderLookup },
-  { path: "cases", Component: CaseStudies },
   { path: "guide", Component: VulnerableGuide },
   { path: "report", Component: ReportPage },
   { path: "emergency", Component: Emergency },

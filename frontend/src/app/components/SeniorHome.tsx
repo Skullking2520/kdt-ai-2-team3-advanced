@@ -2,25 +2,22 @@ import {useNavigate} from "react-router";
 import {motion} from "motion/react";
 import {useSenior} from "@/app/context/SeniorContext";
 import {
-  ShieldAlert, MessageSquareWarning, Link2, Phone, Flag, Heart,
-  Trophy, BookMarked, ArrowRight, ImageIcon,
+  ShieldAlert, MessageSquareWarning, Link2, Flag, Heart,
+  ArrowRight, ImageIcon,
   AlertTriangle, PhoneCall, HelpCircle,
 } from "lucide-react";
 
-/* ── 5개 메인 기능 버튼 ───────────────────────────────── */
+/* ── 4개 메인 기능 버튼 (전화번호 조회 cleanup으로 5→4) ─── */
 const MAIN_ACTIONS = [
   { icon: MessageSquareWarning, title: "문자 검사", sub: "받은 문자를 붙여넣으면 위험한지 알려드려요", to: "/senior-analyze", color: "from-cyan-500 to-blue-600", glow: "shadow-cyan-500/30" },
   { icon: ImageIcon, title: "이미지 검사", sub: "문자 사진 스크린샷 분석", to: "/senior-image", color: "from-emerald-500 to-teal-600", glow: "shadow-emerald-500/30" },
   { icon: Link2, title: "링크(URL) 검사", sub: "의심스러운 인터넷 주소 확인", to: "/url", color: "from-amber-500 to-orange-600", glow: "shadow-amber-500/25" },
-  { icon: Phone, title: "전화번호 조회", sub: "이 번호가 위험한지 확인", to: "/sender", color: "from-sky-500 to-blue-500", glow: "shadow-sky-500/25" },
   { icon: Flag, title: "신고하기", sub: "피해·의심 문자 신고", to: "/report", color: "from-red-500 to-rose-600", glow: "shadow-red-500/25" },
 ];
 
-/* ── 학습 콘텐츠 ──────────────────────────────────────── */
+/* ── 학습 콘텐츠 (피해 사례·퀴즈 cleanup으로 3→1) ──────── */
 const LEARNING = [
   { icon: Heart, title: "안전 사용 가이드", sub: "꼭 알아야 할 7가지 수칙", to: "/guide", color: "text-red-500 dark:text-red-400" },
-  { icon: BookMarked, title: "실제 피해 사례", sub: "다른 분들의 경험 보기", to: "/cases", color: "text-indigo-500 dark:text-indigo-400" },
-  { icon: Trophy, title: "스미싱 퀴즈", sub: "재미있게 안목 키우기", to: "/quiz", color: "text-fuchsia-500 dark:text-fuchsia-400" },
 ];
 
 /* ── 긴급 연락 ────────────────────────────────────────── */

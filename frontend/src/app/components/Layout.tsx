@@ -347,10 +347,6 @@ export function Layout() {
                     <ImageIcon size={14} />
                     사진으로 검사하기
                   </NavLink>
-                  <NavLink to="/sender" className={({ isActive }) => navCls(isActive)}>
-                    <Phone size={14} />
-                    전화번호 조회
-                  </NavLink>
                   <NavLink to="/report" className={({ isActive }) => navCls(isActive)}>
                     <Flag size={14} />
                     신고하기
@@ -616,8 +612,6 @@ export function Layout() {
           </div>
           <div className="flex items-center gap-4 text-xs text-gray-400 dark:text-white/30">
             <NavLink to="/guide"     className="hover:text-blue-600 dark:hover:text-blue-400 transition-colors">안전 가이드</NavLink>
-            <span>·</span>
-            <NavLink to="/cases"     className="hover:text-blue-600 dark:hover:text-blue-400 transition-colors">피해 사례</NavLink>
             <span>·</span>
             <NavLink to="/report"    className="hover:text-blue-600 dark:hover:text-blue-400 transition-colors">신고하기</NavLink>
           </div>
