@@ -3,9 +3,10 @@ import { motion, AnimatePresence } from "motion/react";
 import { useNavigate } from "react-router";
 import {
   ImageIcon, Upload, FileText, ChevronRight, RotateCcw,
-  CheckCircle2, Loader2, AlertCircle, Edit3, Save, ShieldAlert,
+  CheckCircle2, Loader2, AlertCircle, Edit3, Save, ShieldAlert, Flag,
 } from "lucide-react";
 import { useSenior } from "@/app/context/SeniorContext";
+import { selectImageFiles } from "@/lib/imageFiles";
 
 const OCR_STEPS = [
   "이미지 로딩 중",
@@ -21,13 +22,20 @@ const MOCK_OCR_RESULTS = [
   "안녕 엄마 나야 폰이 고장났어 새 번호로 바꿨어 급하게 상품권 50만원어치 필요해 010-9382-7461",
 ];
 
+const MAX_IMAGE_BYTES = 10 * 1024 * 1024;
+
+interface SelectedImage {
+  file: File;
+  preview: string;
+}
+
 /**
  * 시니어용 이미지 분석기 — SeniorAnalyzer 디자인 언어를 따름
  * ImageAnalyzer.tsx를 기반으로 큰 글씨, 단순 UI, 높은 대비 적용
  */
 export function SeniorImageAnalyzer() {
-  const [file, setFile] = useState<File | null>(null);
-  const [preview, setPreview] = useState<string | null>(null);
+  const [images, setImages] = useState<SelectedImage[]>([]);
+  const [selectedIndex, setSelectedIndex] = useState(0);
   const [ocrStep, setOcrStep] = useState(-1);
   const [ocrRunning, setOcrRunning] = useState(false);
   const [ocrText, setOcrText] = useState<string | null>(null);
@@ -38,35 +46,46 @@ export function SeniorImageAnalyzer() {
   const fileRef = useRef<HTMLInputElement>(null);
   const nav = useNavigate();
   const { senior: seniorMode } = useSenior();
+  const selectedImage = images[selectedIndex] ?? null;
 
-  const handleFile = (f: File) => {
-    if (!f.type.startsWith("image/")) {
-      alert("이미지 파일만 업로드 가능합니다.");
-      return;
-    }
-    if (f.size > 10 * 1024 * 1024) {
-      alert("파일 크기는 10MB 이하여야 합니다.");
-      return;
-    }
-    setFile(f);
-    const url = URL.createObjectURL(f);
-    setPreview(url);
+  const resetOcrState = () => {
     setOcrStep(-1);
     setOcrText(null);
     setOcrRunning(false);
     setOcrError(false);
     setIsEditing(false);
+    setEditedText("");
+  };
+
+  const handleFiles = (files: File[]) => {
+    const result = selectImageFiles(files, MAX_IMAGE_BYTES);
+    if (result.accepted.length === 0) {
+      alert("이미지 파일만 올릴 수 있고, 파일 크기는 10MB 이하여야 합니다.");
+      return;
+    }
+    images.forEach((img) => URL.revokeObjectURL(img.preview));
+    setImages(result.accepted.map((file) => ({ file, preview: URL.createObjectURL(file) })));
+    setSelectedIndex(0);
+    resetOcrState();
+    if (result.rejected.length > 0) {
+      alert(`조건에 맞지 않는 사진 ${result.rejected.length}개는 제외했습니다.`);
+    }
   };
 
   const handleDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault();
     setDragOver(false);
-    const f = e.dataTransfer.files[0];
-    if (f) handleFile(f);
-  }, []);
+    handleFiles(Array.from(e.dataTransfer.files));
+  }, [images]);
+
+  const handleSelectImage = (index: number) => {
+    if (ocrRunning || index === selectedIndex) return;
+    setSelectedIndex(index);
+    resetOcrState();
+  };
 
   const handleOcr = () => {
-    if (!file || ocrRunning) return;
+    if (!selectedImage || ocrRunning) return;
     setOcrRunning(true);
     setOcrStep(0);
     setOcrText(null);
@@ -95,15 +114,10 @@ export function SeniorImageAnalyzer() {
   };
 
   const handleReset = () => {
-    if (preview) URL.revokeObjectURL(preview);
-    setFile(null);
-    setPreview(null);
-    setOcrStep(-1);
-    setOcrText(null);
-    setOcrRunning(false);
-    setOcrError(false);
-    setIsEditing(false);
-    setEditedText("");
+    images.forEach((img) => URL.revokeObjectURL(img.preview));
+    setImages([]);
+    setSelectedIndex(0);
+    resetOcrState();
   };
 
   const handleRetryOcr = () => {
@@ -167,7 +181,7 @@ export function SeniorImageAnalyzer() {
 
         <div className="space-y-4">
           {/* 업로드 영역 */}
-          {!preview ? (
+          {!selectedImage ? (
 <label
             htmlFor="file-input-senior-image"
             onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
@@ -193,8 +207,13 @@ export function SeniorImageAnalyzer() {
               ref={fileRef}
               type="file"
               accept="image/*"
-              className="hidden"
-              onChange={(e) => { const f = e.target.files?.[0]; if (f) handleFile(f); }}
+              multiple
+              aria-label="이미지 파일 선택"
+              className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
+              onChange={(e) => {
+                handleFiles(Array.from(e.target.files ?? []));
+                e.currentTarget.value = "";
+              }}
             />
           </label>
           ) : (
@@ -215,16 +234,33 @@ export function SeniorImageAnalyzer() {
                 )}
               </div>
               <div className="rounded-xl overflow-hidden bg-gray-100 dark:bg-black/20 flex justify-center">
-                <img src={preview} alt="업로드된 이미지" className="max-h-80 sm:max-h-96 object-contain" />
+                <img src={selectedImage.preview} alt="업로드된 이미지" className="max-h-80 sm:max-h-96 object-contain" />
               </div>
-              {file && (
-                <p className="text-xs text-slate-400 dark:text-white/30 mt-2 truncate">{file.name}</p>
+              <p className="text-xs text-slate-400 dark:text-white/30 mt-2 truncate">{selectedImage.file.name}</p>
+              {images.length > 1 && (
+                <div className="mt-4 grid grid-cols-3 sm:grid-cols-5 gap-3">
+                  {images.map((img, index) => (
+                    <button
+                      key={`${img.file.name}-${index}`}
+                      onClick={() => handleSelectImage(index)}
+                      disabled={ocrRunning}
+                      className={`relative aspect-square overflow-hidden rounded-xl border-2 transition-all ${
+                        index === selectedIndex
+                          ? "border-emerald-500 ring-4 ring-emerald-500/20"
+                          : "border-slate-300 dark:border-white/15 opacity-75 hover:opacity-100"
+                      }`}
+                      title={img.file.name}
+                    >
+                      <img src={img.preview} alt={`${img.file.name} 미리보기`} className="h-full w-full object-cover" />
+                    </button>
+                  ))}
+                </div>
               )}
             </div>
           )}
 
           {/* OCR 실행 버튼 */}
-          {preview && !ocrText && !ocrError && (
+          {selectedImage && !ocrText && !ocrError && (
             <button
               onClick={handleOcr}
               disabled={ocrRunning}
@@ -425,6 +461,15 @@ export function SeniorImageAnalyzer() {
                       <ShieldAlert size={26} />
                       위험한지 검사하기
                       <ChevronRight size={24} />
+                    </button>
+
+                    <button
+                      onClick={() => nav("/report")}
+                      className="w-full flex items-center justify-center gap-3 px-5 py-4 rounded-2xl border-2 border-red-300 dark:border-red-700/40 text-red-700 dark:text-red-200 hover:bg-red-50 dark:hover:bg-red-900/15 transition-all text-xl"
+                      style={{ fontWeight: 700, lineHeight: 1.2 }}
+                    >
+                      <Flag size={22} />
+                      신고하기
                     </button>
 
                     <button

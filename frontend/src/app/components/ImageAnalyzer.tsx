@@ -1,7 +1,8 @@
 import { useState, useRef, useCallback } from "react";
-import { ImageIcon, Upload, FileText, ChevronRight, RotateCcw, CheckCircle2, Loader2, AlertCircle, Edit3, Save } from "lucide-react";
+import { ImageIcon, Upload, FileText, ChevronRight, RotateCcw, CheckCircle2, Loader2, AlertCircle,   Edit3, Save, Flag, ShieldCheck } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { useNavigate } from "react-router";
+import { selectImageFiles } from "@/lib/imageFiles";
 
 const OCR_STEPS = [
   "이미지 로딩 중",
@@ -17,9 +18,16 @@ const MOCK_OCR_RESULTS = [
   "안녕 엄마 나야 폰이 고장났어 새 번호로 바꿨어 급하게 상품권 50만원어치 필요해 010-9382-7461",
 ];
 
+const MAX_IMAGE_BYTES = 10 * 1024 * 1024;
+
+interface SelectedImage {
+  file: File;
+  preview: string;
+}
+
 export function ImageAnalyzer() {
-  const [file, setFile] = useState<File | null>(null);
-  const [preview, setPreview] = useState<string | null>(null);
+  const [images, setImages] = useState<SelectedImage[]>([]);
+  const [selectedIndex, setSelectedIndex] = useState(0);
   const [ocrStep, setOcrStep] = useState(-1);
   const [ocrRunning, setOcrRunning] = useState(false);
   const [ocrText, setOcrText] = useState<string | null>(null);
@@ -29,35 +37,46 @@ export function ImageAnalyzer() {
   const [ocrError, setOcrError] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
   const nav = useNavigate();
+  const selectedImage = images[selectedIndex] ?? null;
 
-  const handleFile = (f: File) => {
-    if (!f.type.startsWith("image/")) {
-      alert("이미지 파일만 업로드 가능합니다.");
-      return;
-    }
-    if (f.size > 10 * 1024 * 1024) {
-      alert("파일 크기는 10MB 이하여야 합니다.");
-      return;
-    }
-    setFile(f);
-    const url = URL.createObjectURL(f);
-    setPreview(url);
+  const resetOcrState = () => {
     setOcrStep(-1);
     setOcrText(null);
     setOcrRunning(false);
     setOcrError(false);
     setIsEditing(false);
+    setEditedText("");
+  };
+
+  const handleFiles = (files: File[]) => {
+    const result = selectImageFiles(files, MAX_IMAGE_BYTES);
+    if (result.accepted.length === 0) {
+      alert("이미지 파일만 업로드 가능하며, 파일 크기는 10MB 이하여야 합니다.");
+      return;
+    }
+    images.forEach((img) => URL.revokeObjectURL(img.preview));
+    setImages(result.accepted.map((file) => ({ file, preview: URL.createObjectURL(file) })));
+    setSelectedIndex(0);
+    resetOcrState();
+    if (result.rejected.length > 0) {
+      alert(`조건에 맞지 않는 파일 ${result.rejected.length}개는 제외했습니다.`);
+    }
   };
 
   const handleDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault();
     setDragOver(false);
-    const f = e.dataTransfer.files[0];
-    if (f) handleFile(f);
-  }, []);
+    handleFiles(Array.from(e.dataTransfer.files));
+  }, [images]);
+
+  const handleSelectImage = (index: number) => {
+    if (ocrRunning || index === selectedIndex) return;
+    setSelectedIndex(index);
+    resetOcrState();
+  };
 
   const handleOcr = () => {
-    if (!file || ocrRunning) return;
+    if (!selectedImage || ocrRunning) return;
     setOcrRunning(true);
     setOcrStep(0);
     setOcrText(null);
@@ -87,15 +106,10 @@ export function ImageAnalyzer() {
   };
 
   const handleReset = () => {
-    if (preview) URL.revokeObjectURL(preview);
-    setFile(null);
-    setPreview(null);
-    setOcrStep(-1);
-    setOcrText(null);
-    setOcrRunning(false);
-    setOcrError(false);
-    setIsEditing(false);
-    setEditedText("");
+    images.forEach((img) => URL.revokeObjectURL(img.preview));
+    setImages([]);
+    setSelectedIndex(0);
+    resetOcrState();
   };
 
   const handleRetryOcr = () => {
@@ -127,8 +141,8 @@ export function ImageAnalyzer() {
       </div>
 
       <div className="space-y-4">
-        {/* 업로드 영역 */}
-        {!preview ? (
+        {/* 업로드 영역 — native label/htmlFor 연결로 파일 선택창을 연다. */}
+        {!selectedImage ? (
           <label
             htmlFor="file-input-image"
             onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
@@ -154,8 +168,13 @@ export function ImageAnalyzer() {
               ref={fileRef}
               type="file"
               accept="image/*"
-              className="hidden"
-              onChange={(e) => { const f = e.target.files?.[0]; if (f) handleFile(f); }}
+              multiple
+              aria-label="이미지 파일 선택"
+              className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
+              onChange={(e) => {
+                handleFiles(Array.from(e.target.files ?? []));
+                e.currentTarget.value = "";
+              }}
             />
           </label>
         ) : (
@@ -175,16 +194,33 @@ export function ImageAnalyzer() {
               )}
             </div>
             <div className="rounded-xl overflow-hidden bg-gray-100 dark:bg-black/20 flex justify-center">
-              <img src={preview} alt="업로드된 이미지" className="max-h-64 sm:max-h-72 object-contain" />
+              <img src={selectedImage.preview} alt="업로드된 이미지" className="max-h-64 sm:max-h-72 object-contain" />
             </div>
-            {file && (
-              <p className="text-[11px] text-gray-400 dark:text-white/25 mt-2 truncate">{file.name}</p>
+            <p className="text-[11px] text-gray-400 dark:text-white/25 mt-2 truncate">{selectedImage.file.name}</p>
+            {images.length > 1 && (
+              <div className="mt-3 grid grid-cols-4 sm:grid-cols-6 gap-2">
+                {images.map((img, index) => (
+                  <button
+                    key={`${img.file.name}-${index}`}
+                    onClick={() => handleSelectImage(index)}
+                    disabled={ocrRunning}
+                    className={`relative aspect-square overflow-hidden rounded-lg border transition-all ${
+                      index === selectedIndex
+                        ? "border-emerald-500 ring-2 ring-emerald-500/25"
+                        : "border-gray-200 dark:border-white/10 opacity-75 hover:opacity-100"
+                    }`}
+                    title={img.file.name}
+                  >
+                    <img src={img.preview} alt={`${img.file.name} 미리보기`} className="h-full w-full object-cover" />
+                  </button>
+                ))}
+              </div>
             )}
           </div>
         )}
 
         {/* OCR 실행 버튼 */}
-        {preview && !ocrText && !ocrError && (
+        {selectedImage && !ocrText && !ocrError && (
           <button
             onClick={handleOcr}
             disabled={ocrRunning}
@@ -204,6 +240,15 @@ export function ImageAnalyzer() {
             )}
           </button>
         )}
+
+        {/* 정직한 데이터 처리 안내 — 입력 박스 하단 (Analyzer.tsx와 동일 패턴) */}
+        <div className="mt-6 flex items-start gap-2 px-3 py-2.5 rounded-lg bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10">
+          <ShieldCheck size={13} className="text-gray-400 dark:text-white/40 shrink-0 mt-0.5" />
+          <p className="text-[11px] text-gray-500 dark:text-white/50 leading-relaxed">
+            <strong className="text-gray-700 dark:text-white/70">개인정보(전화번호, 이름, 계좌번호 등)는 자동으로 마스킹 처리된 후에만 데이터 품질 개선 목적</strong>으로 활용됩니다.
+            원본 문자는 저장되지 않으며, 해당 기능은 관리자 승인 후에만 활성화됩니다.
+          </p>
+        </div>
 
         {/* OCR 진행 단계 */}
         <AnimatePresence>
@@ -370,26 +415,35 @@ export function ImageAnalyzer() {
                 )}
               </div>
 
-              {!isEditing && (
-                <>
-                  <button
-                    onClick={handleAnalyze}
-                    className="w-full flex items-center justify-center gap-2 px-5 py-3.5 sm:py-4 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 text-white hover:opacity-90 transition-all shadow-md text-sm sm:text-base"
-                    style={{ fontWeight: 700 }}
-                  >
-                    이 텍스트로 스미싱 검사하기
-                    <ChevronRight size={16} />
-                  </button>
+                {!isEditing && (
+                  <>
+                    <button
+                      onClick={handleAnalyze}
+                      className="w-full flex items-center justify-center gap-2 px-5 py-3.5 sm:py-4 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 text-white hover:opacity-90 transition-all shadow-md text-sm sm:text-base"
+                      style={{ fontWeight: 700 }}
+                    >
+                      이 텍스트로 스미싱 검사하기
+                      <ChevronRight size={16} />
+                    </button>
 
-                  <button
-                    onClick={handleReset}
-                    className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl border border-gray-200 dark:border-white/10 text-gray-600 dark:text-white/60 hover:bg-gray-50 dark:hover:bg-white/5 transition-all text-sm"
-                  >
-                    <RotateCcw size={14} />
-                    다른 이미지 검사하기
-                  </button>
-                </>
-              )}
+                    <button
+                      onClick={() => nav("/report")}
+                      className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl border border-red-200 dark:border-red-700/30 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/15 transition-all text-sm"
+                      style={{ fontWeight: 600 }}
+                    >
+                      <Flag size={14} />
+                      신고하기
+                    </button>
+
+                    <button
+                      onClick={handleReset}
+                      className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl border border-gray-200 dark:border-white/10 text-gray-600 dark:text-white/60 hover:bg-gray-50 dark:hover:bg-white/5 transition-all text-sm"
+                    >
+                      <RotateCcw size={14} />
+                      다른 이미지 검사하기
+                    </button>
+                  </>
+                )}
             </motion.div>
           )}
         </AnimatePresence>

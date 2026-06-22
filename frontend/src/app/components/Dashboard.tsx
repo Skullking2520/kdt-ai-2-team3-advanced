@@ -1,6 +1,5 @@
-import { ShieldAlert, ShieldCheck, AlertTriangle, TrendingUp, Activity, Flag, MessageSquare, ChevronRight } from "lucide-react";
+import { ShieldAlert, ShieldCheck, AlertTriangle, TrendingUp, Activity, Flag, MessageSquare } from "lucide-react";
 import { Card, MetricBig, SectionHeader, FeedItem } from "./ui/Primitives";
-import { useNavigate } from "react-router";
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 
 const weeklyData = [
@@ -113,7 +112,7 @@ function CustomAreaChart({ data }: { data: typeof weeklyData }) {
 /* ── Custom Donut Chart ────────────────────────────── */
 function CustomDonutChart({ data }: { data: typeof pieData }) {
   const total = data.reduce((s, d) => s + d.value, 0);
-  const cx = 80, cy = 80, ro = 65, ri = 44;
+  const cx = 110, cy = 110, ro = 90, ri = 60;
   let angle = -Math.PI / 2;
 
   const slices = data.map((d) => {
@@ -133,12 +132,12 @@ function CustomDonutChart({ data }: { data: typeof pieData }) {
   });
 
 return (
-    <svg viewBox="0 0 160 160" className="w-full h-[160px]" preserveAspectRatio="xMidYMid meet">
+    <svg viewBox="0 0 220 220" className="w-full h-[220px]" preserveAspectRatio="xMidYMid meet">
       {slices.map((s) => (
         <path key={s.name} d={s.path} fill={s.color} fillOpacity={0.85} />
       ))}
-      <text x={cx} y={cy - 6} textAnchor="middle" fontSize={18} fill="white" fontWeight="700" fontFamily="system-ui,sans-serif">{total}</text>
-      <text x={cx} y={cy + 12} textAnchor="middle" fontSize={10} fill="rgba(255,255,255,0.4)" fontFamily="system-ui,sans-serif">건</text>
+      <text x={cx} y={cy - 8} textAnchor="middle" fontSize={24} fill="white" fontWeight="700" fontFamily="system-ui,sans-serif">{total}</text>
+      <text x={cx} y={cy + 14} textAnchor="middle" fontSize={11} fill="rgba(255,255,255,0.4)" fontFamily="system-ui,sans-serif">건</text>
     </svg>
   );
 }
@@ -146,22 +145,22 @@ return (
 /* ── Custom Horizontal Bar Chart ──────────────────── */
 function CustomBarChart({ data }: { data: typeof categoryData }) {
   const maxVal = Math.max(...data.map((d) => d.count));
-  const barH = 18, gap = 10;
+  const barH = 24, gap = 12;
   const chartH = data.length * (barH + gap);
-  const labelW = 88, barAreaW = 200, numW = 36;
+  const labelW = 120, barAreaW = 300, numW = 50;
   const totalW = labelW + barAreaW + numW;
 
   return (
-    <svg viewBox={`0 0 ${totalW} ${chartH}`} className="w-full" style={{ height: `${Math.max(chartH, 120)}px` }} preserveAspectRatio="xMidYMid meet">
+    <svg viewBox={`0 0 ${totalW} ${chartH}`} className="w-full" style={{ height: `${Math.max(chartH, 220)}px` }} preserveAspectRatio="xMidYMid meet">
       {data.map((d, i) => {
         const y = i * (barH + gap);
         const bw = (d.count / maxVal) * barAreaW;
         return (
           <g key={d.category}>
-            <text x={labelW - 8} y={y + barH / 2 + 4} textAnchor="end" fontSize={10} fill="rgba(255,255,255,0.5)" fontFamily="system-ui,sans-serif">{d.category}</text>
-            <rect x={labelW} y={y} width={barAreaW} height={barH} rx={4} fill="rgba(255,255,255,0.04)" />
-            <rect x={labelW} y={y} width={bw} height={barH} rx={4} fill="#3b82f6" fillOpacity={0.75} />
-            <text x={labelW + bw + 6} y={y + barH / 2 + 4} fontSize={10} fill="rgba(255,255,255,0.6)" fontFamily="system-ui,sans-serif">{d.count}</text>
+            <text x={labelW - 10} y={y + barH / 2 + 5} textAnchor="end" fontSize={12} fill="rgba(255,255,255,0.7)" fontFamily="system-ui,sans-serif" fontWeight="500">{d.category}</text>
+            <rect x={labelW} y={y} width={barAreaW} height={barH} rx={5} fill="rgba(255,255,255,0.06)" />
+            <rect x={labelW} y={y} width={bw} height={barH} rx={5} fill="#3b82f6" fillOpacity={0.85} />
+            <text x={labelW + bw + 8} y={y + barH / 2 + 5} fontSize={12} fill="white" fontFamily="system-ui,sans-serif" fontWeight="600">{d.count}</text>
           </g>
         );
       })}
@@ -171,7 +170,6 @@ function CustomBarChart({ data }: { data: typeof categoryData }) {
 
 /* ── Dashboard ─────────────────────────────────────── */
 export function Dashboard() {
-  const navigate = useNavigate();
   return (
     <div className="px-4 sm:px-6 py-8 space-y-6 max-w-7xl mx-auto">
       {/* Header */}
@@ -207,12 +205,6 @@ export function Dashboard() {
               <Flag size={14} className="text-red-400" />
               <span className="text-sm text-white/80" style={{ fontWeight: 600 }}>신고 알림</span>
             </div>
-            <button
-              onClick={() => navigate("/audit")}
-              className="flex items-center gap-1 text-[11px] text-white/40 hover:text-white/70 transition-all"
-            >
-              신고 검토 <ChevronRight size={12} />
-            </button>
           </div>
           <div className="grid grid-cols-3 gap-3">
             {reportStats.map((s) => (
@@ -231,12 +223,6 @@ export function Dashboard() {
               <MessageSquare size={14} className="text-cyan-400" />
               <span className="text-sm text-white/80" style={{ fontWeight: 600 }}>피드백 분석</span>
             </div>
-            <button
-              onClick={() => navigate("/feedback")}
-              className="flex items-center gap-1 text-[11px] text-white/40 hover:text-white/70 transition-all"
-            >
-              상세 보기 <ChevronRight size={12} />
-            </button>
           </div>
           <div className="grid grid-cols-2 gap-3">
             {feedbackStats.map((s) => (
@@ -284,7 +270,14 @@ export function Dashboard() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         {/* Category bar chart */}
         <Card padding="p-5">
-          <SectionHeader title="피싱 유형별 분류" sub="누적 탐지 수" />
+          <div className="flex items-center justify-between mb-1">
+            <SectionHeader title="피싱 유형별 분류" sub="누적 탐지 수" />
+            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-amber-500/10 border border-amber-500/20 text-[10px] text-amber-400" style={{ fontWeight: 600 }}>
+              <AlertTriangle size={10} />
+              데모용 가상 데이터
+            </span>
+          </div>
+          <p className="text-[11px] text-white/40 mb-3">백엔드 통계 API 미연동 · 발표 시연용 mock 데이터입니다</p>
           <CustomBarChart data={categoryData} />
         </Card>
 

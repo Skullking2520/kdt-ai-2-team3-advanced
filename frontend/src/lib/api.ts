@@ -21,6 +21,7 @@ import type {
   Paginated,
   ReportRequest,
   ReportResponse,
+  ReportStats,
   FeedbackRequest,
   ShareRequest,
   ShareResponse,
@@ -47,9 +48,15 @@ export class ApiException extends Error {
 // Mock 가드
 // ───────────────────────────────────────────
 
-function isMockPath(path: string, method: string): boolean {
-  if (!env.USE_MOCK) return false;
-  return mockHandle.has(path, method);
+// 라운드6+ 정직성 cleanup: 단순화.
+// - VITE_USE_MOCK=true (dev/발표 시연): 무조건 mock fallback (mockHandle 사용)
+// - VITE_USE_MOCK=false + VITE_API_BASE_URL 설정: real fetch (모든 path)
+// - VITE_USE_MOCK=false + API_BASE_URL 없음: mock fallback
+//
+// 발표 환경에서 backend 못 띄우면 VITE_USE_MOCK=true 유지.
+// backend 띄울 수 있으면 VITE_USE_MOCK=false + API_BASE_URL 설정으로 진짜 실연결.
+function isMockPath(_path: string, _method: string): boolean {
+  return env.USE_MOCK || !env.API_BASE_URL;
 }
 
 // ───────────────────────────────────────────
@@ -135,7 +142,7 @@ async function request<T>(path: string, options: RequestOptions = {}): Promise<T
 export const api = {
   // ── 분석 (핵심) ──────────────────────────
   analyze: (req: AnalysisRequest) =>
-    request<AnalysisResult>('/api/analyze', { method: 'POST', body: req }),
+    request<AnalysisResult>('/api/predict', { method: 'POST', body: req }),
 
   // ── OCR ─────────────────────────────────
   ocr: (image: string) =>
@@ -158,6 +165,9 @@ export const api = {
 
   getReport: (receiptId: string) =>
     request<ReportResponse>(`/api/reports/${encodeURIComponent(receiptId)}`),
+
+  getReportStats: () =>
+    request<ReportStats>('/api/reports/stats'),
 
   // ── 피드백 ──────────────────────────────
   submitFeedback: (req: FeedbackRequest) =>
@@ -182,5 +192,3 @@ export const api = {
   getJob: (jobId: string) =>
     request<AsyncJob>(`/api/jobs/${encodeURIComponent(jobId)}`),
 } as const;
-
-export type Api = typeof api;

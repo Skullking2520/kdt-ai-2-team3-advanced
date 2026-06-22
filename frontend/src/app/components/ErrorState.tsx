@@ -6,7 +6,6 @@ import {
   ServerCrash,
   RefreshCw,
   Home,
-  type LucideIcon,
 } from "lucide-react";
 
 /* ────────────────────────── 에러 상태 (공통) ────────────────────────── */
@@ -56,7 +55,7 @@ const ERROR_TYPES = {
 
 export type ErrorType = keyof typeof ERROR_TYPES;
 
-export interface ErrorStateProps {
+interface ErrorStateProps {
   type?: ErrorType;
   title?: string;
   description?: string;

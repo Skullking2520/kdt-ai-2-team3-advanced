@@ -9,7 +9,7 @@ from typing import Any
 import boto3
 import pandas as pd
 
-S3_BUCKET = os.getenv("CLEANLAB_S3_BUCKET", "smishing-dev-newbies-2026")
+S3_BUCKET = os.getenv("CLEANLAB_S3_BUCKET", "smishing-s3-bucket")
 S3_PREFIX = os.getenv("CLEANLAB_S3_PREFIX", "cleanlab-audit")
 
 

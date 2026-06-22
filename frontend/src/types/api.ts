@@ -32,26 +32,6 @@ export type ActionPriority = 'critical' | 'high' | 'normal';
 
 export type DamageIcon = 'message' | 'click' | 'site' | 'info' | 'damage';
 
-/** 한국어 사용자 노출 (UI 매핑용) */
-export const RISK_LEVEL_KO: Record<RiskLevel, string> = {
-  high: '위험',
-  medium: '주의',
-  low: '안전',
-};
-
-export const SENDER_STATUS_KO: Record<SenderStatus, string> = {
-  safe: '안전',
-  caution: '주의',
-  danger: '위험',
-  unknown: '알 수 없음',
-};
-
-export const ACTION_PRIORITY_KO: Record<ActionPriority, string> = {
-  critical: '즉시',
-  high: '우선',
-  normal: '권장',
-};
-
 // ───────────────────────────────────────────
 // 2. 분석 입력 (프론트 → 백엔드)
 // ───────────────────────────────────────────
@@ -79,11 +59,10 @@ export interface AnalysisResultBase {
   reasons: DetectionReason[];
   actionGuide: ActionGuideItem[];
   similarCases: SimilarCase[];
-  governmentCriteria: GovernmentCriterion[];
   damageScenario?: DamageStep[];    // high/medium일 때만
-  modelVersion: string;             // "kc-electra-v1.2.3"
-  processingTime: number;           // ms
-  cacheHit: boolean;                // 캐시 적중 (이전 결과 재사용)
+  modelVersion: string;             // 백엔드 모델 ID (정직: dev 측정 불가, 실제 모델 ID는 백엔드 응답으로만)
+  processingTime?: number;          // ms (정직: dev 측정 불가, 백엔드 응답 시 채워짐)
+  cacheHit?: boolean;               // 캐시 적중 (정직: 백엔드 응답 시 채워짐)
   createdAt: string;                // ISO 8601
 }
 
@@ -127,6 +106,44 @@ export interface UrlDetails {
   ipCountry: string;
   similarDomains: string[];
   flags: { type: string; desc: string; severity: RiskLevel }[];
+  // 정직 처리: VirusTotal 정보는 우리 백엔드가 VT API를 직접 호출해서 받은 결과만 표시.
+  // mock에서 88/88 vendor 풀-리스트를 만들면 거짓. 백엔드 VT API 연동 시 자동 채워짐.
+  vtVerdict?: VtVerdict;
+  // URL 메타 정보 (HTTP 상태/콘텐츠 타입/서버/IP/ASN/등록일 등) — 백엔드 분석 시 자동 채워짐
+  metaDetails?: UrlMetaDetails;
+}
+
+// URL 메타 정보 (백엔드 분석 시 자동 적재)
+export interface UrlMetaDetails {
+  httpStatus: number;               // 200, 301, 404 등
+  contentType: string;              // "text/html; charset=UTF-8"
+  contentLength: number;            // bytes
+  server: string;                   // "nginx/1.25.3"
+  serverLocation: string;           // "Seoul, KR"
+  ip: string;                       // "175.221.43.127"
+  asn: string;                      // "AS4766 Korea Telecom"
+  registeredDate: string;           // "2024.08.15"
+  expiryDate: string;               // "2025.08.15"
+  registrar: string;                // "Gabia, Inc."
+  lastAnalysis: string;             // "방금 전"
+  firstSubmission: string;          // "2024.08.20"
+  lastFinalUrl: string;             // 리다이렉트 최종 URL
+  category: string;                 // "phishing" | "malware" | "benign" | "unknown"
+  tags: string[];                   // ["suspicious", "phishing", "korea-targeting"]
+  whoisEmail: string;               // "admin@gabia.com"
+}
+
+// VirusTotal verdict (백엔드 VT API 연동 시 채워짐 — 정직 처리)
+export interface VtVerdict {
+  malicious: number;                // 악성 판정 vendor 수 (예: 1)
+  suspicious: number;               // 의심 vendor 수 (예: 0)
+  harmless: number;                 // 안전 vendor 수 (예: 79)
+  undetected: number;               // 미검출 vendor 수 (예: 8)
+  total: number;                    // 총 vendor 수 (예: 88)
+  lastCheckedAt?: string;           // ISO 8601, 마지막 검증 시각
+  status: 'pending' | 'completed' | 'failed' | 'not_checked';
+  // 정직: 우리 4-위험 지표(도메인 나이/SSL/서버 국가/리디렉션)는 우리 자체 분석이므로 vtVerdict와 별개로 유지.
+  // 한국형 사칭 패턴은 VT가 못 잡는 영역이라 별도 표시.
 }
 
 // ───────────────────────────────────────────
@@ -179,14 +196,7 @@ export interface SimilarCase {
 }
 
 // ───────────────────────────────────────────
-// 9. 정부기관 기준
-// ───────────────────────────────────────────
 
-export interface GovernmentCriterion {
-  id: string;                       // 'url_included', 'impersonation' 등
-  label: string;
-  matched: boolean;
-}
 
 // ───────────────────────────────────────────
 // 10. 피해 시나리오
@@ -222,8 +232,9 @@ export interface SenderLookupResult {
   lastReportedAt: string | null;    // ISO 8601
   categories: string[];
   history: { date: string; type: string; count: number }[];
-  isp: string;
-  region: string;
+  // 정직성: 통신사(isp)와 추정 지역(region)은 우리 백엔드가 정직하게 알 수 있는 정보가 아님.
+  // 실제 통신사/지역 조회는 외부 API (KISA 번호 정보 조회, 통신사 DB 등) 연동이 필요하며
+  // mock에서 추측해 채우면 거짓 데이터가 됨. 정직하게 필드 자체를 제거.
 }
 
 // ───────────────────────────────────────────
@@ -267,6 +278,13 @@ export interface ReportResponse {
   receiptId: string;                // 'NB20260605-001234'
   status: ReportStatus;
   createdAt: string;
+}
+
+export interface ReportStats {
+  total: number;
+  byCategory: { category: SmishingType | string; count: number }[];
+  byStatus: { status: ReportStatus | string; count: number }[];
+  period: { from: string; to: string };
 }
 
 // ───────────────────────────────────────────
@@ -328,15 +346,6 @@ export interface CaseStudy {
   outcome: string;
   severity: 'critical' | 'high' | 'medium';
   arrested: boolean;
-}
-
-export interface QuizQuestion {
-  id: number;
-  sender: string;
-  message: string;
-  isPhishing: boolean;
-  explanation: string;
-  category: SmishingType;
 }
 
 // ───────────────────────────────────────────
