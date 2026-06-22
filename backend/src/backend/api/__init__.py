@@ -1,1 +1,11 @@
-# api endpoints (POST /predict)
+from .cases import router as cases
+from .feedback import router as feedback
+from .history import router as history
+from .jobs import router as jobs
+from .ocr import router as ocr
+from .predict import router as predict
+from .report import router as report
+from .root import router as root
+from .sender import router as sender
+from .share import router as share
+from .url_candidates import router as url_candidates

@@ -1,10 +1,9 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 /**
- * Mock 응답 데이터
+ * NewBiz Shield 이전 Mock 응답 백업본
  * ─────────────────────────────────
- * VITE_USE_MOCK=true 일 때 src/lib/api.ts 가 이 파일을 호출.
- * 실제 백엔드 응답과 동일한 모양으로 유지.
- *
- * 백엔드 준비되면 VITE_USE_MOCK=false 로 한 줄만 바꾸면 끝.
+ * frontend API 정리 작업 과정에서 제거된 미사용 API mock 코드들의 보관을 위한 파일입니다.
+ * 컴파일 및 타입 검사 에러를 방지하기 위해 사용되는 타입들을 내부에 로컬 정의해두었습니다.
  */
 
 import type {
@@ -21,20 +20,75 @@ import type {
   ActionGuideItem,
 } from '@/types/api';
 
+// OcrResponse 컴파일 경고 방지용 export
+export type { OcrResponse };
+
+// ───────────────────────────────────────────
+// 로컬 백업용 타입 정의 (types/api.ts에서 제거됨)
+// ───────────────────────────────────────────
+
+export interface HistoryItem {
+  id: string;
+  type: string;
+  content: string;
+  riskLevel: string;
+  riskScore: number;
+  smishingType: string;
+  sender?: string;
+  createdAt: string;
+}
+
+export interface Paginated<T> {
+  items: T[];
+  total: number;
+  page: number;
+  pageSize: number;
+  hasMore: boolean;
+}
+
+export interface ReportStats {
+  total: number;
+  byCategory: { category: string; count: number }[];
+  byStatus: { status: string; count: number }[];
+  period: { from: string; to: string };
+}
+
+export interface ShareResponse {
+  shareId: string;
+  shortUrl: string;
+  expiresAt: string;
+}
+
+export interface CaseStudy {
+  id: string;
+  year: string;
+  title: string;
+  category: string;
+  damage: string;
+  victims: string;
+  method: string;
+  actualTexts: string[];
+  redFlags: string[];
+  prevention: string[];
+  outcome: string;
+  severity: 'critical' | 'high' | 'medium';
+  arrested: boolean;
+}
+
 // ───────────────────────────────────────────
 // 공통 헬퍼
 // ───────────────────────────────────────────
 
-const nowIso = () => new Date().toISOString();
+export const nowIso = () => new Date().toISOString();
 
-const receiptId = () => {
+export const receiptId = () => {
   const d = new Date();
   const ymd = `${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, '0')}${String(d.getDate()).padStart(2, '0')}`;
   const seq = String(Math.floor(Math.random() * 999999)).padStart(6, '0');
   return `NB${ymd}-${seq}`;
 };
 
-const urlDetails = (url: string): UrlAnalysisResult['urlDetails'] => {
+export const urlDetails = (url: string): UrlAnalysisResult['urlDetails'] => {
   const isSuspicious = /(pay|secure|login|verify|kr-|-refund|nhis|hometax|loan)/i.test(url);
   const domain = (() => {
     try { return new URL(url.startsWith('http') ? url : `http://${url}`).hostname; }
@@ -59,17 +113,10 @@ const urlDetails = (url: string): UrlAnalysisResult['urlDetails'] => {
           { type: '의심 TLD', desc: '피싱에 자주 사용되는 패턴', severity: 'medium' },
         ]
       : [{ type: '이상 없음', desc: '명시적인 위험 징후가 발견되지 않았습니다', severity: 'low' }],
-    // 정직 처리: metaDetails는 VirusTotal API를 우리 백엔드가 직접 호출해서 받아와야 표시할 수 있음.
-    // mock에서 가짜 메타(등록일 2025-11-12, IP 175.221.43.127, PHISHING 카테고리 등)를 만들면 정직하지 않음.
-    // 백엔드 운영팀이 VT API key를 발급·연동하면 자동으로 적재됨.
   };
 };
 
-// 정직 처리: 피해 시나리오를 SmishingType별로 동적 분기.
-// 발표 시연에서 "이 문자는 가족 사칭이라 이런 피해, 공공기관 사칭이라 다른 피해" 식으로
-// 사용자가 각 사칭 유형에 따른 실제 피해 흐름을 명확히 인지 가능.
-// 백엔드 연동 시 backend의 진짜 분석 결과로 대체 가능.
-const damageStepsByType: Record<SmsAnalysisResult['smishingType'], DamageStep[]> = {
+export const damageStepsByType: Record<string, DamageStep[]> = {
   '가족/지인 사칭': [
     { step: 1, icon: 'message', title: '문자 수신', description: '자녀/친척 등 가족이나 지인을 사칭한 문자가 도착합니다' },
     { step: 2, icon: 'click', title: '긴급 호소 클릭', description: '휴대폰 고장·번호 변경·급한 부탁 등 긴급한 상황을 호소합니다' },
@@ -122,13 +169,11 @@ const damageStepsByType: Record<SmsAnalysisResult['smishingType'], DamageStep[]>
   '정상 문자': [],
 };
 
-
-
 // ───────────────────────────────────────────
 // SMS 분석 응답 생성
 // ───────────────────────────────────────────
 
-function buildSmsResult(req: AnalysisRequest & { content: string }): SmsAnalysisResult {
+export function buildSmsResult(req: AnalysisRequest & { content: string }): SmsAnalysisResult {
   const text = req.content;
   const urlMatch = text.match(/https?:\/\/[^\s]+/);
   const url = urlMatch?.[0];
@@ -198,11 +243,6 @@ function buildSmsResult(req: AnalysisRequest & { content: string }): SmsAnalysis
     actionGuide.push({ priority: 'normal', action: '그래도 개인정보나 금융정보 입력을 요구한다면 반드시 의심하세요' });
   }
 
-  // 정직 처리: similarCases는 RAG 파이프라인(Pinecone + OpenAI)이 실제로 매칭한 결과여야 정직.
-  // mock에서 5건 가짜 사례(택배 사칭/공공기관 환급/가족 사칭/단축 URL/이벤트 당첨)를 만들면
-  // 정직하지 않음 — 가짜 매칭은 사용자에게 "유사 사례 있음" 으로 오해 유발.
-  // lib/smsAnalysis.ts의 SIMILAR_CASES_HIGH/MEDIUM 도 이미 빈 배열로 정직 처리됨.
-  // RAG 연동 시 real fetch가 Pinecone 검색 결과로 채움. mock fallback은 빈 배열 반환.
   const similarCases: SimilarCase[] = [];
 
   const reasonsWithMatched: DetectionReason[] = reasons.map((c) => {
@@ -233,7 +273,7 @@ function buildSmsResult(req: AnalysisRequest & { content: string }): SmsAnalysis
   };
 }
 
-function buildUrlResult(req: AnalysisRequest & { content: string }): UrlAnalysisResult {
+export function buildUrlResult(req: AnalysisRequest & { content: string }): UrlAnalysisResult {
   const url = req.content;
   const details = urlDetails(url);
   const isDanger = details.flags.some((f) => f.severity === 'high');
@@ -259,9 +299,6 @@ function buildUrlResult(req: AnalysisRequest & { content: string }): UrlAnalysis
           { priority: 'normal', action: '의심 URL을 신고해주세요', contact: { name: 'KISA 사이버신고센터', number: '118' } },
         ]
       : [{ priority: 'normal', action: '공식 도메인을 다시 한번 확인하세요' }],
-    // 정직 처리: similarCases는 RAG가 실제로 매칭한 결과여야 정직.
-    // 가짜 '피싱 도메인 사칭 사례' 1건은 mock에서 만든 데이터로 정직하지 않음.
-    // RAG 연동 시 backend가 Pinecone 검색 결과로 채움. mock fallback은 빈 배열.
     similarCases: [],
     damageScenario: isDanger ? damageStepsByType['기타 사기'] : undefined,
     modelVersion: 'url-classifier-v1.0',
@@ -272,9 +309,7 @@ function buildUrlResult(req: AnalysisRequest & { content: string }): UrlAnalysis
   };
 }
 
-function buildImageResult(req: AnalysisRequest & { content: string; imageId?: string }): ImageAnalysisResult {
-  // image 분석은 content에 OCR 결과 텍스트가 들어옴
-  // (실제로는 /api/ocr 먼저 호출 후 받은 ocrText로 analyze)
+export function buildImageResult(req: AnalysisRequest & { content: string; imageId?: string }): ImageAnalysisResult {
   const ocrText = req.content;
   const smsResult = buildSmsResult({ type: 'sms', content: ocrText });
   return {
@@ -292,7 +327,7 @@ function buildImageResult(req: AnalysisRequest & { content: string; imageId?: st
 // Mock 데이터 — 발신번호
 // ───────────────────────────────────────────
 
-const senderDb: Record<string, SenderLookupResult> = {
+export const senderDb: Record<string, SenderLookupResult> = {
   '010-8821-3947': {
     number: '010-8821-3947',
     trustScore: 12,
@@ -329,7 +364,7 @@ const senderDb: Record<string, SenderLookupResult> = {
   },
 };
 
-function mockSenderLookup(number: string): SenderLookupResult {
+export function mockSenderLookup(number: string): SenderLookupResult {
   return (
     senderDb[number] ?? {
       number,
@@ -344,72 +379,143 @@ function mockSenderLookup(number: string): SenderLookupResult {
 }
 
 // ───────────────────────────────────────────
-// Mock 핸들러 (라우터 역할)
+// Mock 데이터 — 이력 (백업 보관)
 // ───────────────────────────────────────────
 
-type Handler = (body: unknown) => unknown;
+export const mockHistoryItems: HistoryItem[] = [
+  { id: 'h1', type: 'sms', content: '【국민건강보험】미납보험료 89,200원이 있습니다. 즉시 납부...', riskLevel: 'high', riskScore: 88, smishingType: '공공기관 사칭', sender: '0212345678', createdAt: '2026-06-05T14:32:11+09:00' },
+  { id: 'h2', type: 'sms', content: '카카오 인증번호는 [394821]입니다. 타인에게 절대 알려주지...', riskLevel: 'low', riskScore: 8, smishingType: '정상 문자', sender: '카카오', createdAt: '2026-06-05T13:18:44+09:00' },
+  { id: 'h3', type: 'sms', content: '[CJ대한통운] 고객님의 택배가 주소불명으로 반송될 예정입니다...', riskLevel: 'high', riskScore: 82, smishingType: '택배 사칭', sender: '010-5839-2847', createdAt: '2026-06-04T19:45:02+09:00' },
+  { id: 'h4', type: 'url', content: 'http://prize-samsung.xyz/claim', riskLevel: 'high', riskScore: 95, smishingType: '이벤트 사기', createdAt: '2026-06-04T11:22:31+09:00' },
+  { id: 'h5', type: 'sms', content: '【KB국민은행】 고객님의 계좌에서 비정상 접근이 감지되었습니다...', riskLevel: 'high', riskScore: 90, smishingType: '금융 피싱', sender: '0215889999', createdAt: '2026-06-03T09:05:00+09:00' },
+  { id: 'h6', type: 'sms', content: '엄마 나 폰 고장나서 번호 바뀌었어. 급하게 상품권 결제 좀...', riskLevel: 'high', riskScore: 93, smishingType: '가족/지인 사칭', sender: '010-9382-7461', createdAt: '2026-06-02T16:40:00+09:00' },
+];
 
-class MockRouter {
-  private routes: Map<string, Handler> = new Map();
+// ───────────────────────────────────────────
+// Mock 데이터 — 사례 (백업 보관)
+// ───────────────────────────────────────────
 
-  /** path + method 등록 (대소문자 무시) */
-  register(method: string, path: string, handler: Handler) {
-    this.routes.set(`${method.toUpperCase()} ${path.toUpperCase()}`, handler);
-  }
+export const mockCases: CaseStudy[] = [
+  {
+    id: 'c1',
+    year: '2024',
+    title: '국민건강보험 사칭 대규모 피싱 캠페인',
+    category: '공공기관 사칭',
+    damage: '약 42억원',
+    victims: '1만 8천명',
+    method: '공공기관 공식 발신번호 스푸핑 + 가짜 납부 페이지',
+    actualTexts: [
+      '【국민건강보험】미납보험료 89,200원이 있습니다. 즉시 납부하지 않으면 급여가 정지됩니다. http://nhis-pay.kr-notice.com/pay',
+    ],
+    redFlags: ['nhis.or.kr이 아닌 다른 도메인', '급여 정지 위협', '즉시 납부 요구'],
+    prevention: ['nhis.or.kr 공식 사이트에서 직접 확인', '전화로 공단에 직접 문의', '링크 클릭 금지'],
+    outcome: '2024년 11월 사이버수사대 검거, 피의자 7명 구속. 서버는 중국 소재.',
+    severity: 'critical',
+    arrested: true,
+  },
+  {
+    id: 'c2',
+    year: '2024',
+    title: '택배 배송 불가 대규모 스미싱',
+    category: '택배 사칭',
+    damage: '약 18억원',
+    victims: '6천 200명',
+    method: 'CJ대한통운·쿠팡·롯데택배 순환 사칭 + 배송비 결제 유도',
+    actualTexts: [
+      '[CJ대한통운] 고객님의 택배가 주소불명으로 반송될 예정입니다. 배송 재신청: http://cjlogistics.re-delivery.net/confirm',
+    ],
+    redFlags: ['공식 도메인 아닌 유사 URL', '배송비 직접 결제 요구', '개인번호 발신'],
+    prevention: ['앱에서 직접 배송 조회', '배송비는 절대 SMS 링크로 결제 금지', '의심 전화번호 112 신고'],
+    outcome: '현재 수사 중. 피의자 해외 도피 추정.',
+    severity: 'high',
+    arrested: false,
+  },
+  {
+    id: 'c3',
+    year: '2023',
+    title: 'KB국민은행 보안 점검 피싱',
+    category: '금융 피싱',
+    damage: '약 63억원',
+    victims: '2만 4천명',
+    method: '은행 공식 앱 UI 완벽 복제 + 보안 인증서 위조',
+    actualTexts: [
+      '【KB국민은행】고객님의 계좌에서 비정상 접근이 감지되었습니다. 24시간 내 본인확인 필수. 확인: http://kbbank-secure.com/verify',
+    ],
+    redFlags: ['kbstar.com이 아닌 도메인', '24시간 기한 압박', 'OTP 전체 입력 요구'],
+    prevention: ['OTP는 누구에게도 공유 금지', '은행 공식 앱만 사용'],
+    outcome: '2024년 3월 검거. 주범 1명 징역 8년.',
+    severity: 'critical',
+    arrested: true,
+  },
+];
 
-  has(path: string, method: string): boolean {
-    return this.routes.has(`${method.toUpperCase()} ${path.split('?')[0].toUpperCase()}`);
-  }
+// ───────────────────────────────────────────
+// 백업 라우터 등록
+// ───────────────────────────────────────────
 
-  invoke<T>(path: string, method: string, body: unknown): T {
-    const key = `${method.toUpperCase()} ${path.split('?')[0].toUpperCase()}`;
-    const handler = this.routes.get(key);
-    if (!handler) {
-      throw {
-        code: 'NOT_FOUND',
-        message: `Mock route not found: ${method} ${path}`,
-      };
-    }
-    return handler(body) as T;
-  }
-}
+export const backupMockRoutes = (router: any) => {
+  // 이력
+  router.register('GET', '/api/history', () => ({
+    items: mockHistoryItems,
+    total: mockHistoryItems.length,
+    page: 1,
+    pageSize: 20,
+    hasMore: false,
+  } satisfies Paginated<HistoryItem>));
 
-export const mockHandle = new MockRouter();
-
-// ── 라우트 등록 ──
-
-// 분석 (backend path /api/predict 와 일치 — lib/api.ts의 path 매핑 결과)
-mockHandle.register('POST', '/api/predict', (body) => {
-  const req = body as AnalysisRequest;
-  if (req.type === 'sms') return buildSmsResult({ type: 'sms', content: req.content, sender: req.sender });
-  if (req.type === 'url') return buildUrlResult({ type: 'url', content: req.content });
-  if (req.type === 'image') return buildImageResult({ type: 'image', content: req.content, imageId: req.imageId });
-  throw { code: 'INVALID_INPUT', message: `Unknown type: ${req.type}` };
-});
-
-// OCR
-mockHandle.register('POST', '/api/ocr', (_body) => {
-  return {
-    imageId: `img_${Date.now()}`,
-    text: '【CJ대한통운】배송 주소 확인이 필요합니다. 주소 오류로 반송 예정입니다. 확인: http://cj-delivery-check.com/re123',
-    confidence: 0.92,
-    blocks: [],
-  } satisfies OcrResponse;
-});
-
-// 발신번호
-mockHandle.register('GET', '/api/sender/010-8821-3947', () => mockSenderLookup('010-8821-3947'));
-mockHandle.register('GET', '/api/sender/010-3392-1847', () => mockSenderLookup('010-3392-1847'));
-mockHandle.register('GET', '/api/sender/1588-1234', () => mockSenderLookup('1588-1234'));
-
-// 신고
-mockHandle.register('POST', '/api/reports', (_body) => {
-  const id = receiptId();
-  // (실제로는 DB에 저장)
-  return {
-    receiptId: id,
+  // 신고 영수증 상세
+  router.register('GET', '/api/reports/NB20260605-001234', () => ({
+    receiptId: 'NB20260605-001234',
     status: 'received',
-    createdAt: nowIso(),
-  } satisfies ReportResponse;
-});
+    createdAt: '2026-06-05T14:32:00+09:00',
+  } satisfies ReportResponse));
 
+  // 신고 통계
+  router.register('GET', '/api/reports/stats', () => ({
+    total: 996,
+    byCategory: [
+      { category: '공공기관 사칭', count: 342 },
+      { category: '금융 피싱', count: 218 },
+      { category: '택배 사칭', count: 156 },
+      { category: '이벤트 사기', count: 124 },
+      { category: '대출 사기', count: 89 },
+      { category: '기타 사기', count: 67 },
+    ],
+    byStatus: [{ status: 'received', count: 996 }],
+    period: { from: '2026-06-01T00:00:00+09:00', to: nowIso() },
+  } satisfies ReportStats));
+
+  // 피드백
+  router.register('POST', '/api/feedback', () => ({ ok: true as const }));
+
+  // 공유
+  router.register('POST', '/api/share', (_body: any) => {
+    return {
+      shareId: `shr_${Date.now()}`,
+      shortUrl: `https://nb.shield/r/${Date.now().toString(36)}`,
+      expiresAt: new Date(Date.now() + 30 * 24 * 3600 * 1000).toISOString(),
+    } satisfies ShareResponse;
+  });
+
+  // 사례
+  router.register('GET', '/api/cases', () => ({
+    items: mockCases,
+    total: mockCases.length,
+    page: 1,
+    pageSize: 20,
+    hasMore: false,
+  } satisfies Paginated<CaseStudy>));
+
+  router.register('GET', '/api/cases/c1', () => mockCases[0]);
+  router.register('GET', '/api/cases/c2', () => mockCases[1]);
+  router.register('GET', '/api/cases/c3', () => mockCases[2]);
+
+  // 비동기 작업
+  router.register('GET', '/api/jobs/job_demo_001', () => ({
+    jobId: 'job_demo_001',
+    status: 'completed',
+    progress: 100,
+    currentStep: 'done',
+    result: null,
+  }));
+};
