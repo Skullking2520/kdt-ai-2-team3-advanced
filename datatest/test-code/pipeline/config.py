@@ -10,7 +10,7 @@ from dotenv import load_dotenv
 load_dotenv(override=True)
 
 # ─ S3 ─────────────────────────────────────────
-S3_BUCKET = os.getenv("S3_BUCKET", "smishing-dev-newbies-2026")
+S3_BUCKET = os.getenv("S3_BUCKET", "smishing-s3-bucket")
 S3_REGION = os.getenv("AWS_DEFAULT_REGION", "ap-northeast-2")
 
 # ─ MySQL ──────────────────────────────────────
