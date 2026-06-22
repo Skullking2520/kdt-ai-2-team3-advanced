@@ -32,26 +32,6 @@ export type ActionPriority = 'critical' | 'high' | 'normal';
 
 export type DamageIcon = 'message' | 'click' | 'site' | 'info' | 'damage';
 
-/** 한국어 사용자 노출 (UI 매핑용) */
-export const RISK_LEVEL_KO: Record<RiskLevel, string> = {
-  high: '위험',
-  medium: '주의',
-  low: '안전',
-};
-
-export const SENDER_STATUS_KO: Record<SenderStatus, string> = {
-  safe: '안전',
-  caution: '주의',
-  danger: '위험',
-  unknown: '알 수 없음',
-};
-
-export const ACTION_PRIORITY_KO: Record<ActionPriority, string> = {
-  critical: '즉시',
-  high: '우선',
-  normal: '권장',
-};
-
 // ───────────────────────────────────────────
 // 2. 분석 입력 (프론트 → 백엔드)
 // ───────────────────────────────────────────
@@ -366,15 +346,6 @@ export interface CaseStudy {
   outcome: string;
   severity: 'critical' | 'high' | 'medium';
   arrested: boolean;
-}
-
-export interface QuizQuestion {
-  id: number;
-  sender: string;
-  message: string;
-  isPhishing: boolean;
-  explanation: string;
-  category: SmishingType;
 }
 
 // ───────────────────────────────────────────

@@ -70,13 +70,62 @@ const urlDetails = (url: string): UrlAnalysisResult['urlDetails'] => {
   };
 };
 
-const damageSteps: DamageStep[] = [
-  { step: 1, icon: 'message', title: '문자 수신', description: '의심 문자가 휴대폰에 도착합니다' },
-  { step: 2, icon: 'click', title: '링크 클릭', description: '문자 안의 URL을 클릭합니다' },
-  { step: 3, icon: 'site', title: '가짜 사이트 이동', description: '공식과 유사한 피싱 사이트로 이동합니다' },
-  { step: 4, icon: 'info', title: '개인정보 입력', description: '주민번호, 계좌번호, 인증번호 등을 입력합니다' },
-  { step: 5, icon: 'damage', title: '금전 피해', description: '계좌 이체, 카드 부정사용 등 금전 피해 발생' },
-];
+// 정직 처리: 피해 시나리오를 SmishingType별로 동적 분기.
+// 발표 시연에서 "이 문자는 가족 사칭이라 이런 피해, 공공기관 사칭이라 다른 피해" 식으로
+// 사용자가 각 사칭 유형에 따른 실제 피해 흐름을 명확히 인지 가능.
+// 백엔드 연동 시 backend의 진짜 분석 결과로 대체 가능.
+const damageStepsByType: Record<SmsAnalysisResult['smishingType'], DamageStep[]> = {
+  '가족/지인 사칭': [
+    { step: 1, icon: 'message', title: '문자 수신', description: '자녀/친척 등 가족이나 지인을 사칭한 문자가 도착합니다' },
+    { step: 2, icon: 'click', title: '긴급 호소 클릭', description: '휴대폰 고장·번호 변경·급한 부탁 등 긴급한 상황을 호소합니다' },
+    { step: 3, icon: 'info', title: '금전 요청', description: '상품권, 계좌이체, 대출 등 금전을 직접 요청합니다' },
+    { step: 4, icon: 'damage', title: '금전 송금', description: '상품권 번호 전달 또는 계좌이체를 진행합니다' },
+    { step: 5, icon: 'damage', title: '금전 피해 확정', description: '회수 어려운 금전적 피해가 발생합니다' },
+  ],
+  '공공기관 사칭': [
+    { step: 1, icon: 'message', title: '문자 수신', description: '국민건강보험·국세청·경찰청 등 공공기관을 사칭한 문자가 도착합니다' },
+    { step: 2, icon: 'click', title: '가짜 안내 클릭', description: '환급금·미납·본인인증 등 안내 링크를 클릭합니다' },
+    { step: 3, icon: 'site', title: '피싱 사이트 진입', description: '공식과 매우 유사한 가짜 사이트로 이동합니다' },
+    { step: 4, icon: 'info', title: '개인정보 입력', description: '주민번호, 계좌번호, 인증번호 등을 입력합니다' },
+    { step: 5, icon: 'damage', title: '계좌 탈취', description: '입력한 정보로 계좌가 탈취되거나 부정 사용됩니다' },
+  ],
+  '금융 피싱': [
+    { step: 1, icon: 'message', title: '문자 수신', description: '은행·카드사를 사칭한 문자가 도착합니다' },
+    { step: 2, icon: 'click', title: '본인확인 링크 클릭', description: '본인확인·카드 정지 안내 링크를 클릭합니다' },
+    { step: 3, icon: 'site', title: '가짜 은행 사이트', description: '공식과 유사한 피싱 사이트로 이동합니다' },
+    { step: 4, icon: 'info', title: '인증정보 입력', description: '아이디, 비밀번호, 인증번호, 보안카드 번호를 입력합니다' },
+    { step: 5, icon: 'damage', title: '계좌 탈취', description: '입력한 정보로 금융자산이 탈취됩니다' },
+  ],
+  '택배 사칭': [
+    { step: 1, icon: 'message', title: '문자 수신', description: 'CJ대한통운 등 택배사를 사칭한 문자가 도착합니다' },
+    { step: 2, icon: 'click', title: '가짜 배송 조회 클릭', description: '배송 조회·주소 확인 링크를 클릭합니다' },
+    { step: 3, icon: 'site', title: '피싱 사이트 진입', description: '공식과 유사한 가짜 택배 사이트로 이동합니다' },
+    { step: 4, icon: 'info', title: '개인정보 입력', description: '주소, 이름, 연락처, 결제 정보 등을 입력합니다' },
+    { step: 5, icon: 'damage', title: '정보 유출', description: '개인정보 유출 및 카드 부정 사용' },
+  ],
+  '이벤트 사기': [
+    { step: 1, icon: 'message', title: '문자 수신', description: '이벤트 당첨·쿠폰 발송 사칭 문자가 도착합니다' },
+    { step: 2, icon: 'click', title: '당첨 확인 클릭', description: '경품·쿠폰 수령 링크를 클릭합니다' },
+    { step: 3, icon: 'site', title: '피싱 사이트', description: '경품 수령을 가장한 가짜 사이트로 이동합니다' },
+    { step: 4, icon: 'info', title: '개인정보 입력', description: '배송비·세금 명목 개인정보·결제 정보 입력' },
+    { step: 5, icon: 'damage', title: '피해 확정', description: '소액 결제 발생 및 개인정보 유출' },
+  ],
+  '대출 사기': [
+    { step: 1, icon: 'message', title: '문자 수신', description: '저금리·무심사 대출 사칭 문자가 도착합니다' },
+    { step: 2, icon: 'click', title: '대출 신청 클릭', description: '신속한 대출 진행 링크를 클릭합니다' },
+    { step: 3, icon: 'site', title: '가짜 대출 사이트', description: '선취手续费·보험료 명목의 가짜 사이트로 이동합니다' },
+    { step: 4, icon: 'info', title: '선입금 요구', description: '대출 전 수수료·보증금·세금 입금을 요구합니다' },
+    { step: 5, icon: 'damage', title: '선입금 피해', description: '입금 후 연락 두절·금전 피해 발생' },
+  ],
+  '기타 사기': [
+    { step: 1, icon: 'message', title: '문자 수신', description: '의심스러운 문자가 도착합니다' },
+    { step: 2, icon: 'click', title: 'URL 클릭', description: '문자 안의 링크를 클릭합니다' },
+    { step: 3, icon: 'site', title: '피싱 사이트 진입', description: '의심 사이트로 이동합니다' },
+    { step: 4, icon: 'info', title: '개인정보 입력', description: '주민번호, 계좌번호, 인증번호 등을 입력합니다' },
+    { step: 5, icon: 'damage', title: '금전 피해', description: '계좌 이체, 카드 부정사용 등 금전 피해 발생' },
+  ],
+  '정상 문자': [],
+};
 
 
 
@@ -178,7 +227,7 @@ function buildSmsResult(req: AnalysisRequest & { content: string }): SmsAnalysis
     reasons: reasonsWithMatched,
     actionGuide,
     similarCases,
-    damageScenario: riskLevel !== 'low' ? damageSteps : undefined,
+    damageScenario: riskLevel !== 'low' ? damageStepsByType[smishingType] : undefined,
     modelVersion: 'kc-electra-v1.2.3',
     processingTime: 800 + Math.floor(Math.random() * 800),
     cacheHit: false,
@@ -219,7 +268,7 @@ function buildUrlResult(req: AnalysisRequest & { content: string }): UrlAnalysis
     // 가짜 '피싱 도메인 사칭 사례' 1건은 mock에서 만든 데이터로 정직하지 않음.
     // RAG 연동 시 backend가 Pinecone 검색 결과로 채움. mock fallback은 빈 배열.
     similarCases: [],
-    damageScenario: isDanger ? damageSteps : undefined,
+    damageScenario: isDanger ? damageStepsByType['기타 사기'] : undefined,
     modelVersion: 'url-classifier-v1.0',
     processingTime: 600 + Math.floor(Math.random() * 500),
     cacheHit: false,
