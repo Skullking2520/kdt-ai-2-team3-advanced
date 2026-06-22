@@ -1,20 +1,19 @@
-import { useState } from "react";
-import { useAdmin } from "../context/AdminContext";
+import {useState} from "react";
+import {useAdmin} from "../context/AdminContext";
 import {
-  Lock,
-  Unlock,
-  ShieldAlert,
-  Eye,
-  EyeOff,
-  LogOut,
-  BarChart2,
-  Cpu,
-  Zap,
-  TrendingUp,
-  CheckCircle2,
-  AlertCircle,
+Lock,
+Unlock,
+ShieldAlert,
+Eye,
+EyeOff,
+LogOut,
+BarChart2,
+Cpu,
+Zap,
+CheckCircle2,
+AlertCircle,
 } from "lucide-react";
-import { motion, AnimatePresence } from "motion/react";
+import {motion, AnimatePresence} from "motion/react";
 
 /* ── 커스텀 레이더 차트 ─────────────────────────────────── */
 const RADAR_METRICS = ["정확도", "정밀도", "재현율", "F1", "속도", "Zero-day"];
@@ -76,7 +75,7 @@ function CustomRadarChart() {
             y={p.y}
             textAnchor="middle"
             dominantBaseline="middle"
-            fill="rgba(255,255,255,0.4)"
+            className="fill-gray-700 dark:fill-white/40"
             fontSize={9}
           >
             {label}
@@ -87,7 +86,7 @@ function CustomRadarChart() {
       {RADAR_MODELS.map((model, i) => (
         <g key={`legend-${model.name}`} transform={`translate(4, ${210 + i * 12})`}>
           <rect width={8} height={8} rx={2} fill={model.color} fillOpacity={0.8} />
-          <text x={12} y={7} fill="rgba(255,255,255,0.5)" fontSize={9}>{model.name}</text>
+          <text x={12} y={7} className="fill-gray-700 dark:fill-white/50" fontSize={9}>{model.name}</text>
         </g>
       ))}
     </svg>
@@ -240,19 +239,19 @@ function LoginGate() {
 
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <label className="text-xs text-white/40 mb-2 block">관리자 비밀번호</label>
-              <div className="flex items-center gap-2 px-3 py-2.5 bg-[#0b1120] border border-white/10 rounded-xl focus-within:border-amber-500/40 transition-all">
-                <Lock size={13} className="text-white/30 shrink-0" />
+              <label className="text-xs text-white/60 mb-2 block">관리자 비밀번호</label>
+              <div className="flex items-center gap-3 px-4 py-3 bg-[#0b1120] border border-white/10 rounded-xl focus-within:border-amber-500/40 transition-all">
+                <Lock size={16} className="text-white/40 shrink-0" />
                 <input
                   type={show ? "text" : "password"}
                   value={pw}
                   onChange={(e) => { setPw(e.target.value); setError(false); }}
                   placeholder="비밀번호 입력"
-                  className="flex-1 bg-transparent text-sm text-white/80 placeholder:text-white/20 outline-none"
+                  className="flex-1 bg-transparent text-sm text-white/90 placeholder:text-white/40 outline-none min-w-0 focus:outline-none focus:ring-0"
                   autoFocus
                 />
-                <button type="button" onClick={() => setShow(!show)} className="text-white/30 hover:text-white/60 transition-all">
-                  {show ? <EyeOff size={13} /> : <Eye size={13} />}
+                <button type="button" onClick={() => setShow(!show)} className="text-white/40 hover:text-white/70 transition-all shrink-0">
+                  {show ? <EyeOff size={16} /> : <Eye size={16} />}
                 </button>
               </div>
               <AnimatePresence>
@@ -278,8 +277,8 @@ function LoginGate() {
             </button>
           </form>
 
-          <p className="text-[11px] text-white/20 text-center mt-5">
-            힌트: <span className="font-mono">관리자에게 문의하세요.</span>
+          <p className="text-[11px] text-white/35 text-center mt-5">
+            힌트: <span className="font-mono text-white/40">관리자에게 문의하세요.</span>
           </p>
         </div>
       </motion.div>
@@ -320,15 +319,15 @@ function AdminDashboard() {
           { label: "최고 속도", value: "12ms", model: "LSTM", icon: Zap, color: "text-yellow-400", bg: "bg-yellow-500/10" },
           { label: "Zero-day 최고", value: "--%", model: "분석 모델", icon: ShieldAlert, color: "text-red-400", bg: "bg-red-500/10" },
         ].map((c) => (
-          <div key={c.label} className="bg-[#111c30] border border-white/10 rounded-xl p-4">
+          <div key={c.label} className="bg-[#111c30] dark:bg-[#111c30] border border-white/10 rounded-xl p-4">
             <div className="flex items-center justify-between mb-3">
-              <p className="text-xs text-white/40">{c.label}</p>
+              <p className="text-white/40" style={{ fontSize: "0.75rem" }}>{c.label}</p>
               <div className={`w-7 h-7 rounded-lg ${c.bg} flex items-center justify-center`}>
                 <c.icon size={13} className={c.color} />
               </div>
             </div>
             <p className={`${c.color} mb-0.5`} style={{ fontWeight: 700, fontSize: "1.4rem" }}>{c.value}</p>
-            <p className="text-[11px] text-white/30">{c.model}</p>
+            <p className="text-white/30" style={{ fontSize: "0.6875rem" }}>{c.model}</p>
           </div>
         ))}
       </div>

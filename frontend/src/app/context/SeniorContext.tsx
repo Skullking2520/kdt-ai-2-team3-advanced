@@ -10,7 +10,7 @@
  *   const { senior, toggle, setSenior } = useSenior();
  */
 
-import { createContext, useContext, useState, useEffect, ReactNode } from "react";
+import { createContext, useContext, useState, useEffect, type ReactNode } from "react";
 
 const STORAGE_KEY = "nb:senior";
 
@@ -35,6 +35,7 @@ export function SeniorProvider({ children }: { children: ReactNode }) {
     }
   });
 
+  // state → localStorage + html class 동기화
   useEffect(() => {
     try {
       localStorage.setItem(STORAGE_KEY, senior ? "true" : "false");
@@ -42,6 +43,32 @@ export function SeniorProvider({ children }: { children: ReactNode }) {
       /* localStorage 사용 불가 환경 무시 */
     }
     document.documentElement.classList.toggle("senior-mode", senior);
+  }, [senior]);
+
+  // 다른 탭/창에서 localStorage 변경 시 동기화 (storage event)
+  useEffect(() => {
+    const onStorage = (e: StorageEvent) => {
+      if (e.key !== STORAGE_KEY) return;
+      const next = e.newValue === "true";
+      setSeniorState(next);
+    };
+    window.addEventListener("storage", onStorage);
+    return () => window.removeEventListener("storage", onStorage);
+  }, []);
+
+  // 페이지 가시성 복귀 시 localStorage와 state 일치 확인 (백그라운드 탭 동기화)
+  useEffect(() => {
+    const onVisible = () => {
+      if (document.visibilityState !== "visible") return;
+      try {
+        const stored = localStorage.getItem(STORAGE_KEY) === "true";
+        if (stored !== senior) setSeniorState(stored);
+      } catch {
+        /* 무시 */
+      }
+    };
+    document.addEventListener("visibilitychange", onVisible);
+    return () => document.removeEventListener("visibilitychange", onVisible);
   }, [senior]);
 
   const value: SeniorContextType = {

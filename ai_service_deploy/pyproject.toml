@@ -1,0 +1,21 @@
+[project]
+name = "ai_service_deploy"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+
+requires-python = ">=3.12,<3.13"
+dependencies = [
+    "ai_service", # 이 패키지가 ai_service를 사용한다고 명시
+    "modal>=1.5.0",
+]
+
+[project.scripts]
+ai-service-deploy = "ai_service_deploy:main"
+
+[build-system]
+requires = ["uv_build>=0.11.7,<0.12.0"]
+build-backend = "uv_build"
+
+[tool.uv.sources]
+ai_service = { workspace = true } # 마찬가지로 로컬 워크스페이스에서 가져오도록 지정

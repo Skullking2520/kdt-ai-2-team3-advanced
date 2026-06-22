@@ -15,21 +15,11 @@ ai_service/
 
 ## Encoder
 
-현재 서비스에 연결된 Encoder 모델은 `focal_no_oversampling` 실험 결과다.
+기본 프로젝트의 인코더 모델은 업데이트 되었다. 
 
-Hugging Face:
-
-```text
-https://huggingface.co/kdt-2-team4-newbiz/kcelectra-smishing-classifier
-```
+자세한 내용은 https://huggingface.co/kdt-2-team4-newbiz/kcelectra-smishing-classifier 참조.
 
 자세한 내용은 [encoder/README.md](encoder/README.md)를 참고한다.
-
-## Decoder
-
-기본 프로젝트 때 사용한 few-shot smsishing 이유 출력기이다.
-
-자세한 내용은 [decoder/README.md](decoder/README.md)를 참고한다.
 
 ## ai_service 폴더
 

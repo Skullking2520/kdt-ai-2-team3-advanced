@@ -1,0 +1,13 @@
+torch
+transformers
+huggingface_hub
+datasets
+accelerate
+pandas
+numpy
+scikit-learn
+optuna
+wandb
+matplotlib
+tabulate
+cleanlab>=2.7,<3

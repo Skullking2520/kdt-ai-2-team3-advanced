@@ -1,0 +1,26 @@
+# Large or reproducible training artifacts
+.DS_Store
+cleaned_dataset.jsonl
+*.jsonl
+*.safetensors
+*.bin
+*.zip
+data/incoming/*.csv
+!data/incoming/manual_incidents.example.csv
+data/collected/
+data/datasets/
+data/evaluations/
+data/prepared/
+data/pred_probs/
+data/quality/
+data/runs/
+
+# Generated experiment outputs
+results/*/final_model/
+results/*/test_predictions.csv
+results/plots/
+
+# Local experiment trackers/cache
+wandb/
+__pycache__/
+*.pyc

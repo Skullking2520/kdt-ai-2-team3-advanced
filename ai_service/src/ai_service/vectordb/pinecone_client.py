@@ -20,43 +20,52 @@ class PineconeClient(BaseVectorDB):
         vectors_to_upsert = []
 
         for i, doc in enumerate(documents):
-            # 텍스트를 벡터로 변환
             embedding = self.embedding_model.embed_query(doc)
             doc_id = f"doc_{i}_{sha1(doc.encode('utf-8')).hexdigest()}"
-            # 메타데이터 준비 (Pinecone은 원본 텍스트를 주로 메타데이터에 저장함)
             meta = metadatas[i] if metadatas else {}
-            meta["text"] = doc  # 유사도 검색 후 원본 텍스트 복원을 위해 저장 필수
-            
+            # 원본 텍스트를 메타데이터에 두 개 키로 보존하여 검색 복원 시 일관성을 높입니다.
+            meta["text"] = doc
+            meta["page_content"] = doc
+
             vectors_to_upsert.append({
                 "id": doc_id,
                 "values": embedding,
-                "metadata": meta
+                "metadata": meta,
             })
-            
-        # Pinecone에 데이터 업로드
+
         self.index.upsert(vectors=vectors_to_upsert)
 
     def similarity_search(self, query: str, k: int = 4) -> List[Dict[str, Any]]:
         # 쿼리 문장 임베딩 변환
         query_vector = self.embedding_model.embed_query(query)
-        
+
         # 검색 수행 (메타데이터 포함 설정 필수)
         results = self.index.query(
             vector=query_vector,
             top_k=k,
             include_metadata=True
         )
-        
+
         # 결과를 표준화된 List[Dict] 형태로 가공하여 반환
         formatted_results = []
         for match in results.get("matches", []):
-            metadata = match.get("metadata", {})
-            # add_documents에서 넣어둔 원본 텍스트 추출
-            page_content = metadata.pop("text", "") 
+            metadata = match.get("metadata") or {}
             
+            page_content = (
+                metadata.get("text")
+                or metadata.get("page_content")
+                or metadata.get("document")
+                or metadata.get("content")
+                or ""
+            )
+            if not page_content:
+                # fallback for unexpected Pinecone metadata shapes
+                page_content = metadata.get("source", "") or match.get("id", "")
+
             formatted_results.append({
                 "page_content": page_content,
                 "metadata": metadata,
-                "score": match.get("score")  # Pinecone은 코사인 유사도 등 높을수록 유사함
+                "score": match.get("score"),
             })
+
         return formatted_results

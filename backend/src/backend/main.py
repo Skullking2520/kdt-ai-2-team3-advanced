@@ -11,13 +11,19 @@ logging.basicConfig(
     format="%(asctime)s %(levelname)-8s %(name)s - %(message)s",
 )
 
+# uvicorn.error 로그가 상위 로거로 전달되어 중복 출력되는 것을 방지
+# uvicorn.error: 서버의 라이프사이클(시작, 재시작, 종료) 및 실제 코드 내 발생한 에러 기록하는 기본 로거
+logging.getLogger("uvicorn.error").propagate = False
+logging.getLogger("uvicorn.access").propagate = False
+
 from .core.config import CORS_OPTIONS, configure_app
 from .core.exceptions import exception_handlers
 from .db.create_tables import create_db_tables
 
+# lifespan: 애플리케이션이 시작될 때와 종료될 때 실행되어야
+# 하는 로직(DB 연결, 모델 로드, 캐시 초기화 등)을 정의
 
 logger = logging.getLogger(__name__)
-
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -39,6 +45,8 @@ async def _warmup_ocr() -> None:
     try:
         from .ocr.ocr_service import _get_paddle_ocr
         await asyncio.get_event_loop().run_in_executor(None, _get_paddle_ocr)
+        # 첫 번째 인자가 None이면 파이썬의 기본 스레드 풀(ThreadPoolExecutor)을 사용합니다.        
+        # 두 번째 인자인 _get_paddle_ocr 함수를 별도의 스레드(백그라운드)에서 실행하도록 넘깁니다.
         logger.info("[startup] PaddleOCR 워밍업 완료")
     except Exception as e:
         logger.warning("[startup] PaddleOCR 워밍업 실패 (첫 요청이 느릴 수 있음): %s", e)

@@ -1,8 +1,62 @@
 # ollama / openai llm 인스턴스화
-#import os
-from typing import Any
+
+from typing import Any, Union
 from langchain_ollama import ChatOllama
+from langchain_openai import ChatOpenAI
 from ..config.settings import settings
+from ..utils.is_prod import is_prod
+
+def get_llm(
+    model_name: str,
+    temperature: float = 0.0,
+    max_tokens: int = 4096,
+    json_mode: bool = False,
+    **kwargs: Any
+) -> Union[ChatOllama, ChatOpenAI]:
+    """
+    환경(IS_PROD)에 따라 Ollama 또는 vLLM(ChatOpenAI) 인스턴스를 반환합니다.
+    """
+    
+    if is_prod:
+        # ==========================================
+        # 1. 프로덕션 환경: Modal + vLLM (OpenAI 호환)
+        # ==========================================
+        base_url = getattr(settings, "OPENAI_API_BASE", None)
+        api_key = getattr(settings, "OPENAI_API_KEY", "modal-dummy-key")
+        # OPENAI_API_KEY="modal-dummy-key"처럼 아무 문자열이나 채워 넣어야 랭체인이 에러 없이 Modal 서버로 요청을 전송
+        
+        llm_kwargs = {
+            "model": model_name,
+            "base_url": base_url,
+            "api_key": api_key,
+            "temperature": temperature,
+            "max_tokens": max_tokens,
+            **kwargs
+        }
+        
+        if json_mode:
+            llm_kwargs["model_kwargs"] = {"response_format": {"type": "json_object"}}  # ← model_kwargs로 이동
+            
+        return ChatOpenAI(**llm_kwargs)
+        
+    else:
+        # ==========================================
+        # 2. 로컬 개발 환경: Ollama
+        # ==========================================
+        base_url = getattr(settings, "OLLAMA_BASE_URL", "http://localhost:11434")
+        
+        llm_kwargs = {
+            "model": model_name,
+            "base_url": base_url,
+            "temperature": temperature,
+            "num_predict": max_tokens, # Ollama 스펙 맵핑
+            **kwargs
+        }
+        
+        if json_mode:
+            llm_kwargs["format"] = "json"
+            
+        return ChatOllama(**llm_kwargs)
 
 def get_ollama_llm(
     model_name: str,
@@ -31,6 +85,7 @@ def get_ollama_llm(
         "base_url": base_url,
         "temperature": temperature,
         "num_predict": num_predict,
+        "reasoning": False, # qwen <think> mode 해제
         **kwargs # 사용자가 추가로 전달한 파라미터 병합 (예: top_p, num_ctx 등)
     }
 

@@ -13,7 +13,7 @@ const RISK_KEYWORDS = ["즉시", "긴급", "정지", "동결", "납부", "미납
 const URL_PATTERN = /https?:\/\/\S+/g;
 
 function tokenize(text: string): Token[] {
-  const words = text.split(/(\s+|(?=[【】\[\]!?！？.,;:·]))/g).filter((w) => w.trim());
+  const words = text.split(/(\s+|(?=[【】[\]!?！？.,;:·]))/g).filter((w) => w.trim());
   return words.map((w) => {
     const isUrl = URL_PATTERN.test(w);
     const isRisk = RISK_KEYWORDS.some((k) => w.includes(k)) || isUrl;

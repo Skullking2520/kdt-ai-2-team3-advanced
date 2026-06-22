@@ -1,4 +1,4 @@
-
+import traceback
 from typing import Any
 from urllib.error import URLError
 from urllib.request import urlopen
@@ -15,8 +15,30 @@ from ..vectordb.service import get_vector_db
 from ..core.state import SmishingGraphState
 from ..utils.rag_content import _build_user_content
 from ..utils.json_utils import _try_parse_json
+from langfuse import observe, propagate_attributes
+from ..utils.langfuse_init import get_langfuse_client, make_langfuse_session_attributes
 
 router = APIRouter(prefix="/api/v1", tags=["ai-service"])
+
+langfuse = get_langfuse_client()
+
+
+def _record_graph_response_span(result: dict, request: GraphInvokeRequest) -> None:
+    if not langfuse:
+        return
+    metadata = {
+        "route_override": str(request.route_override) if request.route_override else "none",
+        "input_text_length": len(request.text or ""),
+        "ocr_text_length": len(request.ocr_text or ""),
+    }
+    langfuse.update_current_span(
+        output={
+            "final_output": result.get("final_output"),
+            "context": result.get("context"),
+            "route_override": request.route_override,
+        },
+        metadata=metadata,
+    )
 
 @router.get("/health")
 def health() -> dict[str, Any]:
@@ -40,51 +62,104 @@ def health() -> dict[str, Any]:
 
 
 @router.post("/graph/invoke", response_model=GraphInvokeResponse)
+@observe(as_type="span", name="ai_service.graph_invoke")
 def invoke_graph(request: GraphInvokeRequest) -> GraphInvokeResponse:
     user_content = _build_user_content(request.text, request.ocr_text)
     state: SmishingGraphState = {"messages": [HumanMessage(content=user_content)]}
     if request.route_override:
         state["route_override"] = request.route_override
 
-    try:
-        result = langgraph_app.invoke(state)
-    except Exception as exc:
-        raise HTTPException(status_code=500, detail=f"LangGraph 실행 실패: {exc}") from exc
-    # fastapi는 에러가 raise되도 깔끔한 JSON 응답을 기본 제공
+    session_attrs = make_langfuse_session_attributes(
+        endpoint_name="graph_invoke",
+        extra_metadata={
+            "request_id": getattr(request, "route_override", "unknown"),
+            "input_type": "sms+ocr" if request.ocr_text else "sms_only",
+        },
+    )
 
-    final_output = result.get("final_output")
-    if not final_output and result.get("messages"):
-        final_output = result["messages"][-1].content
+    with propagate_attributes(
+        user_id=session_attrs["user_id"],
+        session_id=session_attrs["session_id"],
+        metadata=session_attrs["metadata"],
+        tags=session_attrs["tags"],
+    ):
+        try:
+            result = langgraph_app.invoke(state)
+        except Exception as exc:
+            traceback.print_exc()
+            raise HTTPException(status_code=500, detail=f"LangGraph 실행 실패: {exc}") from exc
+
+        final_output = result.get("final_output")
+        if not final_output and result.get("messages"):
+            final_output = result["messages"][-1].content
+
+        final_output = str(final_output or "")
+        parsed_output = _try_parse_json(final_output)
+        _record_graph_response_span(result, request)
 
     return GraphInvokeResponse(
-        final_output=str(final_output or ""),
-        parsed_output=_try_parse_json(str(final_output or "")),
+        final_output=final_output,
+        parsed_output=parsed_output,
         context=result.get("context"),
         route_override=request.route_override,
     )
 
 
 @router.post("/vectordb/upsert")
+@observe(as_type="span", name="ai_service.vectordb_upsert")
 def upsert_documents(request: VectorUpsertRequest) -> dict[str, Any]:
     db = get_vector_db()
-    try:
-        db.upsert_documents(
-            documents=request.documents,
-            metadatas=request.metadatas,
-            ids=request.ids,
+    session_attrs = make_langfuse_session_attributes(
+        endpoint_name="vectordb_upsert",
+        extra_metadata={"document_count": str(len(request.documents))},
+    )
+
+    with propagate_attributes(
+        user_id=session_attrs["user_id"],
+        session_id=session_attrs["session_id"],
+        metadata=session_attrs["metadata"],
+        tags=session_attrs["tags"],
+    ):
+        try:
+            db.upsert_documents(
+                documents=request.documents,
+                metadatas=request.metadatas,
+                ids=request.ids,
+            )
+        except Exception as exc:
+            raise HTTPException(status_code=500, detail=f"VectorDB upsert 실패: {exc}") from exc
+
+        langfuse.update_current_span(
+            output={"upserted": len(request.documents)},
+            metadata={"collection": settings.CHROMA_COLLECTION_NAME},
         )
-    except Exception as exc:
-        raise HTTPException(status_code=500, detail=f"VectorDB upsert 실패: {exc}") from exc
 
     return {"upserted": len(request.documents)}
 
 
 @router.post("/vectordb/retrieve")
+@observe(as_type="span", name="ai_service.vectordb_retrieve")
 def retrieve_documents(request: VectorRetrieveRequest) -> dict[str, Any]:
     db = get_vector_db()
-    try:
-        results = db.similarity_search(query=request.query, k=request.k)
-    except Exception as exc:
-        raise HTTPException(status_code=500, detail=f"VectorDB retrieve 실패: {exc}") from exc
+    session_attrs = make_langfuse_session_attributes(
+        endpoint_name="vectordb_retrieve",
+        extra_metadata={"query": request.query[:100]},
+    )
+
+    with propagate_attributes(
+        user_id=session_attrs["user_id"],
+        session_id=session_attrs["session_id"],
+        metadata=session_attrs["metadata"],
+        tags=session_attrs["tags"],
+    ):
+        try:
+            results = db.similarity_search(query=request.query, k=request.k)
+        except Exception as exc:
+            raise HTTPException(status_code=500, detail=f"VectorDB retrieve 실패: {exc}") from exc
+
+        langfuse.update_current_span(
+            output={"result_count": len(results)},
+            metadata={"collection": settings.CHROMA_COLLECTION_NAME},
+        )
 
     return {"query": request.query, "results": results}
