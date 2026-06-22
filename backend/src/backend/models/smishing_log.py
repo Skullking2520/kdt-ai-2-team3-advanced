@@ -33,12 +33,31 @@ class SmishingLog(Base):
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
     content: Mapped[str] = mapped_column(Text, nullable=False)
     is_smishing: Mapped[bool] = mapped_column(Boolean, nullable=False)
-    detection_type: Mapped[DetectionType] = mapped_column(Enum(DetectionType), nullable=False)
-    input_type: Mapped[InputType | None] = mapped_column(Enum(InputType), nullable=True)
+    detection_type: Mapped[DetectionType] = mapped_column(
+        Enum(DetectionType),
+        nullable=False,
+    )
+    input_type: Mapped[InputType | None] = mapped_column(
+        Enum(InputType),
+        nullable=True,
+    )
     ai_score: Mapped[float] = mapped_column(Numeric(5, 4), nullable=True)
-    reasoning: Mapped[str | None] = mapped_column(Text, nullable=True)  # 디코더 출력 결과
+    reasoning: Mapped[str | None] = mapped_column(Text, nullable=True)
+    consent_for_training: Mapped[bool] = mapped_column(
+        Boolean,
+        nullable=False,
+        default=False,
+    )
+    static_url_match: Mapped[bool] = mapped_column(
+        Boolean,
+        nullable=False,
+        default=False,
+    )
 
-    model_id: Mapped[int | None] = mapped_column(ForeignKey("model_info.id"), nullable=True)
+    model_id: Mapped[int | None] = mapped_column(
+        ForeignKey("model_info.id"),
+        nullable=True,
+    )
     created_at: Mapped[datetime] = mapped_column(TIMESTAMP, server_default=func.now())
 
     # 관계 설정

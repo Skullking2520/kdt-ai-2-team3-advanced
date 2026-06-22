@@ -11,6 +11,8 @@ async def create_smishing_log(
     input_type: InputType | None = None,
     ai_score: float | None = None,
     reasoning: str | None = None,
+    consent_for_training: bool = False,
+    static_url_match: bool = False,
 ) -> SmishingLog:
     log = SmishingLog(
         content=content,
@@ -19,6 +21,8 @@ async def create_smishing_log(
         input_type=input_type,
         ai_score=ai_score,
         reasoning=reasoning,
+        consent_for_training=consent_for_training,
+        static_url_match=static_url_match,
     )
     db.add(log)
     await db.commit()
