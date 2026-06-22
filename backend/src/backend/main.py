@@ -19,11 +19,9 @@ from .core.config import CORS_OPTIONS, configure_app
 from .core.exceptions import exception_handlers
 from .db.create_tables import create_db_tables
 
-
 # lifespan: 애플리케이션이 시작될 때와 종료될 때 실행되어야
 # 하는 로직(DB 연결, 모델 로드, 캐시 초기화 등)을 정의
 logger = logging.getLogger(__name__)
-
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):

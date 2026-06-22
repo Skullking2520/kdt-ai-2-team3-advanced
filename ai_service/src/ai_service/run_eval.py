@@ -5,14 +5,12 @@
 
 import os
 import sys
-import json
 from ai_service.utils.langfuse_init import load_langfuse_env_variable
 
 # 다른 모듈(RAGGraphEvaluator 등)을 import 하기 전에 환경 변수부터 주입
 load_langfuse_env_variable()
 
 from .evaluation.evaluator import RAGGraphEvaluator
-from .config.settings import settings
 from .utils.save_golden_dataset import load_jsonl, safe_model_name
 
 def main():

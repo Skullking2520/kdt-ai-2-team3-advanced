@@ -85,6 +85,7 @@ def get_ollama_llm(
         "base_url": base_url,
         "temperature": temperature,
         "num_predict": num_predict,
+        "reasoning": False, # qwen <think> mode 해제
         **kwargs # 사용자가 추가로 전달한 파라미터 병합 (예: top_p, num_ctx 등)
     }
 

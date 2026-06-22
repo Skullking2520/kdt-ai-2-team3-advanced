@@ -93,11 +93,13 @@ def invoke_graph(request: GraphInvokeRequest) -> GraphInvokeResponse:
         if not final_output and result.get("messages"):
             final_output = result["messages"][-1].content
 
+        final_output = str(final_output or "")
+        parsed_output = _try_parse_json(final_output)
         _record_graph_response_span(result, request)
 
     return GraphInvokeResponse(
-        final_output=str(final_output or ""),
-        parsed_output=_try_parse_json(str(final_output or "")),
+        final_output=final_output,
+        parsed_output=parsed_output,
         context=result.get("context"),
         route_override=request.route_override,
     )
