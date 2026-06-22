@@ -5,11 +5,10 @@ from ..db.session import get_db
 from ..schemas.predict_api import PredictRequest, PredictResponse
 from ..services.predict_service import predict_smishing
 
-router = APIRouter()
+router = APIRouter(prefix="/api/predict")
 
 
-@router.post("/api/predict", response_model=PredictResponse)
-@router.post("/api/analyze", response_model=PredictResponse)
+@router.post("", response_model=PredictResponse)
 async def predict_sms_message(
     request: PredictRequest,
     db: AsyncSession = Depends(get_db),

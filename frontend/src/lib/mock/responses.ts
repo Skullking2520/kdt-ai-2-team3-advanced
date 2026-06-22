@@ -154,19 +154,12 @@ function buildSmsResult(req: AnalysisRequest & { content: string }): SmsAnalysis
     actionGuide.push({ priority: 'normal', action: '그래도 개인정보나 금융정보 입력을 요구한다면 반드시 의심하세요' });
   }
 
-  const similarCases: SimilarCase[] =
-    riskLevel === 'high'
-      ? [
-          { id: 'c1', title: '택배 회사 사칭 배송 주소 확인 유도형', similarity: 87, year: '2024', category: '공공기관 사칭' },
-          { id: 'c2', title: '공공기관 환급금 명목 피싱', similarity: 74, year: '2024', category: '공공기관 사칭' },
-          { id: 'c3', title: '가족 사칭 상품권 요구형', similarity: 69, year: '2026', category: '가족/지인 사칭' },
-        ]
-      : riskLevel === 'medium'
-        ? [
-            { id: 'c4', title: '단축 URL 포함 확인 유도 문자', similarity: 71, year: '2025', category: '기타 사기' },
-            { id: 'c5', title: '이벤트 당첨 가장 링크 연결형', similarity: 58, year: '2025', category: '이벤트 사기' },
-          ]
-        : [];
+  // 정직 처리: similarCases는 RAG 파이프라인(Pinecone + OpenAI)이 실제로 매칭한 결과여야 정직.
+  // mock에서 5건 가짜 사례(택배 사칭/공공기관 환급/가족 사칭/단축 URL/이벤트 당첨)를 만들면
+  // 정직하지 않음 — 가짜 매칭은 사용자에게 "유사 사례 있음" 으로 오해 유발.
+  // lib/smsAnalysis.ts의 SIMILAR_CASES_HIGH/MEDIUM 도 이미 빈 배열로 정직 처리됨.
+  // RAG 연동 시 real fetch가 Pinecone 검색 결과로 채움. mock fallback은 빈 배열 반환.
+  const similarCases: SimilarCase[] = [];
 
   const reasonsWithMatched: DetectionReason[] = reasons.map((c) => {
     if (c.code === 'impersonation') return { ...c, matched: impersonation };
@@ -222,11 +215,10 @@ function buildUrlResult(req: AnalysisRequest & { content: string }): UrlAnalysis
           { priority: 'normal', action: '의심 URL을 신고해주세요', contact: { name: 'KISA 사이버신고센터', number: '118' } },
         ]
       : [{ priority: 'normal', action: '공식 도메인을 다시 한번 확인하세요' }],
-    similarCases: isDanger
-      ? [
-          { id: 'c1', title: '피싱 도메인 사칭 사례', similarity: 82, year: '2025', category: '기타 사기' },
-        ]
-      : [],
+    // 정직 처리: similarCases는 RAG가 실제로 매칭한 결과여야 정직.
+    // 가짜 '피싱 도메인 사칭 사례' 1건은 mock에서 만든 데이터로 정직하지 않음.
+    // RAG 연동 시 backend가 Pinecone 검색 결과로 채움. mock fallback은 빈 배열.
+    similarCases: [],
     damageScenario: isDanger ? damageSteps : undefined,
     modelVersion: 'url-classifier-v1.0',
     processingTime: 600 + Math.floor(Math.random() * 500),
@@ -445,10 +437,6 @@ mockHandle.register('GET', '/api/history', () => ({
   pageSize: 20,
   hasMore: false,
 } satisfies Paginated<HistoryItem>));
-
-mockHandle.register('GET', '/api/history/h1', () => buildSmsResult({ type: 'sms', content: mockHistoryItems[0].content }));
-mockHandle.register('GET', '/api/history/h3', () => buildSmsResult({ type: 'sms', content: mockHistoryItems[2].content }));
-mockHandle.register('GET', '/api/history/h4', () => buildUrlResult({ type: 'url', content: mockHistoryItems[3].content }));
 
 // 신고
 mockHandle.register('POST', '/api/reports', (_body) => {

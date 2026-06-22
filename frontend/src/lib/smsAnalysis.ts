@@ -69,7 +69,7 @@ const SIMILAR_CASES_MEDIUM: { title: string; similarity: number; year: string }[
 // 결과 타입
 // ───────────────────────────────────────────
 
-export interface SmsAnalysis {
+interface SmsAnalysis {
   /** 'high' | 'medium' | 'low' — types/api.ts RiskLevel 통일 */
   risk_level: RiskLevel;
   /** 0~100 정수 */
@@ -248,7 +248,7 @@ export function toSeniorActions(actionGuide: string[]): string[] {
  * 새 API Contract enum (high/medium/low) ↔ 레거시 키 (danger/warning/normal) 변환.
  * 추후 result/* 카드 prop 타입을 새 enum으로 마이그레이션하면 이 어댑터는 제거 가능.
  */
-export type LegacyRiskLevel = 'danger' | 'warning' | 'normal';
+type LegacyRiskLevel = 'danger' | 'warning' | 'normal';
 
 export function toLegacyRiskLevel(level: RiskLevel): LegacyRiskLevel {
   switch (level) {

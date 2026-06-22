@@ -1,11 +1,10 @@
 from datetime import datetime, timezone
 
-from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..models.static_patterns import PatternType, StaticPattern
 from ..repository.static_pattern_repository import upsert_static_patterns
-from ..schemas.report_api import ReportRequest, ReportResponse, ReportStats
+from ..schemas.report_api import ReportRequest, ReportResponse
 from ..utils.preprocessor import extract_static_patterns
 from .url_candidate_service import register_reported_url_candidates
 
@@ -24,7 +23,7 @@ def _to_phone_pattern_rows(request: ReportRequest) -> list[dict]:
         {
             "pattern_type": PatternType.PHONE,
             "pattern_value": phone,
-            "description": description,
+            "category": description,
         }
         for phone in extracted["phones"]
     ]
@@ -32,7 +31,7 @@ def _to_phone_pattern_rows(request: ReportRequest) -> list[dict]:
         rows.append({
             "pattern_type": PatternType.PHONE,
             "pattern_value": request.sender,
-            "description": description,
+            "category": description,
         })
     return rows
 
@@ -52,31 +51,11 @@ async def save_report_static_patterns(
 
     # 전화번호는 정적 패턴에 직접 저장
     phone_rows = _to_phone_pattern_rows(request)
-    await upsert_static_patterns(db, phone_rows, commit=True)
+    await upsert_static_patterns(db, phone_rows, commit=False)
+    await db.commit()
 
     return ReportResponse(
         receiptId=_generate_receipt_id(),
         status="received",
         createdAt=datetime.now(timezone.utc).isoformat(),
-    )
-
-
-async def build_report_stats(db: AsyncSession) -> ReportStats:
-    rows = await db.execute(
-        select(StaticPattern.description, func.count())
-        .where(StaticPattern.pattern_type == PatternType.PHONE)
-        .group_by(StaticPattern.description)
-    )
-    by_category = [
-        {"category": category or "기타 사기", "count": int(count)}
-        for category, count in rows.all()
-    ]
-    total = sum(item["count"] for item in by_category)
-    now = datetime.now(timezone.utc)
-
-    return ReportStats(
-        total=total,
-        byCategory=by_category,
-        byStatus=[{"status": "received", "count": total}],
-        period={"from": now.replace(day=1).isoformat(), "to": now.isoformat()},
     )

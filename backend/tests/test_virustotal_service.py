@@ -243,31 +243,31 @@ def test_vt_429_uses_retry_after(monkeypatch) -> None:
 
 def test_daily_vt_quota_is_reserved_atomically() -> None:
     db = AsyncMock()
-    quota = VirusTotalQuota(quota_date=date(2026, 6, 9), used_count=3)
+    quota = VirusTotalQuota(date=date(2026, 6, 9), auto_used=3)
     db.scalar.return_value = quota
 
     reserved = asyncio.run(
         reserve_vt_request(
             db,
-            quota_date=quota.quota_date,
+            quota_date=quota.date,
             daily_limit=4,
         )
     )
 
     assert reserved is True
-    assert quota.used_count == 4
+    assert quota.auto_used == 4
     db.commit.assert_awaited_once()
 
 
 def test_daily_vt_quota_rejects_requests_after_limit() -> None:
     db = AsyncMock()
-    quota = VirusTotalQuota(quota_date=date(2026, 6, 9), used_count=4)
+    quota = VirusTotalQuota(date=date(2026, 6, 9), auto_used=4)
     db.scalar.return_value = quota
 
     reserved = asyncio.run(
         reserve_vt_request(
             db,
-            quota_date=quota.quota_date,
+            quota_date=quota.date,
             daily_limit=4,
         )
     )
@@ -355,7 +355,7 @@ def test_static_url_delete_is_limited_to_managed_source() -> None:
     db.execute.assert_awaited_once()
     statement = db.execute.await_args.args[0]
     sql = str(statement.compile(dialect=mysql.dialect()))
-    assert "managed_source" in sql
+    assert "source" in sql
     assert URL_CANDIDATE_MANAGED_SOURCE in statement.compile(
         dialect=mysql.dialect()
     ).params.values()
@@ -422,7 +422,7 @@ def test_approved_candidate_is_promoted_with_normalized_url(
     )
     monkeypatch.setattr(
         virustotal_service,
-        "create_static_patterns_if_new",
+        "upsert_static_patterns",
         promote,
     )
     monkeypatch.setattr(
@@ -438,7 +438,7 @@ def test_approved_candidate_is_promoted_with_normalized_url(
     patterns = promote.await_args.args[1]
     assert patterns[0]["pattern_value"] == candidate.normalized_url
     assert (
-        patterns[0]["managed_source"]
+        patterns[0]["source"]
         == URL_CANDIDATE_MANAGED_SOURCE
     )
     assert candidate.processing_token is None
@@ -491,7 +491,7 @@ def test_admin_review_supersedes_inflight_worker(monkeypatch) -> None:
     )
     monkeypatch.setattr(
         virustotal_service,
-        "create_static_patterns_if_new",
+        "upsert_static_patterns",
         promote,
     )
 

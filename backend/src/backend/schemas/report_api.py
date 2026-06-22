@@ -1,6 +1,6 @@
 from typing import Optional
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel
 
 
 class ReportRequest(BaseModel):
@@ -17,27 +17,3 @@ class ReportResponse(BaseModel):
     receiptId: str    # 접수 번호 (예: NB20260608-001234)
     status: str       # "received"
     createdAt: str    # ISO8601
-
-
-class ReportCategoryCount(BaseModel):
-    category: str
-    count: int
-
-
-class ReportStatusCount(BaseModel):
-    status: str
-    count: int
-
-
-class ReportPeriod(BaseModel):
-    model_config = ConfigDict(populate_by_name=True)
-
-    from_: str = Field(alias="from")
-    to: str
-
-
-class ReportStats(BaseModel):
-    total: int
-    byCategory: list[ReportCategoryCount]
-    byStatus: list[ReportStatusCount]
-    period: ReportPeriod

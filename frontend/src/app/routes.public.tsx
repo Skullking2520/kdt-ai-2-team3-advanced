@@ -13,7 +13,6 @@ import { VulnerableGuide } from "./components/VulnerableGuide";
 import { ReportPage } from "./components/ReportPage";
 import { AnalysisProgress } from "./components/AnalysisProgress";
 import { AnalysisResult } from "./components/AnalysisResult";
-import { Emergency } from "./components/Emergency";
 
 import type { RouteObject } from "react-router";
 
@@ -29,5 +28,4 @@ export const publicRoutes: RouteObject[] = [
   { path: "senior-image", Component: SeniorImageAnalyzer },
   { path: "guide", Component: VulnerableGuide },
   { path: "report", Component: ReportPage },
-  { path: "emergency", Component: Emergency },
 ];

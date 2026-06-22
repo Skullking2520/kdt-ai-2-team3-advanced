@@ -48,9 +48,19 @@ export class ApiException extends Error {
 // Mock 가드
 // ───────────────────────────────────────────
 
+// backend main에 실제 구현된 endpoint. USE_MOCK=false 모드에서
+// 이 path들은 real fetch, 나머지는 mock fallback (history, cases, jobs 등 backend 미구현).
+const REAL_PATH_SET = new Set(['/api/predict', '/api/ocr', '/api/reports']);
+const REAL_PATH_PREFIXES = ['/api/sender/'];
+
 function isMockPath(path: string, method: string): boolean {
-  if (!env.USE_MOCK) return false;
-  return mockHandle.has(path, method);
+  if (env.USE_MOCK) {
+    return mockHandle.has(path, method);
+  }
+  // USE_MOCK=false: backend에 구현된 path만 real fetch
+  if (REAL_PATH_SET.has(path)) return false;
+  if (REAL_PATH_PREFIXES.some((p) => path.startsWith(p))) return false;
+  return true;  // 나머지 (history, cases, jobs, share, feedback 등) → mock fallback
 }
 
 // ───────────────────────────────────────────
@@ -136,7 +146,7 @@ async function request<T>(path: string, options: RequestOptions = {}): Promise<T
 export const api = {
   // ── 분석 (핵심) ──────────────────────────
   analyze: (req: AnalysisRequest) =>
-    request<AnalysisResult>('/api/analyze', { method: 'POST', body: req }),
+    request<AnalysisResult>('/api/predict', { method: 'POST', body: req }),
 
   // ── OCR ─────────────────────────────────
   ocr: (image: string) =>
@@ -186,5 +196,3 @@ export const api = {
   getJob: (jobId: string) =>
     request<AsyncJob>(`/api/jobs/${encodeURIComponent(jobId)}`),
 } as const;
-
-export type Api = typeof api;
