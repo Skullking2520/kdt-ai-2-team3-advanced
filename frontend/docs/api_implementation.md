@@ -92,6 +92,7 @@
 ### 3.3 GET /api/sender/:number
 
 - 요청 경로 예: `/api/sender/010-8821-3947`
+- 프론트엔드 호출: `api.sender(number)` 또는 `api.lookupSender(number)`
 - 응답: `SenderLookupResult`
 
 #### SenderLookupResult

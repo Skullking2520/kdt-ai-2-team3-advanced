@@ -142,6 +142,9 @@ export const api = {
     request<OcrResponse>('/api/ocr', { method: 'POST', body: { image } }),
 
   // ── 발신번호 조회 ────────────────────────
+  sender: (number: string) =>
+    request<SenderLookupResult>(`/api/sender/${encodeURIComponent(number)}`),
+
   lookupSender: (number: string) =>
     request<SenderLookupResult>(`/api/sender/${encodeURIComponent(number)}`),
 
