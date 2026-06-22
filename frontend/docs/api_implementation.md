@@ -23,7 +23,7 @@
 
 ## 3. 엔드포인트 목록
 
-### 3.1 POST /api/analyze
+### 3.1 POST /api/predict
 
 - 요청 body: `AnalysisRequest`
 - 응답: `AnalysisResult`
@@ -66,7 +66,6 @@
 - `reasons: DetectionReason[]`
 - `actionGuide: ActionGuideItem[]`
 - `similarCases: SimilarCase[]`
-- `governmentCriteria: GovernmentCriterion[]`
 - `damageScenario?: DamageStep[]`
 - `modelVersion: string`
 - `processingTime: number`
@@ -92,7 +91,7 @@
 ### 3.3 GET /api/sender/:number
 
 - 요청 경로 예: `/api/sender/010-8821-3947`
-- 프론트엔드 호출: `api.sender(number)` 또는 `api.lookupSender(number)`
+- 프론트엔드 호출: `api.sender(number)`
 - 응답: `SenderLookupResult`
 
 #### SenderLookupResult
@@ -104,40 +103,8 @@
 - `lastReportedAt: string | null`
 - `categories: string[]`
 - `history: { date: string; type: string; count: number }[]`
-- `isp: string`
-- `region: string`
 
-### 3.4 GET /api/history
-
-- 쿼리 파라미터: `page`, `size`
-- 기본 호출: `/api/history?page=1&size=20`
-- 응답: `Paginated<HistoryItem>`
-
-#### HistoryItem
-
-- `id: string`
-- `type: 'sms' | 'url' | 'image'`
-- `content: string`
-- `riskLevel: RiskLevel`
-- `riskScore: number`
-- `smishingType: SmishingType`
-- `sender?: string`
-- `createdAt: string`
-
-#### Paginated<T>
-
-- `items: T[]`
-- `total: number`
-- `page: number`
-- `pageSize: number`
-- `hasMore: boolean`
-
-### 3.5 GET /api/history/:id
-
-- 예: `/api/history/h1`
-- 응답: `AnalysisResult`
-
-### 3.6 POST /api/reports
+### 3.4 POST /api/reports
 
 - 요청 body: `ReportRequest`
 - 응답: `ReportResponse`
@@ -158,93 +125,20 @@
 - `status: 'received' | 'reviewing' | 'completed'`
 - `createdAt: string`
 
-### 3.7 GET /api/reports/:receiptId
-
-- 예: `/api/reports/NB20260605-001234`
-- 응답: `ReportResponse`
-
-### 3.8 POST /api/feedback
-
-- 요청 body: `FeedbackRequest`
-- 응답: `{ ok: true }`
-
-#### FeedbackRequest
-
-- `analysisId: string`
-- `isCorrect: boolean`
-- `userComment?: string`
-- `correctLabel?: 'high' | 'medium' | 'low'`
-
-### 3.9 POST /api/share
-
-- 요청 body: `ShareRequest`
-- 응답: `ShareResponse`
-
-#### ShareRequest
-
-- `analysisId: string`
-- `channel: 'link' | 'kakao' | 'clipboard'`
-
-#### ShareResponse
-
-- `shareId: string`
-- `shortUrl: string`
-- `expiresAt: string`
-
-### 3.10 GET /api/cases
-
-- 쿼리 파라미터: `category`, `page`
-- 기본 호출: `/api/cases?page=1`
-- 응답: `Paginated<CaseStudy>`
-
-#### CaseStudy
-
-- `id`, `year`, `title`, `category`, `damage`, `victims`, `method`
-- `actualTexts: string[]`
-- `redFlags: string[]`
-- `prevention: string[]`
-- `outcome: string`
-- `severity: 'critical' | 'high' | 'medium'`
-- `arrested: boolean`
-
-### 3.11 GET /api/cases/:id
-
-- 예: `/api/cases/c1`
-- 응답: `CaseStudy`
-
-### 3.12 GET /api/jobs/:jobId
-
-- 예: `/api/jobs/job_demo_001`
-- 응답: `AsyncJob`
-
-#### AsyncJob
-
-- `jobId: string`
-- `status: 'queued' | 'processing' | 'completed' | 'failed'`
-- `progress: number`
-- `currentStep?: string`
-- `result?: unknown`
-- `error?: ApiError`
-
 ## 4. 백엔드 구현 시 참고 사항
 
 - `api.ts`는 mock 경로를 그대로 사용하므로, 백엔드도 동일한 URL 구조를 지켜야 합니다.
 - `GET /api/sender/:number`와 같이 path parameter를 사용하므로 백엔드는 번호 문자열을 인코딩/디코딩해야 합니다.
-- `GET /api/history` 는 `page`/`size` 쿼리 파라미터를 받습니다.
-- `POST /api/analyze`는 `type`에 따라 세 가지 결과 타입을 반환해야 합니다.
+- `POST /api/predict`는 `type`에 따라 세 가지 결과 타입을 반환해야 합니다.
 - `POST /api/ocr` → `imageId`를 발급하고 OCR 텍스트를 반환해야 합니다.
-- `POST /api/feedback`는 성공 시 단순 `{ ok: true }`를 반환하면 됩니다.
-- `/api/jobs/:jobId`는 비동기 작업 상태 폴링용입니다. 실제 작업 스케줄러/큐를 사용할 수 있습니다.
 
 ## 5. Mock 예시 구현 참고
 
 `frontend/src/lib/mock/responses.ts`에 mock 서버 로직이 구현되어 있습니다.
 
 - 경로 등록: `mockHandle.register(method, path, handler)`
-- `POST /api/analyze`는 `type`에 따라 `buildSmsResult`, `buildUrlResult`, `buildImageResult`를 호출합니다.
+- `POST /api/predict`는 `type`에 따라 `buildSmsResult`, `buildUrlResult`, `buildImageResult`를 호출합니다.
 - `POST /api/reports`는 `receiptId`를 생성하고 `status: 'received'`를 반환합니다.
-- `GET /api/history`는 `items`, `total`, `page`, `pageSize`, `hasMore`를 반환합니다.
-- `GET /api/cases`는 mock case study 목록을 반환합니다.
 
 ## 6. 빠른 구현 체크리스트
 

@@ -14,12 +14,7 @@ import type {
   ImageAnalysisResult,
   OcrResponse,
   SenderLookupResult,
-  HistoryItem,
-  Paginated,
   ReportResponse,
-  ReportStats,
-  ShareResponse,
-  CaseStudy,
   DamageStep,
   DetectionReason,
   SimilarCase,
@@ -113,7 +108,7 @@ const damageStepsByType: Record<SmsAnalysisResult['smishingType'], DamageStep[]>
   '대출 사기': [
     { step: 1, icon: 'message', title: '문자 수신', description: '저금리·무심사 대출 사칭 문자가 도착합니다' },
     { step: 2, icon: 'click', title: '대출 신청 클릭', description: '신속한 대출 진행 링크를 클릭합니다' },
-    { step: 3, icon: 'site', title: '가짜 대출 사이트', description: '선취手续费·보험료 명목의 가짜 사이트로 이동합니다' },
+    { step: 3, icon: 'site', title: '가짜 대출 사이트', description: '선취수수료·보험료 명목의 가짜 사이트로 이동합니다' },
     { step: 4, icon: 'info', title: '선입금 요구', description: '대출 전 수수료·보증금·세금 입금을 요구합니다' },
     { step: 5, icon: 'damage', title: '선입금 피해', description: '입금 후 연락 두절·금전 피해 발생' },
   ],
@@ -349,77 +344,6 @@ function mockSenderLookup(number: string): SenderLookupResult {
 }
 
 // ───────────────────────────────────────────
-// Mock 데이터 — 이력
-// ───────────────────────────────────────────
-
-const mockHistoryItems: HistoryItem[] = [
-  { id: 'h1', type: 'sms', content: '【국민건강보험】미납보험료 89,200원이 있습니다. 즉시 납부...', riskLevel: 'high', riskScore: 88, smishingType: '공공기관 사칭', sender: '0212345678', createdAt: '2026-06-05T14:32:11+09:00' },
-  { id: 'h2', type: 'sms', content: '카카오 인증번호는 [394821]입니다. 타인에게 절대 알려주지...', riskLevel: 'low', riskScore: 8, smishingType: '정상 문자', sender: '카카오', createdAt: '2026-06-05T13:18:44+09:00' },
-  { id: 'h3', type: 'sms', content: '[CJ대한통운] 고객님의 택배가 주소불명으로 반송될 예정입니다...', riskLevel: 'high', riskScore: 82, smishingType: '택배 사칭', sender: '010-5839-2847', createdAt: '2026-06-04T19:45:02+09:00' },
-  { id: 'h4', type: 'url', content: 'http://prize-samsung.xyz/claim', riskLevel: 'high', riskScore: 95, smishingType: '이벤트 사기', createdAt: '2026-06-04T11:22:31+09:00' },
-  { id: 'h5', type: 'sms', content: '【KB국민은행】 고객님의 계좌에서 비정상 접근이 감지되었습니다...', riskLevel: 'high', riskScore: 90, smishingType: '금융 피싱', sender: '0215889999', createdAt: '2026-06-03T09:05:00+09:00' },
-  { id: 'h6', type: 'sms', content: '엄마 나 폰 고장나서 번호 바뀌었어. 급하게 상품권 결제 좀...', riskLevel: 'high', riskScore: 93, smishingType: '가족/지인 사칭', sender: '010-9382-7461', createdAt: '2026-06-02T16:40:00+09:00' },
-];
-
-// ───────────────────────────────────────────
-// Mock 데이터 — 사례
-// ───────────────────────────────────────────
-
-const mockCases: CaseStudy[] = [
-  {
-    id: 'c1',
-    year: '2024',
-    title: '국민건강보험 사칭 대규모 피싱 캠페인',
-    category: '공공기관 사칭',
-    damage: '약 42억원',
-    victims: '1만 8천명',
-    method: '공공기관 공식 발신번호 스푸핑 + 가짜 납부 페이지',
-    actualTexts: [
-      '【국민건강보험】미납보험료 89,200원이 있습니다. 즉시 납부하지 않으면 급여가 정지됩니다. http://nhis-pay.kr-notice.com/pay',
-    ],
-    redFlags: ['nhis.or.kr이 아닌 다른 도메인', '급여 정지 위협', '즉시 납부 요구'],
-    prevention: ['nhis.or.kr 공식 사이트에서 직접 확인', '전화로 공단에 직접 문의', '링크 클릭 금지'],
-    outcome: '2024년 11월 사이버수사대 검거, 피의자 7명 구속. 서버는 중국 소재.',
-    severity: 'critical',
-    arrested: true,
-  },
-  {
-    id: 'c2',
-    year: '2024',
-    title: '택배 배송 불가 대규모 스미싱',
-    category: '택배 사칭',
-    damage: '약 18억원',
-    victims: '6천 200명',
-    method: 'CJ대한통운·쿠팡·롯데택배 순환 사칭 + 배송비 결제 유도',
-    actualTexts: [
-      '[CJ대한통운] 고객님의 택배가 주소불명으로 반송될 예정입니다. 배송 재신청: http://cjlogistics.re-delivery.net/confirm',
-    ],
-    redFlags: ['공식 도메인 아닌 유사 URL', '배송비 직접 결제 요구', '개인번호 발신'],
-    prevention: ['앱에서 직접 배송 조회', '배송비는 절대 SMS 링크로 결제 금지', '의심 전화번호 112 신고'],
-    outcome: '현재 수사 중. 피의자 해외 도피 추정.',
-    severity: 'high',
-    arrested: false,
-  },
-  {
-    id: 'c3',
-    year: '2023',
-    title: 'KB국민은행 보안 점검 피싱',
-    category: '금융 피싱',
-    damage: '약 63억원',
-    victims: '2만 4천명',
-    method: '은행 공식 앱 UI 완벽 복제 + 보안 인증서 위조',
-    actualTexts: [
-      '【KB국민은행】고객님의 계좌에서 비정상 접근이 감지되었습니다. 24시간 내 본인확인 필수. 확인: http://kbbank-secure.com/verify',
-    ],
-    redFlags: ['kbstar.com이 아닌 도메인', '24시간 기한 압박', 'OTP 전체 입력 요구'],
-    prevention: ['OTP는 누구에게도 공유 금지', '은행 공식 앱만 사용'],
-    outcome: '2024년 3월 검거. 주범 1명 징역 8년.',
-    severity: 'critical',
-    arrested: true,
-  },
-];
-
-// ───────────────────────────────────────────
 // Mock 핸들러 (라우터 역할)
 // ───────────────────────────────────────────
 
@@ -478,15 +402,6 @@ mockHandle.register('GET', '/api/sender/010-8821-3947', () => mockSenderLookup('
 mockHandle.register('GET', '/api/sender/010-3392-1847', () => mockSenderLookup('010-3392-1847'));
 mockHandle.register('GET', '/api/sender/1588-1234', () => mockSenderLookup('1588-1234'));
 
-// 이력
-mockHandle.register('GET', '/api/history', () => ({
-  items: mockHistoryItems,
-  total: mockHistoryItems.length,
-  page: 1,
-  pageSize: 20,
-  hasMore: false,
-} satisfies Paginated<HistoryItem>));
-
 // 신고
 mockHandle.register('POST', '/api/reports', (_body) => {
   const id = receiptId();
@@ -498,56 +413,3 @@ mockHandle.register('POST', '/api/reports', (_body) => {
   } satisfies ReportResponse;
 });
 
-mockHandle.register('GET', '/api/reports/NB20260605-001234', () => ({
-  receiptId: 'NB20260605-001234',
-  status: 'received',
-  createdAt: '2026-06-05T14:32:00+09:00',
-} satisfies ReportResponse));
-
-mockHandle.register('GET', '/api/reports/stats', () => ({
-  total: 996,
-  byCategory: [
-    { category: '공공기관 사칭', count: 342 },
-    { category: '금융 피싱', count: 218 },
-    { category: '택배 사칭', count: 156 },
-    { category: '이벤트 사기', count: 124 },
-    { category: '대출 사기', count: 89 },
-    { category: '기타 사기', count: 67 },
-  ],
-  byStatus: [{ status: 'received', count: 996 }],
-  period: { from: '2026-06-01T00:00:00+09:00', to: nowIso() },
-} satisfies ReportStats));
-
-// 피드백
-mockHandle.register('POST', '/api/feedback', () => ({ ok: true as const }));
-
-// 공유
-mockHandle.register('POST', '/api/share', (_body) => {
-  return {
-    shareId: `shr_${Date.now()}`,
-    shortUrl: `https://nb.shield/r/${Date.now().toString(36)}`,
-    expiresAt: new Date(Date.now() + 30 * 24 * 3600 * 1000).toISOString(),
-  } satisfies ShareResponse;
-});
-
-// 사례
-mockHandle.register('GET', '/api/cases', () => ({
-  items: mockCases,
-  total: mockCases.length,
-  page: 1,
-  pageSize: 20,
-  hasMore: false,
-} satisfies Paginated<CaseStudy>));
-
-mockHandle.register('GET', '/api/cases/c1', () => mockCases[0]);
-mockHandle.register('GET', '/api/cases/c2', () => mockCases[1]);
-mockHandle.register('GET', '/api/cases/c3', () => mockCases[2]);
-
-// 비동기 작업 (예시)
-mockHandle.register('GET', '/api/jobs/job_demo_001', () => ({
-  jobId: 'job_demo_001',
-  status: 'completed',
-  progress: 100,
-  currentStep: 'done',
-  result: null,
-}));
