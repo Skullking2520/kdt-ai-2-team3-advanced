@@ -131,7 +131,21 @@ export function ImageAnalyzer() {
         {!preview ? (
           <button
             type="button"
-            onClick={() => fileRef.current?.click()}
+            onClick={() => {
+              // 가장 robust한 파일 피커 fallback:
+              // label-for / ref.click() 패턴은 일부 브라우저/HMR 환경에서 작동 안 함
+              // (label-for 미작동, ref stale state, React state 동기화 이슈).
+              // 매번 새 input element를 만들어 native click() 호출 = user gesture 안이라
+              // 브라우저 정책 통과, ref/HMR 의존성 0.
+              const input = document.createElement("input");
+              input.type = "file";
+              input.accept = "image/*";
+              input.onchange = (e) => {
+                const f = (e.target as HTMLInputElement).files?.[0];
+                if (f) handleFile(f);
+              };
+              input.click();
+            }}
             onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
             onDragLeave={() => setDragOver(false)}
             onDrop={handleDrop}
