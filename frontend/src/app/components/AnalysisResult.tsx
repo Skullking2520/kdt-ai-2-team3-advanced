@@ -9,6 +9,8 @@ import {DamageScenarioCard} from "./result/DamageScenarioCard";
 import {ActionGuideCard} from "./result/ActionGuideCard";
 import {GovernmentCriteriaCard} from "./result/GovernmentCriteriaCard";
 import {analyzeSms, toLegacyRiskLevel} from "@/lib/smsAnalysis";
+import {api, ApiException} from "@/lib/api";
+import type {SmsAnalysisResult} from "@/types/api";
 
 interface AnalysisResult {
   risk_level: "danger" | "warning" | "normal";
@@ -35,22 +37,62 @@ export function AnalysisResult() {
   const [feedback, setFeedback] = useState<"correct" | "incorrect" | null>(null);
 
   useEffect(() => {
-    if (text) {
-      const sms = analyzeSms(text);
-      setResult({
-        risk_level: toLegacyRiskLevel(sms.risk_level),
-        risk_score: sms.risk_score,
-        smishing_type: sms.smishing_type,
-        reasons: sms.reasons,
-        action_guide: sms.action_guide,
-        similar_cases: sms.similar_cases,
-        has_url: sms.has_url,
-        has_impersonation: sms.has_impersonation,
-        has_payment_request: sms.has_payment_request,
-        has_personal_info_request: sms.has_personal_info_request,
-      });
-    }
+    if (!text) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        // P0 연동: 백엔드 API 호출 (VITE_USE_MOCK=false 면 실제 fetch, true 면 mock)
+        const resp = await api.analyze({ type: "sms", content: text });
+        if (cancelled) return;
+        if (resp.type === "sms") {
+          setResult(adaptSmsResult(resp));
+        } else {
+          throw new Error("예상하지 못한 응답 타입");
+        }
+      } catch (e) {
+        if (cancelled) return;
+        if (e instanceof ApiException) {
+          console.warn("[AnalysisResult] API 실패, mock fallback:", e.message);
+        }
+        // 정직한 fallback: mock 휴리스틱 (백엔드 AI 모델 연동 시 자동 교체)
+        const sms = analyzeSms(text);
+        setResult(adaptSmsMock(sms));
+      }
+    })();
+    return () => { cancelled = true; };
   }, [text]);
+
+  /** api.analyze() SmsAnalysisResult → 컴포넌트 내부 AnalysisResult 어댑터 */
+  function adaptSmsResult(resp: SmsAnalysisResult): AnalysisResult {
+    return {
+      risk_level: toLegacyRiskLevel(resp.riskLevel),
+      risk_score: resp.riskScore,
+      smishing_type: resp.smishingType,
+      reasons: resp.reasons.map((r) => r.label),
+      action_guide: resp.actionGuide.map((a) => a.action + (a.detail ? ` — ${a.detail}` : "")),
+      similar_cases: resp.similarCases.map((c) => ({ title: c.title, similarity: c.similarity, year: c.year })),
+      has_url: !!resp.extractedUrl,
+      has_impersonation: resp.reasons.some((r) => r.code.includes("impersonat") || r.label.includes("사칭")),
+      has_payment_request: resp.reasons.some((r) => r.code.includes("payment") || r.label.includes("결제")),
+      has_personal_info_request: resp.reasons.some((r) => r.code.includes("personal") || r.label.includes("개인정보")),
+    };
+  }
+
+  /** mock fallback: analyzeSms() 휴리스틱 결과를 컴포넌트 내부 형태로 변환 */
+  function adaptSmsMock(sms: ReturnType<typeof analyzeSms>): AnalysisResult {
+    return {
+      risk_level: toLegacyRiskLevel(sms.risk_level),
+      risk_score: sms.risk_score,
+      smishing_type: sms.smishing_type,
+      reasons: sms.reasons,
+      action_guide: sms.action_guide,
+      similar_cases: sms.similar_cases,
+      has_url: sms.has_url,
+      has_impersonation: sms.has_impersonation,
+      has_payment_request: sms.has_payment_request,
+      has_personal_info_request: sms.has_personal_info_request,
+    };
+  }
 
   const handleFeedback = (isCorrect: boolean) => {
     setFeedback(isCorrect ? "correct" : "incorrect");

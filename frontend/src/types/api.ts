@@ -81,9 +81,9 @@ export interface AnalysisResultBase {
   similarCases: SimilarCase[];
   governmentCriteria: GovernmentCriterion[];
   damageScenario?: DamageStep[];    // high/medium일 때만
-  modelVersion: string;             // "kc-electra-v1.2.3"
-  processingTime: number;           // ms
-  cacheHit: boolean;                // 캐시 적중 (이전 결과 재사용)
+  modelVersion: string;             // 백엔드 모델 ID (정직: dev 측정 불가, 실제 모델 ID는 백엔드 응답으로만)
+  processingTime?: number;          // ms (정직: dev 측정 불가, 백엔드 응답 시 채워짐)
+  cacheHit?: boolean;               // 캐시 적중 (정직: 백엔드 응답 시 채워짐)
   createdAt: string;                // ISO 8601
 }
 
@@ -127,6 +127,22 @@ export interface UrlDetails {
   ipCountry: string;
   similarDomains: string[];
   flags: { type: string; desc: string; severity: RiskLevel }[];
+  // 정직 처리: VirusTotal 정보는 우리 백엔드가 VT API를 직접 호출해서 받은 결과만 표시.
+  // mock에서 88/88 vendor 풀-리스트를 만들면 거짓. 백엔드 VT API 연동 시 자동 채워짐.
+  vtVerdict?: VtVerdict;
+}
+
+// VirusTotal verdict (백엔드 VT API 연동 시 채워짐 — 정직 처리)
+export interface VtVerdict {
+  malicious: number;                // 악성 판정 vendor 수 (예: 1)
+  suspicious: number;               // 의심 vendor 수 (예: 0)
+  harmless: number;                 // 안전 vendor 수 (예: 79)
+  undetected: number;               // 미검출 vendor 수 (예: 8)
+  total: number;                    // 총 vendor 수 (예: 88)
+  lastCheckedAt?: string;           // ISO 8601, 마지막 검증 시각
+  status: 'pending' | 'completed' | 'failed' | 'not_checked';
+  // 정직: 우리 4-위험 지표(도메인 나이/SSL/서버 국가/리디렉션)는 우리 자체 분석이므로 vtVerdict와 별개로 유지.
+  // 한국형 사칭 패턴은 VT가 못 잡는 영역이라 별도 표시.
 }
 
 // ───────────────────────────────────────────
