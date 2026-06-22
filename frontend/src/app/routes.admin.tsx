@@ -20,7 +20,7 @@
  *     redteam, audit, feature-importance, ioc, feedback
  */
 import { lazy } from "react";
-import type { RouteObject } from "react-router";
+import { redirect, type RouteObject } from "react-router";
 
 const Dashboard = lazy(() => import("./components/Dashboard").then((m) => ({ default: m.Dashboard })));
 const CompareAnalysis = lazy(() => import("./components/CompareAnalysis").then((m) => ({ default: m.CompareAnalysis })));
@@ -32,14 +32,15 @@ const SystemHealth = lazy(() => import("./components/SystemHealth").then((m) => 
  *
  * 라우트 가드: nb_admin_auth(localStorage) 체크 → 권한 없으면 "/" redirect.
  * Dashboard는 자체 LoginGate를 가지므로 별도 가드 없이 진입 가능.
+ * React Router 7는 Response.redirect 대신 throw redirect(...) 사용.
  */
 const STORAGE_KEY = "nb_admin_auth";
 
-function adminGuard({ request }: { request: Request }) {
+function adminGuard() {
   if (import.meta.env.DEV) {
     const isAdmin = localStorage.getItem(STORAGE_KEY) === "true";
     if (!isAdmin) {
-      return Response.redirect(new URL("/", request.url), 302);
+      throw redirect("/");
     }
   }
   return null;
