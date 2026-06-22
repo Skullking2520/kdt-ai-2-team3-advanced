@@ -96,9 +96,9 @@ cleanlab-audit/
 
 | Name | Type | Required | Purpose |
 | --- | --- | --- | --- |
-| `ENCODER_CLEANLAB_AUDIT_URL` | secret | current required | Cleanlab audit S3 prefix 또는 `.tar.gz` 다운로드 URL |
-| `S3_AWS_ACCESS_KEY_ID` | secret | S3 required | S3 다운로드용 AWS access key |
-| `S3_AWS_SECRET_ACCESS_KEY` | secret | S3 required | S3 다운로드용 AWS secret key |
+| `ENCODER_CLEANLAB_AUDIT_URL` | secret | optional | Cleanlab audit S3 prefix 또는 `.tar.gz` 다운로드 URL |
+| `AWS_ACCESS_KEY_ID` | secret | S3 required | S3 다운로드용 AWS access key |
+| `AWS_SECRET_ACCESS_KEY` | secret | S3 required | S3 다운로드용 AWS secret key |
 | `AWS_REGION` | variable | S3 required | S3 bucket region. 현재 값은 `ap-northeast-2` |
 
 현재 repository에 설정된 값은 위 네 가지가 기준이다. 아래 값들은 workflow가
@@ -106,10 +106,10 @@ cleanlab-audit/
 
 | Name | Type | Purpose |
 | --- | --- | --- |
-| `ENCODER_PREPARED_DATASET_URL` | secret | prepared dataset `.tar.gz`를 직접 받을 때 사용 |
+| `ENCODER_PREPARED_DATASET_URL` | secret | prepared dataset `.tar.gz` 또는 S3 prefix를 직접 받을 때 사용 |
 | `ENCODER_PREPARED_DATASET_BEARER_TOKEN` | secret | private URL 접근용 bearer token |
-| `AWS_ACCESS_KEY_ID` | secret | 기존 호환용 S3 access key fallback |
-| `AWS_SECRET_ACCESS_KEY` | secret | 기존 호환용 S3 secret key fallback |
+| `S3_AWS_ACCESS_KEY_ID` | secret | 더 이상 재학습 workflow에서 사용하지 않음 |
+| `S3_AWS_SECRET_ACCESS_KEY` | secret | 더 이상 재학습 workflow에서 사용하지 않음 |
 | `AWS_SESSION_TOKEN` | secret | 임시 AWS credential 사용 시 session token |
 | `HF_TOKEN` | secret | Hugging Face model upload token |
 
@@ -136,7 +136,18 @@ workflow는 이 값이 `s3://`로 시작하면 해당 prefix 아래에서 가장
 `uv tool run --from awscli aws ...` 형태로 실행한다. 따라서 runner에 AWS CLI를
 별도 설치하지 않아도 된다.
 
-prepared dataset을 S3 archive로 받을 때는 `.tar.gz` 객체 경로를 사용한다.
+prepared dataset은 S3 archive 또는 JSONL 파일이 있는 S3 prefix로 받을 수 있다.
+
+```text
+# archive 방식
+s3://<bucket>/encoder_retraining/encoder-v4.tar.gz
+
+# prefix 방식
+s3://smishing-s3-bucket/encoder_retraining/encoder-v4/
+```
+
+prefix 방식은 `cleaned_train.jsonl`, `valid.jsonl`, `test.jsonl`, `manifest.json`을
+포함해야 하며, workflow가 해당 파일을 prepared dataset 디렉터리로 재귀 복사한다.
 
 ```text
 s3://<bucket>/<path>/encoder-v4.tar.gz
