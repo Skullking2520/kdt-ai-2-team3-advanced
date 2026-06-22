@@ -22,21 +22,9 @@ function useAnimatedMetric(base: number, variance: number): number {
   return Math.max(0, Math.min(100, val));
 }
 
-function _Sparkline({ points, color, height = 32 }: { points: number[]; color: string; height?: number }) {
-  const w = 120, h = height, p = 2;
-  const min = Math.min(...points), max = Math.max(...points);
-  const range = max - min || 1;
-  const coords = points.map((v, i) => `${p + (i / (points.length - 1)) * (w - p * 2)},${h - p - ((v - min) / range) * (h - p * 2)}`).join(" ");
-  return (
-    <svg viewBox={`0 0 ${w} ${h}`} className="w-20" style={{ height }}>
-      <polyline points={coords} fill="none" stroke={color} strokeWidth="1.5" strokeLinejoin="round" />
-    </svg>
-  );
-}
-
 function GaugeArc({ value, color, size = 80 }: { value: number; color: string; size?: number }) {
   const r = (size - 10) / 2;
-  const cx = size / 2, _cy = size / 2;
+  const cx = size / 2;
   const circumference = Math.PI * r;
   const dash = (value / 100) * circumference;
   return (
@@ -71,6 +59,12 @@ const STATUS_STYLE = {
   healthy:  { icon: CheckCircle, text: "text-emerald-400", bg: "bg-emerald-500/10", border: "border-emerald-500/20", label: "정상" },
   degraded: { icon: AlertTriangle, text: "text-amber-400", bg: "bg-amber-500/10", border: "border-amber-500/20", label: "저하" },
   down:     { icon: XCircle, text: "text-red-400", bg: "bg-red-500/10", border: "border-red-500/20", label: "중단" },
+};
+
+const GPU_STATUS = {
+  idle:     { text: "text-white/40", bg: "bg-white/8", border: "border-white/15", label: "유휴" },
+  normal:   { text: "text-emerald-400", bg: "bg-emerald-500/10", border: "border-emerald-500/20", label: "정상" },
+  warning:  { text: "text-amber-400", bg: "bg-amber-500/10", border: "border-amber-500/20", label: "경고" },
 };
 
 const API_ENDPOINTS = [
@@ -139,17 +133,28 @@ export function SystemHealth() {
       {/* Resource metrics */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         {[
-          { label: "CPU 사용률", value: cpu, color: "#22d3ee", icon: Cpu },
-          { label: "메모리", value: mem, color: "#a78bfa", icon: Server },
-          { label: "GPU (추론)", value: gpu, color: "#fb923c", icon: Activity },
-          { label: "디스크", value: disk, color: "#22c55e", icon: Database },
-        ].map((m) => (
+          { label: "CPU 사용률", value: cpu, color: "#22d3ee", icon: Cpu, isGpu: false },
+          { label: "메모리",     value: mem, color: "#a78bfa", icon: Server, isGpu: false },
+          { label: "GPU (추론)", value: gpu, color: "#fb923c", icon: Activity, isGpu: true },
+          { label: "디스크",     value: disk,color: "#22c55e", icon: Database, isGpu: false },
+        ].map((m) => {
+          const gpuState = m.isGpu
+            ? (gpu < 10 ? "idle" : gpu < 50 ? "normal" : "warning")
+            : null;
+          const gpuStyle = gpuState ? GPU_STATUS[gpuState] : null;
+          return (
           <div key={m.label} className="bg-[#111c30] border border-white/10 rounded-xl p-3 flex flex-col items-center">
             <m.icon size={13} className="mb-1" style={{ color: m.color }} />
             <p className="text-[11px] text-white/35 mb-1">{m.label}</p>
             <GaugeArc value={m.value} color={m.color} size={70} />
+            {gpuStyle && (
+              <span className={`mt-1.5 text-[9px] px-1.5 py-0.5 rounded border ${gpuStyle.bg} ${gpuStyle.border} ${gpuStyle.text}`}>
+                {gpuStyle.label}
+              </span>
+            )}
           </div>
-        ))}
+          );
+        })}
       </div>
 
       {/* Throughput sparkline */}

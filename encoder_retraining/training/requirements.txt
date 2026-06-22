@@ -1,5 +1,6 @@
 torch
 transformers
+huggingface_hub
 datasets
 accelerate
 pandas
@@ -9,3 +10,4 @@ optuna
 wandb
 matplotlib
 tabulate
+cleanlab>=2.7,<3

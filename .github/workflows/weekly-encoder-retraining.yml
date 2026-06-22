@@ -1,0 +1,356 @@
+name: Weekly Encoder Retraining
+
+on:
+  workflow_dispatch:
+    inputs:
+      dataset_version:
+        description: "Prepared dataset version under encoder_retraining/data/prepared/"
+        required: true
+        default: "encoder-weekly"
+      prepared_dataset_url:
+        description: "Optional tar.gz URL containing cleaned_train.jsonl, valid.jsonl, test.jsonl"
+        required: false
+        default: ""
+      cleanlab_audit_url:
+        description: "Optional S3 prefix or tar.gz URL containing Cleanlab audit artifacts"
+        required: false
+        default: ""
+      dry_run:
+        description: "Skip actual training and model comparison"
+        required: true
+        type: boolean
+        default: true
+      upload_to_hf:
+        description: "Upload to Hugging Face only when promotion is recommended"
+        required: true
+        type: boolean
+        default: false
+      allow_not_recommended_upload:
+        description: "Test-only override for uploading a non-recommended candidate"
+        required: true
+        type: boolean
+        default: false
+      hf_repo_id:
+        description: "Target Hugging Face model repo for optional upload"
+        required: true
+        default: "kdt-2-team4-newbiz/kcelectra-smishing-classifier"
+      use_smoke_dataset:
+        description: "Use a tiny generated dataset for workflow validation only"
+        required: true
+        type: boolean
+        default: false
+      epochs:
+        description: "Training epochs"
+        required: true
+        default: "3"
+      n_trials:
+        description: "Optuna trials"
+        required: true
+        default: "1"
+  schedule:
+    # Weekly Monday 03:00 KST = Sunday 18:00 UTC.
+    - cron: "0 18 * * 0"
+
+permissions:
+  contents: read
+
+env:
+  BASELINE_MODEL: kdt-2-team4-newbiz/kcelectra-smishing-classifier
+  DATASET_VERSION: ${{ github.event.inputs.dataset_version || 'encoder-weekly' }}
+  PREPARED_DATASET_URL: ${{ github.event.inputs.prepared_dataset_url || secrets.ENCODER_PREPARED_DATASET_URL }}
+  CLEANLAB_AUDIT_URL: ${{ github.event.inputs.cleanlab_audit_url || secrets.ENCODER_CLEANLAB_AUDIT_URL }}
+  PREPARED_DATASET_BEARER_TOKEN: ${{ secrets.ENCODER_PREPARED_DATASET_BEARER_TOKEN }}
+  AWS_ACCESS_KEY_ID: ${{ secrets.S3_AWS_ACCESS_KEY_ID || secrets.AWS_ACCESS_KEY_ID }}
+  AWS_SECRET_ACCESS_KEY: ${{ secrets.S3_AWS_SECRET_ACCESS_KEY || secrets.AWS_SECRET_ACCESS_KEY }}
+  AWS_SESSION_TOKEN: ${{ secrets.AWS_SESSION_TOKEN }}
+  AWS_DEFAULT_REGION: ${{ vars.AWS_REGION || vars.AWS_DEFAULT_REGION || secrets.AWS_DEFAULT_REGION || 'ap-northeast-2' }}
+  HF_TOKEN: ${{ secrets.HF_TOKEN }}
+  HF_REPO_ID: ${{ github.event.inputs.hf_repo_id || 'kdt-2-team4-newbiz/kcelectra-smishing-classifier' }}
+  UV_LINK_MODE: copy
+
+jobs:
+  retrain:
+    if: >-
+      ${{
+        github.event_name == 'schedule' ||
+        github.actor == github.repository_owner ||
+        github.actor == 'Skullking2520'
+      }}
+    runs-on:
+      - self-hosted
+      - macOS
+      - ARM64
+      - encoder
+      - mps
+      - team3-advanced-encoder-retraining
+    timeout-minutes: 360
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Configure writable Python tooling paths
+        run: |
+          set -euo pipefail
+          export UV_CACHE_DIR="${RUNNER_TEMP}/uv-cache"
+          export UV_PYTHON_INSTALL_DIR="${RUNNER_TEMP}/uv-python"
+          export UV_TOOL_DIR="${RUNNER_TEMP}/uv-tools"
+          export UV_PROJECT_ENVIRONMENT="${GITHUB_WORKSPACE}/.venv"
+          export ACTIONS_TOOL_CACHE="${RUNNER_TEMP}/tool-cache"
+          {
+            echo "AGENT_TOOLSDIRECTORY=${ACTIONS_TOOL_CACHE}"
+            echo "RUNNER_TOOL_CACHE=${ACTIONS_TOOL_CACHE}"
+            echo "UV_CACHE_DIR=${UV_CACHE_DIR}"
+            echo "UV_PYTHON_INSTALL_DIR=${UV_PYTHON_INSTALL_DIR}"
+            echo "UV_TOOL_DIR=${UV_TOOL_DIR}"
+            echo "UV_PROJECT_ENVIRONMENT=${UV_PROJECT_ENVIRONMENT}"
+          } >> "${GITHUB_ENV}"
+          mkdir -p \
+            "${ACTIONS_TOOL_CACHE}" \
+            "${UV_CACHE_DIR}" \
+            "${UV_PYTHON_INSTALL_DIR}" \
+            "${UV_TOOL_DIR}" \
+            "${UV_PROJECT_ENVIRONMENT}"
+          echo "AGENT_TOOLSDIRECTORY=${ACTIONS_TOOL_CACHE}"
+          echo "RUNNER_TOOL_CACHE=${ACTIONS_TOOL_CACHE}"
+          echo "UV_CACHE_DIR=${UV_CACHE_DIR}"
+          echo "UV_PYTHON_INSTALL_DIR=${UV_PYTHON_INSTALL_DIR}"
+          echo "UV_TOOL_DIR=${UV_TOOL_DIR}"
+          echo "UV_PROJECT_ENVIRONMENT=${UV_PROJECT_ENVIRONMENT}"
+
+      - name: Setup uv and Python 3.12
+        uses: astral-sh/setup-uv@v5
+        with:
+          python-version: "3.12"
+          enable-cache: false
+
+      - name: Verify Python tooling
+        run: |
+          set -euo pipefail
+          uv --version
+          uv python install 3.12
+
+      - name: Install encoder dependencies
+        run: uv sync --frozen --group encoder --python 3.12
+
+      - name: Prepare dataset directory
+        run: |
+          set -euo pipefail
+          mkdir -p "encoder_retraining/data/prepared/${DATASET_VERSION}"
+
+      - name: Generate smoke dataset
+        if: ${{ github.event.inputs.use_smoke_dataset == 'true' }}
+        run: |
+          set -euo pipefail
+          dataset_dir="encoder_retraining/data/prepared/${DATASET_VERSION}"
+          cat > "${dataset_dir}/cleaned_train.jsonl" <<'JSONL'
+          {"text":"정상 안내 문자입니다.","label":0}
+          {"text":"배송 주소 오류로 반송 예정입니다. <URL>","label":1}
+          JSONL
+          cat > "${dataset_dir}/valid.jsonl" <<'JSONL'
+          {"text":"회의 일정 안내입니다.","label":0}
+          {"text":"계좌가 정지되었습니다. 보안 인증을 진행하세요. <URL>","label":1}
+          JSONL
+          cat > "${dataset_dir}/test.jsonl" <<'JSONL'
+          {"text":"인증번호는 123456입니다. 타인에게 알려주지 마세요.","label":0}
+          {"text":"환급금 수령을 위해 개인정보를 입력하세요. <URL>","label":1}
+          JSONL
+          cat > "${dataset_dir}/manifest.json" <<JSON
+          {
+            "dataset_version": "${DATASET_VERSION}",
+            "source": "workflow_smoke_dataset",
+            "notes": "Only for validating GitHub Actions wiring."
+          }
+          JSON
+
+      - name: Download Cleanlab audit and build prepared dataset
+        if: ${{ github.event.inputs.use_smoke_dataset != 'true' && env.CLEANLAB_AUDIT_URL != '' }}
+        run: |
+          set -euo pipefail
+          dataset_dir="encoder_retraining/data/prepared/${DATASET_VERSION}"
+          audit_dir="/tmp/${DATASET_VERSION}-cleanlab-audit"
+          archive_path="/tmp/${DATASET_VERSION}-cleanlab-audit.tar.gz"
+          mkdir -p "${audit_dir}"
+
+          if [[ "${CLEANLAB_AUDIT_URL}" == s3://* ]]; then
+            if [ -z "${AWS_ACCESS_KEY_ID}" ] || [ -z "${AWS_SECRET_ACCESS_KEY}" ]; then
+              echo "AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY secrets are required for s3:// Cleanlab audit downloads."
+              exit 1
+            fi
+            if [[ "${CLEANLAB_AUDIT_URL}" == *.tar.gz ]] || [[ "${CLEANLAB_AUDIT_URL}" == *.tgz ]]; then
+              uv tool run --from awscli aws s3 cp \
+                "${CLEANLAB_AUDIT_URL}" \
+                "${archive_path}"
+              tar -xzf "${archive_path}" -C "${audit_dir}"
+            else
+              cleanlab_prefix="${CLEANLAB_AUDIT_URL%/}/"
+              bucket_and_prefix="${cleanlab_prefix#s3://}"
+              bucket="${bucket_and_prefix%%/*}"
+              listing_path="/tmp/${DATASET_VERSION}-cleanlab-s3-listing.txt"
+              if ! uv tool run --from awscli aws s3 ls \
+                "${cleanlab_prefix}" \
+                --recursive \
+                > "${listing_path}"; then
+                echo "Failed to list Cleanlab audit S3 prefix."
+                echo "Check bucket name, region, and s3:ListBucket permission."
+                exit 1
+              fi
+              listed_count="$(wc -l < "${listing_path}" | tr -d ' ')"
+              echo "Listed ${listed_count} objects under Cleanlab audit prefix."
+              latest_cleaned_key="$(awk '$4 ~ /(^|\/)cleaned_dataset\.jsonl$/ {print $1" "$2" "$4}' "${listing_path}" | sort | tail -n 1 | awk '{print $3}')"
+              if [ -z "${latest_cleaned_key}" ]; then
+                echo "No cleaned_dataset.jsonl was found under ${cleanlab_prefix}."
+                echo "Expected a path like cleanlab-audit/<run_name>/<timestamp>/cleaned_dataset.jsonl."
+                exit 1
+              fi
+              latest_audit_prefix="s3://${bucket}/$(dirname "${latest_cleaned_key}")/"
+              echo "Using latest Cleanlab audit prefix: ${latest_audit_prefix}"
+              uv tool run --from awscli aws s3 cp \
+                "${latest_audit_prefix}" \
+                "${audit_dir}" \
+                --recursive
+            fi
+          elif [ -n "${PREPARED_DATASET_BEARER_TOKEN}" ]; then
+            curl --fail --location --retry 3 --retry-delay 10 --retry-all-errors \
+              --header "Authorization: Bearer ${PREPARED_DATASET_BEARER_TOKEN}" \
+              --output "${archive_path}" \
+              "${CLEANLAB_AUDIT_URL}"
+            tar -xzf "${archive_path}" -C "${audit_dir}"
+          else
+            curl --fail --location --retry 3 --retry-delay 10 --retry-all-errors \
+              --output "${archive_path}" \
+              "${CLEANLAB_AUDIT_URL}"
+            tar -xzf "${archive_path}" -C "${audit_dir}"
+          fi
+
+          cleaned_data="$(find "${audit_dir}" -name cleaned_dataset.jsonl -type f | head -n 1)"
+          if [ -z "${cleaned_data}" ]; then
+            echo "cleaned_dataset.jsonl was not found in the Cleanlab audit archive."
+            exit 1
+          fi
+
+          uv run --group encoder python \
+            encoder_retraining/pipeline/prepare_from_cleanlab_audit.py \
+            --cleaned-data-path "${cleaned_data}" \
+            --audit-dir "$(dirname "${cleaned_data}")" \
+            --dataset-version "${DATASET_VERSION}" \
+            --output-dir "${dataset_dir}" \
+            --overwrite
+
+      - name: Download prepared dataset
+        if: ${{ github.event.inputs.use_smoke_dataset != 'true' && env.CLEANLAB_AUDIT_URL == '' }}
+        run: |
+          set -euo pipefail
+          if [ -z "${PREPARED_DATASET_URL}" ]; then
+            echo "ENCODER_PREPARED_DATASET_URL secret, ENCODER_CLEANLAB_AUDIT_URL secret, prepared_dataset_url input, or cleanlab_audit_url input is required."
+            exit 1
+          fi
+
+          dataset_dir="encoder_retraining/data/prepared/${DATASET_VERSION}"
+          archive_path="/tmp/${DATASET_VERSION}.tar.gz"
+
+          if [[ "${PREPARED_DATASET_URL}" == s3://* ]]; then
+            if [ -z "${AWS_ACCESS_KEY_ID}" ] || [ -z "${AWS_SECRET_ACCESS_KEY}" ]; then
+              echo "AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY secrets are required for s3:// prepared dataset downloads."
+              exit 1
+            fi
+            uv tool run --from awscli aws s3 cp \
+              "${PREPARED_DATASET_URL}" \
+              "${archive_path}"
+          elif [ -n "${PREPARED_DATASET_BEARER_TOKEN}" ]; then
+            curl --fail --location --retry 3 --retry-delay 10 --retry-all-errors \
+              --header "Authorization: Bearer ${PREPARED_DATASET_BEARER_TOKEN}" \
+              --output "${archive_path}" \
+              "${PREPARED_DATASET_URL}"
+          else
+            curl --fail --location --retry 3 --retry-delay 10 --retry-all-errors \
+              --output "${archive_path}" \
+              "${PREPARED_DATASET_URL}"
+          fi
+
+          tar -xzf "${archive_path}" -C "${dataset_dir}"
+
+      - name: Validate prepared dataset
+        run: |
+          set -euo pipefail
+          dataset_dir="encoder_retraining/data/prepared/${DATASET_VERSION}"
+          test -s "${dataset_dir}/cleaned_train.jsonl"
+          test -s "${dataset_dir}/valid.jsonl"
+          test -s "${dataset_dir}/test.jsonl"
+          test -s "${dataset_dir}/manifest.json"
+          python - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+
+          dataset_dir = Path(os.environ["DATASET_VERSION"])
+          prepared_dir = Path("encoder_retraining/data/prepared") / dataset_dir
+          for filename in ("cleaned_train.jsonl", "valid.jsonl", "test.jsonl"):
+              path = prepared_dir / filename
+              with path.open("r", encoding="utf-8") as file:
+                  for line_number, line in enumerate(file, start=1):
+                      line = line.strip()
+                      if not line:
+                          continue
+                      row = json.loads(line)
+                      if not str(row.get("text", "")).strip():
+                          raise ValueError(f"{path}:{line_number} has empty text")
+                      if row.get("label") not in (0, 1, 0.0, 1.0, "0", "1", "0.0", "1.0"):
+                          raise ValueError(f"{path}:{line_number} has unsupported label")
+                      break
+                  else:
+                      raise ValueError(f"{path} has no usable rows")
+          json.loads((prepared_dir / "manifest.json").read_text(encoding="utf-8"))
+          PY
+
+      - name: Run encoder retraining pipeline
+        run: |
+          set -euo pipefail
+          run_id="weekly-${DATASET_VERSION}-$(date -u +%Y%m%dT%H%M%SZ)"
+          args=(
+            uv run --group encoder python
+            encoder_retraining/pipeline/run_retraining_pipeline.py
+            --prepared-dir "encoder_retraining/data/prepared/${DATASET_VERSION}"
+            --baseline-model "${BASELINE_MODEL}"
+            --output-dir "encoder_retraining/data/runs/${run_id}"
+            --experiments focal_no_oversampling
+            --n-trials "${{ github.event.inputs.n_trials || '1' }}"
+            --epochs "${{ github.event.inputs.epochs || '3' }}"
+          )
+          if [ "${{ github.event.inputs.dry_run || 'false' }}" = "true" ]; then
+            args+=(--dry-run)
+          fi
+          "${args[@]}"
+          echo "RUN_ID=${run_id}" >> "${GITHUB_ENV}"
+
+      - name: Upload retraining artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: encoder-retraining-${{ env.RUN_ID }}
+          path: |
+            encoder_retraining/data/runs/${{ env.RUN_ID }}/retraining_pipeline_manifest.json
+            encoder_retraining/data/runs/${{ env.RUN_ID }}/evaluation/
+            encoder_retraining/data/runs/${{ env.RUN_ID }}/training/*/test_metrics.json
+            encoder_retraining/data/runs/${{ env.RUN_ID }}/logs/
+          if-no-files-found: warn
+          retention-days: 14
+
+      - name: Promote candidate to Hugging Face
+        if: ${{ github.event.inputs.upload_to_hf == 'true' && github.event.inputs.dry_run != 'true' }}
+        run: |
+          set -euo pipefail
+          args=(
+            uv run --group encoder python
+            encoder_retraining/pipeline/promote_encoder_model.py
+            --promotion-manifest
+            "encoder_retraining/data/runs/${RUN_ID}/evaluation/promotion_manifest.json"
+            --repo-id "${HF_REPO_ID}"
+            --model-version "${RUN_ID}"
+            --private
+            --upload
+            --skip-not-recommended
+          )
+          if [ "${{ github.event.inputs.allow_not_recommended_upload || 'false' }}" = "true" ]; then
+            args+=(--allow-not-recommended)
+          fi
+          "${args[@]}"

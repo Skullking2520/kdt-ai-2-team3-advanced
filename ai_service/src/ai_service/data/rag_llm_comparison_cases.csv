@@ -1,0 +1,8 @@
+model,faithfulness,context_recall,answer_similarity,note
+qwen2.5:7b,0.4000,0.6000,0.7730,baseline stable
+llama3.1:8b,0.1000,0.6000,0.5158,low score
+mistral:7b,0.1300,0.6000,0.5158,low score
+qwen3:8b,0.4100,0.6000,0.6459,best faithfulness
+qwen3.5:9b,0.3867,0.6000,0.8617,best overall
+exaone3.5:7.8b,0.3345,0.6000,0.8387,strong Korean candidate
+qwen3:14b,0.2600,0.6000,0.6993,larger but slower

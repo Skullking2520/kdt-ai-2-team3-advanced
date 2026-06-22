@@ -27,6 +27,39 @@ README.md
 
 `training_args.bin`은 추론 필수 파일은 아니다.
 
+## Promotion Script
+
+재학습 파이프라인에서 생성된 후보 모델은
+`encoder_retraining/pipeline/promote_encoder_model.py`로 업로드를 준비한다.
+
+이 스크립트는 `promotion_manifest.json`을 먼저 확인한다.
+`promotion_recommended=true`인 경우에만 기본적으로 업로드가 가능하다.
+
+```bash
+uv run --group encoder python \
+  encoder_retraining/pipeline/promote_encoder_model.py \
+  --promotion-manifest <run_dir>/evaluation/promotion_manifest.json \
+  --repo-id kdt-2-team4-newbiz/kcelectra-smishing-classifier \
+  --model-version encoder-v2
+```
+
+위 명령은 dry-run이며 Hugging Face에 업로드하지 않는다.
+
+실제 업로드 시에는 `HF_TOKEN` 인증 후 `--upload`를 명시한다.
+
+```bash
+uv run --group encoder python \
+  encoder_retraining/pipeline/promote_encoder_model.py \
+  --promotion-manifest <run_dir>/evaluation/promotion_manifest.json \
+  --repo-id kdt-2-team4-newbiz/kcelectra-smishing-classifier \
+  --model-version encoder-v2 \
+  --private \
+  --upload
+```
+
+원본 `final_model/`은 직접 수정하지 않고, 업로드용 staging 폴더에 모델 카드와
+필수 파일을 모아 Hub에 올린다.
+
 ## Recommended Config Metadata
 
 `config.json`에는 label 의미를 명확히 남긴다.
@@ -71,4 +104,3 @@ confidence다.
 - `confidence`
 - `risk_level`
 - `score`
-
