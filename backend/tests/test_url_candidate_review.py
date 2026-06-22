@@ -36,7 +36,7 @@ def test_admin_approval_promotes_candidate(monkeypatch) -> None:
     promote = AsyncMock(return_value=[])
     monkeypatch.setattr(
         url_candidate_service,
-        "create_static_patterns_if_new",
+        "upsert_static_patterns",
         promote,
     )
 
@@ -58,7 +58,7 @@ def test_admin_approval_promotes_candidate(monkeypatch) -> None:
     promote.assert_awaited_once()
     patterns = promote.await_args.args[1]
     assert (
-        patterns[0]["managed_source"]
+        patterns[0]["source"]
         == URL_CANDIDATE_MANAGED_SOURCE
     )
     db.commit.assert_awaited_once()

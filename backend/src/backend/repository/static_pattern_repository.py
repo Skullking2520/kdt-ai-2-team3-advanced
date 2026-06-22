@@ -82,8 +82,8 @@ async def upsert_static_patterns(
             pattern_type,
             pattern["pattern_value"],
         )
-        description = pattern.get("description")
-        managed_source = pattern.get("managed_source")
+        category = pattern.get("category")
+        source = pattern.get("source")
         pattern_hash = hash_value(pattern_value)
         key = (pattern_type, pattern_hash)
 
@@ -96,8 +96,8 @@ async def upsert_static_patterns(
                 "pattern_type": pattern_type,
                 "pattern_value": pattern_value,
                 "pattern_hash": pattern_hash,
-                "description": description[:255] if description else None,
-                "managed_source": managed_source,
+                "category": category[:255] if category else None,
+                "source": source,
             }
         )
 
@@ -138,6 +138,6 @@ async def delete_static_url_pattern(
         delete(StaticPattern).where(
             StaticPattern.pattern_type == PatternType.URL,
             StaticPattern.pattern_hash == hash_value(normalized_url),
-            StaticPattern.managed_source == URL_CANDIDATE_MANAGED_SOURCE,
+            StaticPattern.source == URL_CANDIDATE_MANAGED_SOURCE,
         )
     )

@@ -51,4 +51,4 @@ URLHAUS_AUTH_KEY = os.getenv("URLHAUS_AUTH_KEY", "")
 # - pinecone
 PINECONE_INDEX_NAME = "smishing-cases-v01"
 EMBEDDING_MODEL = "jhgan/ko-sroberta-multitask"
-PINECONE_API_KEY = os.environ["PINECONE_API_KEY"]
+PINECONE_API_KEY = os.getenv("PINECONE_API_KEY", "")

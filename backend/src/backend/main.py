@@ -1,4 +1,5 @@
 # src/backend/main.py
+import asyncio
 import logging
 from contextlib import asynccontextmanager
 
@@ -21,13 +22,20 @@ from .db.create_tables import create_db_tables
 
 # lifespan: 애플리케이션이 시작될 때와 종료될 때 실행되어야
 # 하는 로직(DB 연결, 모델 로드, 캐시 초기화 등)을 정의
+
 logger = logging.getLogger(__name__)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     await create_db_tables()
     await _warmup_ocr()
+    vt_task = asyncio.create_task(_start_vt_worker())
     yield
+    vt_task.cancel()
+    try:
+        await vt_task
+    except asyncio.CancelledError:
+        pass
 
 
 async def _warmup_ocr() -> None:
@@ -36,13 +44,25 @@ async def _warmup_ocr() -> None:
         return
     try:
         from .ocr.ocr_service import _get_paddle_ocr
-        import asyncio
         await asyncio.get_event_loop().run_in_executor(None, _get_paddle_ocr)
         # 첫 번째 인자가 None이면 파이썬의 기본 스레드 풀(ThreadPoolExecutor)을 사용합니다.        
         # 두 번째 인자인 _get_paddle_ocr 함수를 별도의 스레드(백그라운드)에서 실행하도록 넘깁니다.
         logger.info("[startup] PaddleOCR 워밍업 완료")
     except Exception as e:
         logger.warning("[startup] PaddleOCR 워밍업 실패 (첫 요청이 느릴 수 있음): %s", e)
+
+
+async def _start_vt_worker() -> None:
+    from .core.pydantic_settings import settings
+    if not settings.VIRUSTOTAL_API_KEY:
+        logger.warning("[startup] VIRUSTOTAL_API_KEY 없음 - VT 워커 비활성화")
+        return
+    try:
+        from .workers.virustotal_worker import serve
+        logger.info("[startup] VT 워커 시작")
+        await serve()
+    except Exception as e:
+        logger.error("[startup] VT 워커 오류: %s", e)
 
 
 app = FastAPI(lifespan=lifespan, exception_handlers=exception_handlers)

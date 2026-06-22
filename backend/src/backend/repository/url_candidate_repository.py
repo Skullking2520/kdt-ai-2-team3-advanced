@@ -138,19 +138,19 @@ async def reserve_vt_request(
 ) -> bool:
     await db.execute(
         mysql_insert(VirusTotalQuota)
-        .values(quota_date=quota_date, used_count=0)
+        .values(date=quota_date, auto_used=0, manual_used=0)
         .prefix_with("IGNORE")
     )
     quota = await db.scalar(
         select(VirusTotalQuota)
-        .where(VirusTotalQuota.quota_date == quota_date)
+        .where(VirusTotalQuota.date == quota_date)
         .with_for_update()
     )
-    if quota is None or quota.used_count >= daily_limit:
+    if quota is None or quota.auto_used >= daily_limit:
         await db.rollback()
         return False
 
-    quota.used_count += 1
+    quota.auto_used += 1
     await db.commit()
     return True
 

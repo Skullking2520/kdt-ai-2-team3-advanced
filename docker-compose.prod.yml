@@ -34,6 +34,19 @@ services:
     depends_on:
       - fastapi
 
+  data-pipeline:
+    build:
+      context: .
+      dockerfile: datatest/Dockerfile
+    container_name: data-pipeline
+    env_file:
+      - .env
+    mem_limit: 256m
+    memswap_limit: 256m
+    networks:
+      - monitoring
+    restart: unless-stopped
+
   prometheus:
     image: prom/prometheus:latest
     container_name: prometheus

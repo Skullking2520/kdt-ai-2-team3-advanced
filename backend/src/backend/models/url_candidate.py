@@ -101,10 +101,11 @@ class UrlCandidate(Base):
 
 
 class VirusTotalQuota(Base):
-    __tablename__ = "virustotal_quota"
+    __tablename__ = "vt_quota"
 
-    quota_date: Mapped[date] = mapped_column(Date, primary_key=True)
-    used_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    date: Mapped[date] = mapped_column(Date, primary_key=True)
+    auto_used: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    manual_used: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     updated_at: Mapped[datetime] = mapped_column(
         TIMESTAMP,
         server_default=func.now(),
