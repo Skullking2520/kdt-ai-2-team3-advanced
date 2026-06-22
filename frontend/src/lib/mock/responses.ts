@@ -63,24 +63,9 @@ const urlDetails = (url: string): UrlAnalysisResult['urlDetails'] => {
           { type: '의심 TLD', desc: '피싱에 자주 사용되는 패턴', severity: 'medium' },
         ]
       : [{ type: '이상 없음', desc: '명시적인 위험 징후가 발견되지 않았습니다', severity: 'low' }],
-    metaDetails: {
-      httpStatus: 200,
-      contentType: 'text/html; charset=UTF-8',
-      contentLength: isSuspicious ? 12480 : 38420,
-      server: isSuspicious ? 'nginx/1.18.0' : 'nginx/1.25.3 (Korean hosting)',
-      serverLocation: isSuspicious ? 'Beijing, CN' : 'Seoul, KR',
-      ip: isSuspicious ? '175.221.43.127' : '211.55.78.140',
-      asn: 'AS4766 Korea Telecom',
-      registeredDate: isSuspicious ? '2025.11.12' : '2010.03.15',
-      expiryDate: isSuspicious ? '2026.11.12' : '2027.03.15',
-      registrar: isSuspicious ? 'Unknown / Privacy Protected' : 'Gabia, Inc.',
-      lastAnalysis: '방금 전',
-      firstSubmission: isSuspicious ? '2025.11.15' : '2010.03.20',
-      lastFinalUrl: isSuspicious ? `http://redir.${domain}` : url,
-      category: isSuspicious ? 'phishing' : 'benign',
-      tags: isSuspicious ? ['phishing', 'korea-targeting', 'financial-impersonation'] : ['official-government'],
-      whoisEmail: isSuspicious ? 'redacted-for-privacy' : 'admin@nhis.or.kr',
-    },
+    // 정직 처리: metaDetails는 VirusTotal API를 우리 백엔드가 직접 호출해서 받아와야 표시할 수 있음.
+    // mock에서 가짜 메타(등록일 2025-11-12, IP 175.221.43.127, PHISHING 카테고리 등)를 만들면 정직하지 않음.
+    // 백엔드 운영팀이 VT API key를 발급·연동하면 자동으로 적재됨.
   };
 };
 

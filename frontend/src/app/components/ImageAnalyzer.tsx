@@ -127,19 +127,15 @@ export function ImageAnalyzer() {
       </div>
 
       <div className="space-y-4">
-        {/* 업로드 영역 */}
+        {/* 업로드 영역 — button + onClick 패턴 (label-for 일부 브라우저 미작동 대비) */}
         {!preview ? (
-          <label
-            htmlFor="file-input-image"
-            onClick={(e) => {
-              // 일부 브라우저에서 label-for 패턴이 작동하지 않을 때를 대비한 명시적 click
-              e.preventDefault();
-              fileRef.current?.click();
-            }}
+          <button
+            type="button"
+            onClick={() => fileRef.current?.click()}
             onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
             onDragLeave={() => setDragOver(false)}
             onDrop={handleDrop}
-            className={`relative rounded-2xl border-2 border-dashed p-8 sm:p-12 flex flex-col items-center gap-4 cursor-pointer transition-all
+            className={`relative w-full text-left rounded-2xl border-2 border-dashed p-8 sm:p-12 flex flex-col items-center gap-4 cursor-pointer transition-all
               ${dragOver
                 ? "border-emerald-500/60 bg-emerald-50 dark:bg-emerald-900/10"
                 : "border-gray-300 dark:border-white/10 hover:border-emerald-500/40 hover:bg-gray-50 dark:hover:bg-white/5"
@@ -155,14 +151,13 @@ export function ImageAnalyzer() {
               <p className="text-xs sm:text-sm text-gray-500 dark:text-white/40">PNG, JPG, WEBP 지원 · 최대 10MB</p>
             </div>
             <input
-              id="file-input-image"
               ref={fileRef}
               type="file"
               accept="image/*"
               className="hidden"
               onChange={(e) => { const f = e.target.files?.[0]; if (f) handleFile(f); }}
             />
-          </label>
+          </button>
         ) : (
           <div className="bg-white dark:bg-[#111c30] border border-gray-200 dark:border-white/10 rounded-2xl p-4">
             <div className="flex items-center justify-between mb-3">

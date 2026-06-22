@@ -1,6 +1,6 @@
 import {useState} from "react";
 import {motion, AnimatePresence} from "motion/react";
-import {Link2, Search, AlertTriangle, CheckCircle, Shield, RefreshCw, Clock, Globe, FileText, Server, Tag, Calendar} from "lucide-react";
+import {Link2, Search, AlertTriangle, CheckCircle, Shield, RefreshCw, Clock, Globe, FileText} from "lucide-react";
 import {Card} from "./ui/Primitives";
 import {api, ApiException} from "@/lib/api";
 import type { UrlAnalysisResult } from "@/types/api";
@@ -377,94 +377,28 @@ export function URLAnalyzer() {
                   transition={{ duration: 0.15 }}
                   className="space-y-4"
                 >
-                  {/* 카테고리 + 태그 */}
-                  <Card padding="p-4">
-                    <p className="text-xs text-white/80 mb-3 flex items-center gap-1"><Tag size={10} /> 카테고리 및 태그</p>
-                    <div className="flex items-center gap-2 mb-3">
-                      <span className={`text-[10px] px-2 py-0.5 rounded border ${
-                        result.details.category === "phishing"
-                          ? "bg-red-500/15 border-red-500/30 text-red-400"
-                          : result.details.category === "benign"
-                          ? "bg-emerald-500/15 border-emerald-500/30 text-emerald-400"
-                          : "bg-white/5 border-white/10 text-white/60"
-                      }`} style={{ fontWeight: 600 }}>{result.details.category.toUpperCase()}</span>
-                    </div>
-                    <div className="flex flex-wrap gap-1.5">
-                      {result.details.tags.map((t) => (
-                        <span key={t} className="text-[10px] px-2 py-0.5 rounded bg-white/5 border border-white/10 text-white/60 font-mono">{t}</span>
-                      ))}
-                    </div>
-                  </Card>
-
-                  {/* HTTP 메타 */}
-                  <Card padding="p-4">
-                    <p className="text-xs text-white/80 mb-3 flex items-center gap-1"><Server size={10} /> HTTP 응답</p>
-                    <div className="grid grid-cols-2 gap-2">
-                      {[
-                        { k: "HTTP 상태", v: `${result.details.httpStatus} ${result.details.httpStatus === 200 ? "OK" : ""}` },
-                        { k: "콘텐츠 타입", v: result.details.contentType },
-                        { k: "콘텐츠 길이", v: `${(result.details.contentLength / 1024).toFixed(1)} KB` },
-                        { k: "서버", v: result.details.server },
-                      ].map((s) => (
-                        <div key={s.k} className="bg-white/3 rounded-lg p-2">
-                          <p className="text-[10px] text-white/60">{s.k}</p>
-                          <p className="text-xs text-white/80 mt-0.5 font-mono break-all">{s.v}</p>
+                  {/* VirusTotal API 미연동 정직 안내 — 세부 탭의 모든 가짜 메타 정보 정직 처리 */}
+                  <div className="p-4 rounded-xl border border-dashed border-amber-500/40 bg-amber-500/5">
+                    <div className="flex items-start gap-3">
+                      <div className="mt-0.5 grid h-6 w-6 place-items-center rounded-full bg-amber-500/15 text-amber-700 dark:text-amber-400 text-xs" style={{ fontWeight: 700 }}>
+                        !
+                      </div>
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2 mb-1">
+                          <p className="text-sm text-amber-800 dark:text-amber-200" style={{ fontWeight: 600 }}>
+                            VirusTotal API 메타 정보 미연동
+                          </p>
+                          <span className="text-[10px] px-1.5 py-0.5 rounded bg-amber-500/15 border border-amber-500/25 text-amber-700 dark:text-amber-300">정직 처리</span>
                         </div>
-                      ))}
+                        <p className="text-xs text-amber-700/80 dark:text-amber-300/80 leading-relaxed">
+                          카테고리·태그·HTTP 응답·서버 정보·IP/ASN·WHOIS 등록 정보·분석 이력은 VirusTotal API를 우리 백엔드가 직접 호출해서 받아와야 표시할 수 있습니다. mock에서 가짜 메타(예: 등록일 2025-11-12, IP 175.221.43.127, PHISHING 카테고리)를 만들면 정직하지 않습니다. 운영팀이 VT API key를 발급·연동하면 자동으로 적재됩니다.
+                        </p>
+                        <p className="text-[10px] text-amber-700/70 dark:text-amber-300/70 mt-2">
+                          VT API 연동 시 표시되는 정보: 카테고리(Categories) · 태그(Tags) · HTTP Status/Type/Length/Server · IP/ASN/Country · Whois 등록일/만료일/Registrar/Email · Last Analysis Date · First Submission Date
+                        </p>
+                      </div>
                     </div>
-                  </Card>
-
-                  {/* 서버 위치 */}
-                  <Card padding="p-4">
-                    <p className="text-xs text-white/80 mb-3 flex items-center gap-1"><Globe size={10} /> 서버 위치</p>
-                    <div className="grid grid-cols-2 gap-2">
-                      {[
-                        { k: "IP 주소", v: result.details.ip },
-                        { k: "ASN", v: result.details.asn },
-                        { k: "위치", v: result.details.serverLocation },
-                        { k: "최종 URL", v: result.details.lastFinalUrl },
-                      ].map((s) => (
-                        <div key={s.k} className="bg-white/3 rounded-lg p-2">
-                          <p className="text-[10px] text-white/60">{s.k}</p>
-                          <p className="text-xs text-white/80 mt-0.5 font-mono break-all">{s.v}</p>
-                        </div>
-                      ))}
-                    </div>
-                  </Card>
-
-                  {/* WHOIS / 등록 정보 */}
-                  <Card padding="p-4">
-                    <p className="text-xs text-white/80 mb-3 flex items-center gap-1"><Calendar size={10} /> WHOIS 등록 정보</p>
-                    <div className="grid grid-cols-2 gap-2">
-                      {[
-                        { k: "등록일", v: result.details.registeredDate },
-                        { k: "만료일", v: result.details.expiryDate },
-                        { k: "등록 대행", v: result.details.registrar },
-                        { k: "WHOIS 이메일", v: result.details.whoisEmail },
-                      ].map((s) => (
-                        <div key={s.k} className="bg-white/3 rounded-lg p-2">
-                          <p className="text-[10px] text-white/60">{s.k}</p>
-                          <p className="text-xs text-white/80 mt-0.5 font-mono break-all">{s.v}</p>
-                        </div>
-                      ))}
-                    </div>
-                  </Card>
-
-                  {/* 분석 이력 (VirusTotal Last Analysis Date / First Submission Date) */}
-                  <Card padding="p-4">
-                    <p className="text-xs text-white/80 mb-3 flex items-center gap-1"><Clock size={10} /> 분석 이력</p>
-                    <div className="grid grid-cols-2 gap-2">
-                      {[
-                        { k: "최종 분석", v: result.details.lastAnalysis },
-                        { k: "최초 등록", v: result.details.firstSubmission },
-                      ].map((s) => (
-                        <div key={s.k} className="bg-white/3 rounded-lg p-2">
-                          <p className="text-[10px] text-white/60">{s.k}</p>
-                          <p className="text-xs text-white/80 mt-0.5">{s.v}</p>
-                        </div>
-                      ))}
-                    </div>
-                  </Card>
+                  </div>
                 </motion.div>
               )}
             </AnimatePresence>
