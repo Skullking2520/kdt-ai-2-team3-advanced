@@ -2,8 +2,7 @@ import {Outlet, NavLink, useLocation, useNavigate} from "react-router";
 import {
   ShieldCheck, Menu, X, MessageSquareWarning, Link2, ImageIcon,
   Flag, ChevronDown, Bell, Search, Sun, Moon, BookOpen,
-  History, TrendingUp, Phone, HelpCircle, Zap, Type,
-  AlertTriangle,
+  Zap, Type,
   LayoutDashboard,
   LogOut,
 } from "lucide-react";
@@ -15,7 +14,7 @@ import {motion, AnimatePresence} from "motion/react";
 
 const TREND_ALERT = "이번 주 택배·공공기관 사칭 스미싱 급증 — 링크 클릭 전 꼭 확인하세요";
 
-const ADMIN_PATH_PREFIXES = ["/dashboard", "/compare", "/benchmark", "/ab-test", "/health"];
+const ADMIN_PATH_PREFIXES = ["/dashboard", "/compare", "/health"];
 
 /* ─── 실시간 검사 드롭다운 ─── */
 const SCAN_ITEMS = [
@@ -49,39 +48,10 @@ const SCAN_ITEMS = [
     tag: null,
     tagColor: "",
   },
-  {
-    to: "/sender",
-    icon: Phone,
-    label: "발신번호 조회",
-    desc: "발신 번호가 안전한지 바로 확인",
-    color: "text-orange-600 dark:text-orange-400",
-    bg: "bg-orange-50 dark:bg-orange-900/20",
-    tag: null,
-    tagColor: "",
-  },
 ];
 
-/* ─── 피해 사례 드롭다운 ─── */
-const CASES_ITEMS = [
-  {
-    to: "/cases",
-    icon: AlertTriangle,
-    label: "최근 피해 사례",
-    desc: "최신 스미싱 피해 신고 모음",
-  },
-  {
-    to: "/history",
-    icon: History,
-    label: "검사 이력",
-    desc: "이전에 검사한 문자 다시 보기",
-  },
-  {
-    to: "/trend",
-    icon: TrendingUp,
-    label: "최신 피싱 트렌드",
-    desc: "요즘 가장 많이 나오는 유형",
-  },
-];
+/* ─── 피해 사례 드롭다운 (전부 cleanup되어 빈 배열 — 헤더 자동 숨김) ─── */
+const CASES_ITEMS: DropItem[] = [];
 
 /* ─── 안전 가이드 드롭다운 ─── */
 const GUIDE_ITEMS = [
@@ -90,12 +60,6 @@ const GUIDE_ITEMS = [
     icon: BookOpen,
     label: "스미싱 예방법 총정리",
     desc: "유형별 대응법을 한눈에 정리",
-  },
-  {
-    to: "/quiz",
-    icon: HelpCircle,
-    label: "스미싱 퀴즈",
-    desc: "나는 얼마나 잘 구별할까?",
   },
 ];
 
@@ -365,11 +329,13 @@ export function Layout() {
                     triggerIcon={Zap}
                   />
 
-                  <NavDropdown
-                    label="피해 사례"
-                    items={CASES_ITEMS}
-                    isActive={isCasesActive}
-                  />
+                  {CASES_ITEMS.length > 0 && (
+                    <NavDropdown
+                      label="피해 사례"
+                      items={CASES_ITEMS}
+                      isActive={isCasesActive}
+                    />
+                  )}
 
                   <NavDropdown
                     label="안전 가이드"
@@ -525,16 +491,20 @@ export function Layout() {
                       </NavLink>
                     ))}
 
-                    {/* 피해 사례 */}
-                    <div className="px-3 pt-3">
-                      <p className="text-[10px] text-gray-400 dark:text-white/30 uppercase tracking-widest mb-1.5" style={{ fontWeight: 600 }}>피해 사례</p>
-                    </div>
-                    {CASES_ITEMS.map(({ to, icon: Icon, label }) => (
-                      <NavLink key={to} to={to} className={({ isActive }) => `flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm transition-colors ${isActive ? "bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400 font-semibold" : "text-gray-700 dark:text-white/60 hover:bg-gray-50 dark:hover:bg-white/5"}`}>
-                        <Icon size={14} className="text-gray-400 dark:text-white/35 shrink-0" />
-                        {label}
-                      </NavLink>
-                    ))}
+                    {/* 피해 사례 (cleanup으로 빈 배열 — 섹션 자동 숨김) */}
+                    {CASES_ITEMS.length > 0 && (
+                      <>
+                        <div className="px-3 pt-3">
+                          <p className="text-[10px] text-gray-400 dark:text-white/30 uppercase tracking-widest mb-1.5" style={{ fontWeight: 600 }}>피해 사례</p>
+                        </div>
+                        {CASES_ITEMS.map(({ to, icon: Icon, label }) => (
+                          <NavLink key={to} to={to} className={({ isActive }) => `flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm transition-colors ${isActive ? "bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400 font-semibold" : "text-gray-700 dark:text-white/60 hover:bg-gray-50 dark:hover:bg-white/5"}`}>
+                            <Icon size={14} className="text-gray-400 dark:text-white/35 shrink-0" />
+                            {label}
+                          </NavLink>
+                        ))}
+                      </>
+                    )}
 
                     {/* 안전 가이드 */}
                     <div className="px-3 pt-3">

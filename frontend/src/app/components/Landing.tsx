@@ -206,10 +206,10 @@ export function Landing() {
                   ))}
                 </div>
                 <button
-                  onClick={() => navigate("/cases")}
+                  onClick={() => navigate("/guide")}
                   className="w-full py-2.5 rounded-xl border border-gray-200 dark:border-white/10 text-sm text-gray-500 dark:text-white/40 hover:bg-gray-50 dark:hover:bg-white/5 transition-all flex items-center justify-center gap-1"
                 >
-                  전체 피해 사례 보기
+                  안전 가이드 보기
                   <ChevronRight size={13} />
                 </button>
               </>
