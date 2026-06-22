@@ -82,6 +82,11 @@ uv run --group encoder python \
 학습 후 5번 모델 비교와 6번 Hugging Face 승격 검토를 수행한다. 자세한 데이터
 계약은 [data/README.md](data/README.md)를 참고한다.
 
+재학습 파이프라인이 학습을 직접 수행한 경우, 최종 기준 모델 비교도
+`training/best_params.json`의 `max_length`를 사용한다. 학습 직후 후보 평가와
+승격 비교의 입력 길이를 일치시키기 위한 규칙이다. `--skip-training`처럼 기존
+후보만 비교할 때는 `run_retraining_pipeline.py --max-length` 값을 사용한다.
+
 ## Cleanlab Audit Shortcut
 
 PR #24처럼 Cleanlab 실행 결과가 다음 파일을 포함하는 archive로 전달되는 경우,
