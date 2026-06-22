@@ -55,16 +55,6 @@ const SCAN_ITEMS = [
 /* ─── 피해 사례 드롭다운 (전부 cleanup되어 빈 배열 — 헤더 자동 숨김) ─── */
 const CASES_ITEMS: DropItem[] = [];
 
-/* ─── 안전 가이드 드롭다운 ─── */
-const GUIDE_ITEMS = [
-  {
-    to: "/guide",
-    icon: BookOpen,
-    label: "스미싱 예방법 총정리",
-    desc: "유형별 대응법을 한눈에 정리",
-  },
-];
-
 /* ─── 공통 드롭다운 컴포넌트 ─── */
 interface DropItem {
   to: string;
@@ -240,8 +230,6 @@ export function Layout() {
   const isScanActive = scanPaths.includes(location.pathname);
   const casesPaths = CASES_ITEMS.map((s) => s.to);
   const isCasesActive = casesPaths.includes(location.pathname);
-  const guidePaths = GUIDE_ITEMS.map((s) => s.to);
-  const isGuideActive = guidePaths.includes(location.pathname);
 
   const navCls = (isActive: boolean) =>
     `flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm transition-colors whitespace-nowrap ${
@@ -341,11 +329,10 @@ export function Layout() {
                     />
                   )}
 
-                  <NavDropdown
-                    label="안전 가이드"
-                    items={GUIDE_ITEMS}
-                    isActive={isGuideActive}
-                  />
+                  <NavLink to="/guide" className={({ isActive }) => navCls(isActive)}>
+                    <BookOpen size={14} />
+                    안전 가이드
+                  </NavLink>
 
                   <NavLink to="/report" className={({ isActive }) => navCls(isActive)}>
                     <Flag size={14} />
@@ -513,15 +500,10 @@ export function Layout() {
                     )}
 
                     {/* 안전 가이드 */}
-                    <div className="px-3 pt-3">
-                      <p className="text-[10px] text-gray-400 dark:text-white/30 uppercase tracking-widest mb-1.5" style={{ fontWeight: 600 }}>안전 가이드</p>
-                    </div>
-                    {GUIDE_ITEMS.map(({ to, icon: Icon, label }) => (
-                      <NavLink key={to} to={to} className={({ isActive }) => `flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm transition-colors ${isActive ? "bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400 font-semibold" : "text-gray-700 dark:text-white/60 hover:bg-gray-50 dark:hover:bg-white/5"}`}>
-                        <Icon size={14} className="text-gray-400 dark:text-white/35 shrink-0" />
-                        {label}
-                      </NavLink>
-                    ))}
+                    <NavLink to="/guide" className={({ isActive }) => `flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm transition-colors ${isActive ? "bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400 font-semibold" : "text-gray-700 dark:text-white/60 hover:bg-gray-50 dark:hover:bg-white/5"}`}>
+                      <BookOpen size={14} className="text-gray-400 dark:text-white/35 shrink-0" />
+                      안전 가이드
+                    </NavLink>
                   </>
                 )}
 
