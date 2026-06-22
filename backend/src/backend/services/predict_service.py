@@ -72,7 +72,7 @@ async def _find_static_pattern_matches(
 
 def _require_encoder_settings() -> tuple[str, str]:
     api_key = settings.ENCODER_API_KEY
-    endpoint = settings.ENCODER_INFERENCE_ENDPOINT or settings.HF_SMISHING_ENCODER_URL
+    endpoint = settings.ENCODER_INFERENCE_ENDPOINT
 
     if not api_key or not endpoint:
         raise HTTPException(
@@ -156,7 +156,7 @@ async def request_encoder_prediction(text: str) -> EncoderClassificationOutput:
         return EncoderClassificationOutput(label="smishing", score=0.85)
 
     api_key = settings.ENCODER_API_KEY
-    endpoint = settings.ENCODER_INFERENCE_ENDPOINT or settings.HF_SMISHING_ENCODER_URL
+    endpoint = settings.ENCODER_INFERENCE_ENDPOINT
     if not api_key or not endpoint:
         logger.warning("[encoder] API 키 또는 엔드포인트 미설정 → mock fallback")
         return EncoderClassificationOutput(label="smishing", score=0.85)
@@ -260,7 +260,7 @@ async def generate_explanation(
             # 2. 예상 답변 구조에 맞춰 parsed_output -> reason 추출
             reason = data.get("parsed_output", {}).get("reason")
             if reason:
-                logger.info("[decoder] 응답 성공 및 추론 이유 추출 완료")
+                logger.info("[decoder] 응답 성공 | reason=%s", reason)
                 return reason
                 
             logger.warning("[decoder] 응답은 성공했으나 parsed_output.reason 필드가 없습니다: %s", data)
