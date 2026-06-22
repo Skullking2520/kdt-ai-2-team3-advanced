@@ -8,9 +8,6 @@ services:
       - "8000:8000"
     env_file:
       - .env
-    environment:
-      - USE_MOCK_MODEL=true
-      - USE_MOCK_OCR=true
     mem_limit: 2000m
     memswap_limit: 2000m
     networks:
@@ -23,9 +20,6 @@ services:
     command: ["python", "-m", "src.backend.workers.virustotal_worker"]
     env_file:
       - .env
-    environment:
-      - USE_MOCK_MODEL=true
-      - USE_MOCK_OCR=true
     mem_limit: 100m
     memswap_limit: 100m
     networks:

@@ -202,10 +202,15 @@ def _build_features(text: str, extracted: dict[str, list[str]]) -> str:
 
 
 async def generate_explanation(
-    text: str,  # noqa: ARG001 — ai_service 연동 후 body에 사용 예정
+    text: str,
     label_name: str,
-    features: str,  # noqa: ARG001 — ai_service 연동 후 body에 사용 예정
+    features: str,  # noqa: ARG001
+    ocr_text: str = "",
 ) -> str:
+    """
+    디코더(LangGraph Inference Endpoint)를 호출하여 스미싱 판단 근거 및 설명을 생성합니다.
+    서버리스(Modal) 기반으로 작동하므로 타임아웃 및 예외 처리를 엄격하게 적용합니다.
+    """
     if label_name != "스미싱":
         return NORMAL_EXPLANATION
 
@@ -215,10 +220,52 @@ async def generate_explanation(
             "링크나 개인정보 입력 요청에 응하지 마세요."
         )
 
-    # TODO: ai_service 엔드포인트 확정 후 아래 형태로 교체
-    # POST {AI_SERVICE_URL}/api/v1/graph/invoke
-    # body: {"text": text}
-    # response: {"is_smishing": bool, "reason": str}
+    decoder_url = settings.DECODER_ENDPOINT_URL
+    if not decoder_url:
+        logger.warning("[decoder] DECODER_ENDPOINT_URL 환경변수가 설정되지 않았습니다.")
+        return EXPLAINER_UNAVAILABLE_EXPLANATION
+
+    # 1. 요구사항에 따른 라우팅 조건 분기 (ocr_text 존재 여부에 따라 결정)
+    route_override = "zero_day" if ocr_text else "general"
+    
+    # URL 엔드포인트 빌드 및 로그 출력
+    invoke_url = f"{decoder_url.rstrip('/')}/api/v1/graph/invoke"
+    logger.info("[decoder] 호출 시작 | endpoint=%s | route_override=%s", invoke_url, route_override)
+    
+    payload = {
+        "text": text,
+        "ocr_text": ocr_text,
+        "route_override": route_override
+    }
+
+    try:
+        import httpx
+        # 서버리스 특성상 Cold Start 지연이 있을 수 있으므로 충분한 timeout(60초)을 부여합니다.
+        async with httpx.AsyncClient(timeout=60.0) as client:
+            response = await client.post(
+                invoke_url,
+                json=payload,
+                headers={"Content-Type": "application/json"}
+            )
+            response.raise_for_status()
+            data = response.json()
+            
+            # 2. 예상 답변 구조에 맞춰 parsed_output -> reason 추출
+            reason = data.get("parsed_output", {}).get("reason")
+            if reason:
+                logger.info("[decoder] 응답 성공 및 추론 이유 추출 완료")
+                return reason
+                
+            logger.warning("[decoder] 응답은 성공했으나 parsed_output.reason 필드가 없습니다: %s", data)
+            
+    except httpx.HTTPStatusError as exc:
+        logger.error("[decoder] HTTP 오류 발생 | 상태 코드: %d | 내용: %s", exc.response.status_code, exc.response.text)
+    except httpx.TimeoutException:
+        logger.error("[decoder] 호출 타임아웃 발생 (서버리스 Cold Start 가능성)")
+    except Exception as exc:
+        logger.error("[decoder] 알 수 없는 호출 실패: %s: %s", type(exc).__name__, exc)
+
+    # 실패 시 시스템이 다운되지 않도록 사용자 안전 안내 폴백 메시지 반환
     return EXPLAINER_UNAVAILABLE_EXPLANATION
 
 
@@ -318,7 +365,8 @@ async def predict_smishing(
 
         else:
             features = _build_features(masked_content, extracted)
-            reason = await generate_explanation(masked_content, "스미싱", features)
+            ocr_text = content if request.type == "image" else ""
+            reason = await generate_explanation(masked_content, "스미싱", features, ocr_text=ocr_text)
             await register_model_url_candidates(
                 db,
                 urls=extracted["urls"],
