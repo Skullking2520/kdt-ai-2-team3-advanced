@@ -56,24 +56,20 @@ const PERSONAL_INFO_KEYWORDS = ['주민번호', '카드번호', '비밀번호', 
 
 // ───────────────────────────────────────────
 // 유사 사례 (RAG 결과 자리 — 실제 백엔드에서는 API 응답으로 대체)
+// 정직한 처리: RAG(과거 스미싱 사례 검색) 시스템은 백엔드에 미연동.
+// mock에서 가짜 사례를 추측해 표시하면 정직하지 않음. 빈 배열로 두고 UI에서 "RAG 미연동" 안내.
+// 백엔드 Pinecone RAG 연동 시 자동 채워짐.
 // ───────────────────────────────────────────
 
-const SIMILAR_CASES_HIGH = [
-  { title: '택배 회사 사칭 배송 주소 확인 유도형', similarity: 87, year: '2026' },
-  { title: '공공기관 환급금 명목 피싱', similarity: 74, year: '2025' },
-  { title: '가족 사칭 상품권 요구형', similarity: 69, year: '2026' },
-];
+const SIMILAR_CASES_HIGH: { title: string; similarity: number; year: string }[] = [];
 
-const SIMILAR_CASES_MEDIUM = [
-  { title: '단축 URL 포함 확인 유도 문자', similarity: 71, year: '2025' },
-  { title: '이벤트 당첨 가장 링크 연결형', similarity: 58, year: '2025' },
-];
+const SIMILAR_CASES_MEDIUM: { title: string; similarity: number; year: string }[] = [];
 
 // ───────────────────────────────────────────
 // 결과 타입
 // ───────────────────────────────────────────
 
-export interface SmsAnalysis {
+interface SmsAnalysis {
   /** 'high' | 'medium' | 'low' — types/api.ts RiskLevel 통일 */
   risk_level: RiskLevel;
   /** 0~100 정수 */
@@ -84,7 +80,7 @@ export interface SmsAnalysis {
   reasons: string[];
   /** 사용자에게 보여줄 대응 가이드 (한국어) */
   action_guide: string[];
-  /** 시그널 플래그 (GovernmentCriteriaCard 등에서 사용) */
+  /** 시그널 플래그 (탐지 근거 카드 + 정부 기준 정직 처리 후 제거됨) */
   has_url: boolean;
   has_impersonation: boolean;
   has_payment_request: boolean;
@@ -252,7 +248,7 @@ export function toSeniorActions(actionGuide: string[]): string[] {
  * 새 API Contract enum (high/medium/low) ↔ 레거시 키 (danger/warning/normal) 변환.
  * 추후 result/* 카드 prop 타입을 새 enum으로 마이그레이션하면 이 어댑터는 제거 가능.
  */
-export type LegacyRiskLevel = 'danger' | 'warning' | 'normal';
+type LegacyRiskLevel = 'danger' | 'warning' | 'normal';
 
 export function toLegacyRiskLevel(level: RiskLevel): LegacyRiskLevel {
   switch (level) {

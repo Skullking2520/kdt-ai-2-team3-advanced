@@ -8,13 +8,21 @@ on:
         required: true
         default: "encoder-weekly"
       prepared_dataset_url:
-        description: "Optional tar.gz URL containing cleaned_train.jsonl, valid.jsonl, test.jsonl"
+        description: "Optional tar.gz URL or S3 prefix containing prepared dataset files"
         required: false
         default: ""
       cleanlab_audit_url:
         description: "Optional S3 prefix or tar.gz URL containing Cleanlab audit artifacts"
         required: false
         default: ""
+      data_source:
+        description: "Dataset source for manual runs"
+        required: true
+        type: choice
+        options:
+          - prepared_dataset
+          - cleanlab_audit
+        default: prepared_dataset
       dry_run:
         description: "Skip actual training and model comparison"
         required: true
@@ -166,7 +174,11 @@ jobs:
           JSON
 
       - name: Download Cleanlab audit and build prepared dataset
-        if: ${{ github.event.inputs.use_smoke_dataset != 'true' && env.CLEANLAB_AUDIT_URL != '' }}
+        if: >-
+          ${{
+            github.event.inputs.use_smoke_dataset != 'true' &&
+            (github.event_name == 'schedule' || github.event.inputs.data_source == 'cleanlab_audit')
+          }}
         run: |
           set -euo pipefail
           dataset_dir="encoder_retraining/data/prepared/${DATASET_VERSION}"
@@ -240,7 +252,12 @@ jobs:
             --overwrite
 
       - name: Download prepared dataset
-        if: ${{ github.event.inputs.use_smoke_dataset != 'true' && env.CLEANLAB_AUDIT_URL == '' }}
+        if: >-
+          ${{
+            github.event.inputs.use_smoke_dataset != 'true' &&
+            github.event_name != 'schedule' &&
+            github.event.inputs.data_source == 'prepared_dataset'
+          }}
         run: |
           set -euo pipefail
           if [ -z "${PREPARED_DATASET_URL}" ]; then
@@ -250,15 +267,25 @@ jobs:
 
           dataset_dir="encoder_retraining/data/prepared/${DATASET_VERSION}"
           archive_path="/tmp/${DATASET_VERSION}.tar.gz"
+          mkdir -p "${dataset_dir}"
 
           if [[ "${PREPARED_DATASET_URL}" == s3://* ]]; then
             if [ -z "${AWS_ACCESS_KEY_ID}" ] || [ -z "${AWS_SECRET_ACCESS_KEY}" ]; then
               echo "AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY secrets are required for s3:// prepared dataset downloads."
               exit 1
             fi
-            uv tool run --from awscli aws s3 cp \
-              "${PREPARED_DATASET_URL}" \
-              "${archive_path}"
+            if [[ "${PREPARED_DATASET_URL}" == *.tar.gz ]] || [[ "${PREPARED_DATASET_URL}" == *.tgz ]]; then
+              uv tool run --from awscli aws s3 cp \
+                "${PREPARED_DATASET_URL}" \
+                "${archive_path}"
+              tar -xzf "${archive_path}" -C "${dataset_dir}"
+            else
+              prepared_prefix="${PREPARED_DATASET_URL%/}/"
+              uv tool run --from awscli aws s3 cp \
+                "${prepared_prefix}" \
+                "${dataset_dir}" \
+                --recursive
+            fi
           elif [ -n "${PREPARED_DATASET_BEARER_TOKEN}" ]; then
             curl --fail --location --retry 3 --retry-delay 10 --retry-all-errors \
               --header "Authorization: Bearer ${PREPARED_DATASET_BEARER_TOKEN}" \
@@ -268,9 +295,8 @@ jobs:
             curl --fail --location --retry 3 --retry-delay 10 --retry-all-errors \
               --output "${archive_path}" \
               "${PREPARED_DATASET_URL}"
+            tar -xzf "${archive_path}" -C "${dataset_dir}"
           fi
-
-          tar -xzf "${archive_path}" -C "${dataset_dir}"
 
       - name: Validate prepared dataset
         run: |

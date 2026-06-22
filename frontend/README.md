@@ -15,12 +15,12 @@
 | **프레임워크** | React 18 |
 | **스타일** | Tailwind CSS 4 (유틸리티 클래스) |
 | **UI 키트** | Radix UI (shadcn-style) + Lucide Icons |
-| **차트** | Recharts 2 (Dashboard, TrendReport) |
+| **차트** | Recharts 2 (Dashboard) |
 | **라우팅** | React Router 7 |
 | **HTTP** | Native `fetch` (axios 없음) |
 | **상태** | useState/useEffect (전역은 Context: `AdminContext`, `SeniorContext`) |
-| **테스트** | Vitest 2 (2개 테스트: smsAnalysis, mock/responses) |
-| **린트** | ESLint 9 (flat config) |
+| **테스트** | Vitest 4 (1개 테스트: imageFiles) |
+| **린트** | ESLint 10 (flat config) |
 
 ---
 
@@ -33,11 +33,11 @@ npm run dev               # → http://localhost:5173
 ```
 
 기타 스크립트:
-- `npm run build` — 프로덕션 번들 (`dist/`, 1.80s)
+- `npm run build` — 프로덕션 번들 (`dist/`, ~1.5s)
 - `npm run typecheck` — `tsc -b --noEmit` (CI에서 사용)
-- `npm run lint` — ESLint 9 (`--max-warnings 0`)
+- `npm run lint` — ESLint 10 (`--max-warnings 0`)
 - `npm run lint:fix` — 자동 수정
-- `npm run test` — Vitest 2개 테스트
+- `npm run test` — Vitest 1개 테스트
 - `npm run preview` — 빌드 결과 미리보기
 
 ##  환경변수
@@ -61,13 +61,13 @@ npm run dev               # → http://localhost:5173
  src/
 ├── app/                  ← 라우트 + 페이지 (Figma export)
 │   ├── App.tsx
-│   ├── routes.public.tsx  일반 사용자 라우트 (19개, 실서비스 빌드 포함)
-│   ├── routes.admin.tsx   어드민/연구/개발 라우트 (24개, DEV 빌드에서만)
-│   ├── components/        페이지 컴포넌트 (45개)
-│   │   ├── ui/            공통 UI 컴포넌트 (shadcn-style 프리미티브)
-│   │   ├── result/        결과 카드
-│   │   ├── senior/        시니어 모드 전용 (SeniorBottomBar)
-│   │   └── figma/         Figma 헬퍼
+│   ├── routes.tsx        router 정의 (Layout + catch-all NotFound)
+│   ├── routes.public.tsx  일반 사용자 라우트 (11개, 실서비스 빌드 포함)
+│   ├── routes.admin.tsx   어드민 라우트 (4개, DEV 빌드에서만)
+│   ├── components/        페이지 컴포넌트 (18개)
+│   │   ├── ui/            공통 UI 프리미티브
+│   │   ├── result/        결과 카드 (5종)
+│   │   └── senior/        시니어 모드 전용 (SeniorBottomBar)
 │   └── context/
 │       ├── AdminContext.tsx
 │       └── SeniorContext.tsx
@@ -76,7 +76,7 @@ npm run dev               # → http://localhost:5173
 │   ├── api.ts            API 클라이언트
 │   ├── env.ts            환경변수
 │   ├── smsAnalysis.ts    클라이언트 사이드 분석 (Mock, API 마이그레이션 예정)
-│   ├── ErrorState.tsx    공통 에러 UI
+│   ├── imageFiles.ts     이미지 업로드 유틸 (테스트 포함)
 │   └── mock/             VITE_USE_MOCK=true일 때 응답
 │
 ├── types/
@@ -99,9 +99,9 @@ npm run dev               # → http://localhost:5173
 | API 호출 함수 | `src/lib/api.ts` |
 | API 타입/스키마 | `src/types/api.ts` |
 | 환경변수 | `src/lib/env.ts` + `.env` |
-| 공통 UI (버튼/카드 등) | `src/app/components/ui/` |
+| 공통 UI (버튼/카드 등) | `src/app/components/ui/Primitives.tsx` |
 | 결과 카드 | `src/app/components/result/` |
-| 에러 UI | `src/lib/ErrorState.tsx` |
+| 에러 UI | `src/app/components/ErrorState.tsx` |
 
 ---
 
@@ -215,7 +215,7 @@ const result = await api.myEndpoint({ foo: 'hello' });
 | 다크모드 깨짐 | `dark:` prefix 누락, `tailwind.config` 의 darkMode 확인 |
 | 시니어 모드 안 켜짐 | `localStorage["nb:senior"]` 확인 (true/false 문자열) |
 | 어드민 GNB 안 보임 | `localStorage["nb_admin_auth"]` 확인 (로그인: "true") |
-| 분석 실패 화면 | `src/lib/ErrorState.tsx` 4종 (network/timeout/server/unknown) |
+| 분석 실패 화면 | `src/app/components/ErrorState.tsx` 4종 (network/timeout/server/unknown) |
 | 느린 로딩 시뮬레이션 | `/analyze/progress?text=테스트&slow=8000` |
 | 실패 시뮬레이션 | `/analyze/progress?text=테스트&fail=network|timeout|server` |
 
@@ -232,7 +232,7 @@ const result = await api.myEndpoint({ foo: 'hello' });
 - [ ] 다크모드 / 시니어 큰글씨 모드 깨지지 않음
 - [ ] 모바일 (375px / 360px 폭) 깨지지 않음
 - [ ] 4해상도 시각 검증 (Playwright) — 1920x1080 / 1366x768 / 390x844 / 360x800
-- [ ] ErrorState 4종 (network/timeout/server/unknown) 정상
+- [ ] ErrorState 4종 (network/timeout/server/unknown) 정상 (`src/app/components/ErrorState.tsx`)
 - [ ] localStorage 손상 시 fallback 작동
 
 ---
@@ -248,21 +248,19 @@ const result = await api.myEndpoint({ foo: 'hello' });
 
 인증 후 `localStorage["nb_admin_auth"] = "true"` 저장. 로그아웃 또는 `isAdmin` 컨텍스트의 `logout()` 함수로 해제.
 
-운영 도구 (24개 라우트 중 GNB 노출 6개):
-- **모델 성능** (`/admin`) — AdminPanel
+운영 도구 (4개 라우트, GNB 노출 3개 — 모두 `import.meta.env.DEV` 가드로 DEV 빌드에서만 활성화):
+- **어드민 로그인** (`/admin`) — AdminLogin. 로그인 후 대시보드로 자동 이동
 - **대시보드** (`/dashboard`) — Recharts 차트, 신고/피드백 카드
-- **패턴 DB** (`/patterns`) — 피싱 패턴 라이브러리
-- **보안 감사** (`/audit`) — AuditLog + 신고 검토
-- **피드백 분석** (`/feedback`) — AdminFeedback
-- **설정** (`/settings`) — 환경 설정
+- **비교 분석** (`/compare`) — CompareAnalysis (다중 분석 결과 비교)
+- **헬스 체크** (`/health`) — SystemHealth (서버·API 상태 모니터링)
 
-나머지 18개 (simulator, live-feed, export, attention, bulk, compare, benchmark, dataset, model, zero-day, api, error-analysis, redteam, ab-test, feature-importance, ioc, health 등) 라우트는 등록되어 있으나 GNB에 노출 안 됨. **운영 시 `import.meta.env.DEV` 가드** (`routes.admin.tsx` 참고).
+GNB 노출: 대시보드 / 비교 분석 / 헬스 체크 (3개). 어드민 로그아웃 시 GNB에서 자동 숨김 처리.
 
 ## 시니어 모드
 
 `nb:senior` localStorage 키로 토글. 시니어 모드 ON일 때:
 - html에 `.senior-mode` 클래스 자동 부여
-- GNB 4→6개 메뉴 (홈/문자/링크/사진/전화번호/신고/도움)
+- GNB 6개 메뉴 (홈/문자 검사/링크 검사/사진 검사/신고/도움말)
 - SeniorHome 진입 페이지 노출 (5개 메인 버튼 + 112/1332/118 긴급연락처)
 - 어드민 라우트 자동 제외 (시니어 UX 우선)
 - 다크 테마 강제 (SeniorHome/SeniorAnalyzer 다크 전용 디자인)

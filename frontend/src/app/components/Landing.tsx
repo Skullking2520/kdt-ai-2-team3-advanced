@@ -2,9 +2,10 @@ import { useNavigate } from "react-router";
 import { motion } from "motion/react";
 import {
   MessageSquareWarning, Link2, ImageIcon, Flag,
-  ShieldCheck, ArrowRight, AlertTriangle,
-  Package, Building2, Heart, CreditCard, ChevronRight,
+  ShieldCheck, ArrowRight, ChevronRight,
+  Accessibility,
 } from "lucide-react";
+import { useSenior } from "../context/SeniorContext";
 
 const QUICK_ACTIONS = [
   {
@@ -45,45 +46,14 @@ const QUICK_ACTIONS = [
   },
 ];
 
-const PHISHING_TYPES = [
-  {
-    icon: Package,
-    label: "택배 사칭",
-    example: "주소불명 반송 예정, 배송비 결제 요구",
-    level: "급증",
-    levelColor: "text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20",
-  },
-  {
-    icon: Building2,
-    label: "공공기관 사칭",
-    example: "건강보험, 국세청, 경찰 사칭 미납금 요구",
-    level: "주의",
-    levelColor: "text-orange-600 dark:text-orange-400 bg-orange-50 dark:bg-orange-900/20",
-  },
-  {
-    icon: Heart,
-    label: "청첩장 사칭",
-    example: "지인 결혼 안내 링크로 악성 앱 설치 유도",
-    level: "신종",
-    levelColor: "text-violet-600 dark:text-violet-400 bg-violet-50 dark:bg-violet-900/20",
-  },
-  {
-    icon: CreditCard,
-    label: "카드사 사칭",
-    example: "해외 결제 이상 감지, 본인 확인 링크 유도",
-    level: "증가",
-    levelColor: "text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/20",
-  },
-];
-
-const RECENT_WARNINGS = [
-  { text: "CJ대한통운 사칭 스미싱 주의보", time: "2시간 전", level: "긴급" },
-  { text: "건강보험공단 사칭 피싱 신고 급증", time: "5시간 전", level: "경고" },
-  { text: "청첩장 위장 악성 링크 주의", time: "1일 전", level: "주의" },
-];
-
 export function Landing() {
   const navigate = useNavigate();
+  const { setSenior } = useSenior();
+
+  const enterSeniorMode = () => {
+    setSenior(true);
+    navigate("/senior-home");
+  };
 
   return (
     <div>
@@ -112,6 +82,14 @@ export function Landing() {
                 <MessageSquareWarning size={16} style={{ color: "white" }} />
                 문자 검사 시작
                 <ArrowRight size={14} style={{ color: "white" }} />
+              </button>
+              <button
+                onClick={enterSeniorMode}
+                className="flex items-center justify-center gap-2 px-6 py-3 rounded-xl text-gray-700 dark:text-white/70 text-sm bg-gray-100 dark:bg-white/8 hover:bg-gray-200 dark:hover:bg-white/12 transition-all cursor-pointer"
+                style={{ fontWeight: 500 }}
+              >
+                <Accessibility size={16} />
+                어르신 예방 가이드
               </button>
               <button
                 onClick={() => navigate("/guide")}
@@ -153,69 +131,8 @@ export function Landing() {
 
       <div className="border-t border-gray-100 dark:border-white/8" />
 
-      {/* Phishing types + Recent warnings */}
-      <section className="max-w-4xl mx-auto px-4 sm:px-6 py-10">
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-          <div>
-            <p className="text-xs font-semibold text-gray-400 dark:text-white/40 mb-4 uppercase tracking-widest">최근 많이 발견되는 유형</p>
-            <div className="space-y-2">
-              {PHISHING_TYPES.map(({ icon: Icon, label, example, level, levelColor }, i) => (
-                <motion.div
-                  key={label}
-                  initial={{ opacity: 0, x: -8 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: i * 0.08 }}
-                  className="flex items-start gap-3 p-4 bg-white dark:bg-[#111c30] border border-gray-100 dark:border-white/8 rounded-xl hover:border-gray-200 dark:hover:border-white/15 transition-all"
-                >
-                  <div className="w-9 h-9 rounded-lg bg-gray-50 dark:bg-white/5 flex items-center justify-center shrink-0">
-                    <Icon size={16} className="text-gray-500 dark:text-white/50" />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-0.5">
-                      <span className="text-sm text-gray-900 dark:text-white" style={{ fontWeight: 600 }}>{label}</span>
-                      <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium ${levelColor}`}>{level}</span>
-                    </div>
-                    <p className="text-xs text-gray-500 dark:text-white/40">{example}</p>
-                  </div>
-                </motion.div>
-              ))}
-            </div>
-          </div>
-
-          <div>
-            <p className="text-xs font-semibold text-gray-400 dark:text-white/40 mb-4 uppercase tracking-widest">최신 보안 경보</p>
-            <div className="space-y-2 mb-4">
-              {RECENT_WARNINGS.map(({ text, time, level }, i) => (
-                <motion.div
-                  key={text}
-                  initial={{ opacity: 0, x: 8 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: i * 0.08 }}
-                  className="flex items-start gap-3 p-4 bg-white dark:bg-[#111c30] border border-gray-100 dark:border-white/8 rounded-xl"
-                >
-                  <AlertTriangle size={14} className="text-orange-500 dark:text-orange-400 shrink-0 mt-0.5" />
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm text-gray-800 dark:text-white/80 leading-snug">{text}</p>
-                    <div className="flex items-center gap-2 mt-1">
-                      <span className="text-[10px] text-gray-400 dark:text-white/40">{time}</span>
-                      <span className="text-[10px] px-1.5 py-0.5 rounded bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 font-medium">{level}</span>
-                    </div>
-                  </div>
-                </motion.div>
-              ))}
-            </div>
-            <button
-              onClick={() => navigate("/cases")}
-              className="w-full py-2.5 rounded-xl border border-gray-200 dark:border-white/10 text-sm text-gray-500 dark:text-white/40 hover:bg-gray-50 dark:hover:bg-white/5 transition-all flex items-center justify-center gap-1"
-            >
-              전체 피해 사례 보기
-              <ChevronRight size={13} />
-            </button>
-          </div>
-        </div>
-      </section>
-
-      <div className="border-t border-gray-100 dark:border-white/8" />
+      {/* (삭제됨) "최근 많이 발견되는 유형" 4-카드 — 가짜 빈도 데이터 (택배/공공기관/청첩장/카드사 사칭) */}
+      {/* (삭제됨) "최신 보안 경보" KISA·경찰청 amber 정직 배너 — 정부기관 RSS 미연동 안내 */}
     </div>
   );
 }

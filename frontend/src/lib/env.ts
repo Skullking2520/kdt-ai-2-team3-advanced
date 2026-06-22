@@ -38,5 +38,3 @@ export const env = {
   /** 디버그 로그 출력 */
   DEBUG: bool(envRaw.VITE_DEBUG, false),
 } as const;
-
-export type Env = typeof env;

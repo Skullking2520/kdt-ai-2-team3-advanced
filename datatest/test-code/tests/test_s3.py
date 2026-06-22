@@ -14,7 +14,7 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-BUCKET = os.getenv("S3_BUCKET", "smishing-dev-newbies-2026")
+BUCKET = os.getenv("S3_BUCKET", "smishing-s3-bucket")
 REGION = os.getenv("AWS_DEFAULT_REGION", "ap-northeast-2")
 
 
