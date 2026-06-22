@@ -403,8 +403,8 @@ async def extract_text_from_image(data_uri: str) -> str:
     """
     image_bytes, mime_type, ext = _parse_data_uri(data_uri)
 
-    # CLOVA 설정이 있으면 PaddleOCR 없이 CLOVA만 호출
-    if settings.CLOVA_OCR_URL and settings.CLOVA_OCR_SECRET:
+    # CLOVA 전용 모드: PaddleOCR 없이 CLOVA만 호출
+    if settings.USE_CLOVA_ONLY and settings.CLOVA_OCR_URL and settings.CLOVA_OCR_SECRET:
         logger.info("[OCR] CLOVA 전용 모드")
         try:
             clova_text = _run_clova_ocr(image_bytes, mime_type, ext)

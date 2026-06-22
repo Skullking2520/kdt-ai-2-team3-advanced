@@ -38,6 +38,7 @@ class Settings(BaseSettings):
 
     USE_MOCK_MODEL: bool = Field(default=False)
     USE_MOCK_OCR: bool = Field(default=False)
+    USE_CLOVA_ONLY: bool = Field(default=False)
     MODEL_VERSION: str = Field(default="unknown")
 
     # CLOVA OCR 설정 (USE_MOCK_OCR=False 시 필요)
