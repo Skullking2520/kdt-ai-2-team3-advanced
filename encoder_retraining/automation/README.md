@@ -149,6 +149,12 @@ s3://smishing-s3-bucket/encoder_retraining/encoder-v4/
 prefix 방식은 `cleaned_train.jsonl`, `valid.jsonl`, `test.jsonl`, `manifest.json`을
 포함해야 하며, workflow가 해당 파일을 prepared dataset 디렉터리로 재귀 복사한다.
 
+수동 실행 화면에서는 `Dataset source for manual runs`를 명시적으로 선택한다.
+
+- `prepared_dataset`: `ENCODER_CLEANLAB_AUDIT_URL` Secret이 있어도 무시하고 prepared dataset URL만 사용한다.
+- `cleanlab_audit`: Cleanlab audit 결과를 내려받아 prepared dataset을 새로 생성한다.
+- schedule 실행: 기존 자동 실행 호환성을 위해 `cleanlab_audit` 경로를 사용한다.
+
 ```text
 s3://<bucket>/<path>/encoder-v4.tar.gz
 ```

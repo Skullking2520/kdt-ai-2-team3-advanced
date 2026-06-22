@@ -15,6 +15,14 @@ on:
         description: "Optional S3 prefix or tar.gz URL containing Cleanlab audit artifacts"
         required: false
         default: ""
+      data_source:
+        description: "Dataset source for manual runs"
+        required: true
+        type: choice
+        options:
+          - prepared_dataset
+          - cleanlab_audit
+        default: prepared_dataset
       dry_run:
         description: "Skip actual training and model comparison"
         required: true
@@ -166,7 +174,11 @@ jobs:
           JSON
 
       - name: Download Cleanlab audit and build prepared dataset
-        if: ${{ github.event.inputs.use_smoke_dataset != 'true' && env.CLEANLAB_AUDIT_URL != '' }}
+        if: >-
+          ${{
+            github.event.inputs.use_smoke_dataset != 'true' &&
+            (github.event_name == 'schedule' || github.event.inputs.data_source == 'cleanlab_audit')
+          }}
         run: |
           set -euo pipefail
           dataset_dir="encoder_retraining/data/prepared/${DATASET_VERSION}"
@@ -240,7 +252,12 @@ jobs:
             --overwrite
 
       - name: Download prepared dataset
-        if: ${{ github.event.inputs.use_smoke_dataset != 'true' && env.CLEANLAB_AUDIT_URL == '' }}
+        if: >-
+          ${{
+            github.event.inputs.use_smoke_dataset != 'true' &&
+            github.event_name != 'schedule' &&
+            github.event.inputs.data_source == 'prepared_dataset'
+          }}
         run: |
           set -euo pipefail
           if [ -z "${PREPARED_DATASET_URL}" ]; then
