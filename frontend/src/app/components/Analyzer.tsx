@@ -509,13 +509,13 @@ export function Analyzer() {
           </motion.div>
         )}
 
-        {/* 정직한 데이터 처리 안내 — 검사 결과 박스 하단 */}
+        {/* 정직한 데이터 처리 안내 — 검사 결과 박스 하단 (쉬운 말) */}
         <div className="mt-6 flex items-start gap-2 px-3 py-2.5 rounded-lg bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10">
           <ShieldCheck size={13} className="text-gray-400 dark:text-white/40 shrink-0 mt-0.5" />
           <p className="text-[11px] text-gray-500 dark:text-white/50 leading-relaxed">
-            입력하신 메시지 내용은 <strong className="text-gray-700 dark:text-white/70">전화번호·URL·이름·계좌번호 등 개인정보가 전부 마스킹</strong>된 채로
-            {" "}<strong className="text-gray-700 dark:text-white/70">AI 모델 학습 데이터</strong>로만 저장·활용됩니다.
-            원문은 저장되지 않으며, 마스킹·저장·학습 파이프라인은 백엔드 운영팀 승인 후 활성화됩니다.
+            걱정 마세요! 검사한 문자의 <strong className="text-gray-700 dark:text-white/70">개인정보(전화번호·이름·계좌번호 등)는 자동으로 가려져서</strong>
+            {" "}(예: 010-****-1234) <strong className="text-gray-700 dark:text-white/70">AI 학습 데이터</strong>로만 저장됩니다.
+            원래 문장은 저장하지 않으며, 이 기능은 관리팀이 승인한 뒤에야 켜져요.
           </p>
         </div>
       </AnimatePresence>

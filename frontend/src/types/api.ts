@@ -129,6 +129,28 @@ export interface UrlDetails {
   // 정직 처리: VirusTotal 정보는 우리 백엔드가 VT API를 직접 호출해서 받은 결과만 표시.
   // mock에서 88/88 vendor 풀-리스트를 만들면 거짓. 백엔드 VT API 연동 시 자동 채워짐.
   vtVerdict?: VtVerdict;
+  // URL 메타 정보 (HTTP 상태/콘텐츠 타입/서버/IP/ASN/등록일 등) — 백엔드 분석 시 자동 채워짐
+  metaDetails?: UrlMetaDetails;
+}
+
+// URL 메타 정보 (백엔드 분석 시 자동 적재)
+export interface UrlMetaDetails {
+  httpStatus: number;               // 200, 301, 404 등
+  contentType: string;              // "text/html; charset=UTF-8"
+  contentLength: number;            // bytes
+  server: string;                   // "nginx/1.25.3"
+  serverLocation: string;           // "Seoul, KR"
+  ip: string;                       // "175.221.43.127"
+  asn: string;                      // "AS4766 Korea Telecom"
+  registeredDate: string;           // "2024.08.15"
+  expiryDate: string;               // "2025.08.15"
+  registrar: string;                // "Gabia, Inc."
+  lastAnalysis: string;             // "방금 전"
+  firstSubmission: string;          // "2024.08.20"
+  lastFinalUrl: string;             // 리다이렉트 최종 URL
+  category: string;                 // "phishing" | "malware" | "benign" | "unknown"
+  tags: string[];                   // ["suspicious", "phishing", "korea-targeting"]
+  whoisEmail: string;               // "admin@gabia.com"
 }
 
 // VirusTotal verdict (백엔드 VT API 연동 시 채워짐 — 정직 처리)

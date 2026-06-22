@@ -131,6 +131,11 @@ export function ImageAnalyzer() {
         {!preview ? (
           <label
             htmlFor="file-input-image"
+            onClick={(e) => {
+              // 일부 브라우저에서 label-for 패턴이 작동하지 않을 때를 대비한 명시적 click
+              e.preventDefault();
+              fileRef.current?.click();
+            }}
             onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
             onDragLeave={() => setDragOver(false)}
             onDrop={handleDrop}

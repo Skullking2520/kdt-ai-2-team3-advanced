@@ -1,6 +1,6 @@
 import {useState} from "react";
 import {motion, AnimatePresence} from "motion/react";
-import {Link2, Search, AlertTriangle, CheckCircle, Shield, RefreshCw, ExternalLink, Clock, Lock, Globe} from "lucide-react";
+import {Link2, Search, AlertTriangle, CheckCircle, Shield, RefreshCw, ExternalLink, Clock, Lock, Globe, FileText, Server, Tag, Calendar} from "lucide-react";
 import {Card} from "./ui/Primitives";
 import {api, ApiException} from "@/lib/api";
 import type { UrlAnalysisResult } from "@/types/api";
@@ -17,12 +17,31 @@ interface URLResult {
   ipCountry: string;
   similarDomains: string[];
   flags: { type: string; desc: string; severity: "high" | "medium" | "low" }[];
+  details: {
+    httpStatus: number;
+    contentType: string;
+    contentLength: number;
+    server: string;
+    serverLocation: string;
+    ip: string;
+    asn: string;
+    registeredDate: string;
+    expiryDate: string;
+    registrar: string;
+    lastAnalysis: string;
+    firstSubmission: string;
+    lastFinalUrl: string;
+    category: string;
+    tags: string[];
+    whoisEmail: string;
+  };
 }
 
 /** api.analyze() UrlAnalysisResult → 컴포넌트 내부 URLResult 어댑터 */
 function adaptUrlResult(r: UrlAnalysisResult): URLResult {
   const upper = (s: "high" | "medium" | "low") =>
     s.toUpperCase() as "HIGH" | "MEDIUM" | "LOW";
+  const md = r.urlDetails.metaDetails;
   return {
     url: r.content,
     domain: r.urlDetails.domain,
@@ -34,6 +53,24 @@ function adaptUrlResult(r: UrlAnalysisResult): URLResult {
     ipCountry: r.urlDetails.ipCountry,
     similarDomains: r.urlDetails.similarDomains,
     flags: r.urlDetails.flags,
+    details: md ?? {
+      httpStatus: 200,
+      contentType: "text/html; charset=UTF-8",
+      contentLength: 0,
+      server: "Unknown",
+      serverLocation: "Unknown",
+      ip: "Unknown",
+      asn: "Unknown",
+      registeredDate: "Unknown",
+      expiryDate: "Unknown",
+      registrar: "Unknown",
+      lastAnalysis: "방금 전",
+      firstSubmission: "Unknown",
+      lastFinalUrl: r.content,
+      category: "unknown",
+      tags: [],
+      whoisEmail: "Unknown",
+    },
   };
 }
 
@@ -56,6 +93,7 @@ export function URLAnalyzer() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [errorType, setErrorType] = useState<ErrorType>("unknown");
+  const [tab, setTab] = useState<"detection" | "details">("detection");
 
   const handleAnalyze = async (val?: string) => {
     const target = val ?? input;
@@ -122,7 +160,7 @@ export function URLAnalyzer() {
         <div className="flex flex-wrap gap-1.5 mt-2.5 pt-2.5 border-t border-white/5">
           <p className="text-[10px] text-white/25">샘플:</p>
           {SAMPLE_URLS.map((u) => (
-            <button key={u} onClick={() => { setInput(u); handleAnalyze(u); }}
+            <button key={u} onClick={() => { setInput(u); }}
               className="text-[10px] px-2 py-0.5 rounded bg-white/5 border border-white/10 text-white/70 hover:text-blue-400 hover:border-blue-500/30 transition-all font-mono truncate max-w-[180px]">
               {u}
             </button>
@@ -162,85 +200,220 @@ export function URLAnalyzer() {
               </div>
             </div>
 
-            {/* Detail cards */}
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-              {[
-                { label: "도메인 나이", value: `${result.domainAge}일`, icon: Clock, warn: result.domainAge < 60 },
-                { label: "SSL 인증서", value: result.ssl.valid ? "유효" : "무효", icon: Lock, warn: !result.ssl.valid },
-                { label: "서버 국가", value: result.ipCountry, icon: Globe, warn: result.ipCountry !== "KR" },
-                { label: "리다이렉션", value: `${result.redirects.length}회`, icon: RefreshCw, warn: result.redirects.length > 0 },
-              ].map((c) => (
-                <div key={c.label} className={`rounded-2xl border p-3 text-center ${c.warn ? "bg-red-500/8 border-red-500/20" : "bg-white/3 border-white/8"}`}>
-                  <c.icon size={13} className={`mx-auto mb-1 ${c.warn ? "text-red-400" : "text-white/60"}`} />
-                  <p className="text-[10px] text-white/60">{c.label}</p>
-                  <p className={`text-xs mt-0.5 ${c.warn ? "text-red-400" : "text-white/60"}`} style={{ fontWeight: 500 }}>{c.value}</p>
-                </div>
+            {/* Tabs: 발각 / 세부 (VirusTotal 스타일) */}
+            <div className="flex items-center gap-1 border-b border-white/10">
+              {([
+                { id: "detection", label: "발각", icon: Shield },
+                { id: "details", label: "세부", icon: FileText },
+              ] as const).map((t) => (
+                <button
+                  key={t.id}
+                  onClick={() => setTab(t.id)}
+                  className={`flex items-center gap-1.5 px-4 py-2 text-xs transition-all border-b-2 -mb-px ${
+                    tab === t.id
+                      ? "border-blue-400 text-blue-400"
+                      : "border-transparent text-white/50 hover:text-white/70"
+                  }`}
+                  style={{ fontWeight: tab === t.id ? 600 : 500 }}
+                >
+                  <t.icon size={12} />
+                  {t.label}
+                </button>
               ))}
             </div>
 
-            {/* SSL detail */}
-            <Card padding="p-4">
-              <p className="text-xs text-white/80 mb-2 flex items-center gap-1"><Lock size={10} /> SSL 인증서 상세</p>
-              <div className="grid grid-cols-2 gap-2">
-                {[
-                  { k: "발급 기관", v: result.ssl.issuer },
-                  { k: "만료일", v: result.ssl.expiry },
-                  { k: "유효 여부", v: result.ssl.valid ? "유효" : "무효/만료" },
-                  { k: "HTTPS", v: result.url.startsWith("https") ? "사용" : "미사용" },
-                ].map((s) => (
-                  <div key={s.k} className="bg-white/3 rounded-lg p-2">
-                    <p className="text-[10px] text-white/60">{s.k}</p>
-                    <p className="text-xs text-white/60 mt-0.5">{s.v}</p>
+            <AnimatePresence mode="wait">
+              {tab === "detection" ? (
+                <motion.div
+                  key="detection"
+                  initial={{ opacity: 0, y: 4 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -4 }}
+                  transition={{ duration: 0.15 }}
+                  className="space-y-4"
+                >
+                  {/* Detail cards */}
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                    {[
+                      { label: "도메인 나이", value: `${result.domainAge}일`, icon: Clock, warn: result.domainAge < 60 },
+                      { label: "SSL 인증서", value: result.ssl.valid ? "유효" : "무효", icon: Lock, warn: !result.ssl.valid },
+                      { label: "서버 국가", value: result.ipCountry, icon: Globe, warn: result.ipCountry !== "KR" },
+                      { label: "리다이렉션", value: `${result.redirects.length}회`, icon: RefreshCw, warn: result.redirects.length > 0 },
+                    ].map((c) => (
+                      <div key={c.label} className={`rounded-2xl border p-3 text-center ${c.warn ? "bg-red-500/8 border-red-500/20" : "bg-white/3 border-white/8"}`}>
+                        <c.icon size={13} className={`mx-auto mb-1 ${c.warn ? "text-red-400" : "text-white/60"}`} />
+                        <p className="text-[10px] text-white/60">{c.label}</p>
+                        <p className={`text-xs mt-0.5 ${c.warn ? "text-red-400" : "text-white/60"}`} style={{ fontWeight: 500 }}>{c.value}</p>
+                      </div>
+                    ))}
                   </div>
-                ))}
-              </div>
-            </Card>
 
-            {/* Redirects */}
-            {result.redirects.length > 0 && (
-              <Card padding="p-4">
-                <p className="text-xs text-white/80 mb-2">리다이렉션 체인</p>
-                <div className="space-y-1.5">
-                  {result.redirects.map((r, i) => (
-                    <div key={i} className="flex items-center gap-2">
-                      <span className="text-[10px] px-1.5 py-0.5 rounded bg-amber-500/15 text-amber-400 border border-amber-500/25">{r.status}</span>
-                      <span className="text-xs text-white/80 font-mono truncate">{r.url}</span>
+                  {/* SSL detail */}
+                  <Card padding="p-4">
+                    <p className="text-xs text-white/80 mb-2 flex items-center gap-1"><Lock size={10} /> SSL 인증서 상세</p>
+                    <div className="grid grid-cols-2 gap-2">
+                      {[
+                        { k: "발급 기관", v: result.ssl.issuer },
+                        { k: "만료일", v: result.ssl.expiry },
+                        { k: "유효 여부", v: result.ssl.valid ? "유효" : "무효/만료" },
+                        { k: "HTTPS", v: result.url.startsWith("https") ? "사용" : "미사용" },
+                      ].map((s) => (
+                        <div key={s.k} className="bg-white/3 rounded-lg p-2">
+                          <p className="text-[10px] text-white/60">{s.k}</p>
+                          <p className="text-xs text-white/60 mt-0.5">{s.v}</p>
+                        </div>
+                      ))}
                     </div>
-                  ))}
-                </div>
-              </Card>
-            )}
+                  </Card>
 
-            {/* Similar domains */}
-            {result.similarDomains.length > 0 && (
-              <Card padding="p-4">
-                <p className="text-xs text-white/80 mb-2 flex items-center gap-1"><ExternalLink size={10} /> 공식 도메인 (참고)</p>
-                <div className="flex flex-wrap gap-2">
-                  {result.similarDomains.map((d) => (
-                    <span key={d} className="text-xs px-2 py-1 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 font-mono">{d}</span>
-                  ))}
-                </div>
-              </Card>
-            )}
+                  {/* Redirects */}
+                  {result.redirects.length > 0 && (
+                    <Card padding="p-4">
+                      <p className="text-xs text-white/80 mb-2">리다이렉션 체인</p>
+                      <div className="space-y-1.5">
+                        {result.redirects.map((r, i) => (
+                          <div key={i} className="flex items-center gap-2">
+                            <span className="text-[10px] px-1.5 py-0.5 rounded bg-amber-500/15 text-amber-400 border border-amber-500/25">{r.status}</span>
+                            <span className="text-xs text-white/80 font-mono truncate">{r.url}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </Card>
+                  )}
 
-            {/* Flags */}
-            <Card padding="p-4">
-              <p className="text-xs text-white/80 mb-3 flex items-center gap-1"><Shield size={10} /> 위험 징후</p>
-              <div className="space-y-2">
-                {result.flags.map((f, i) => (
-                  <div key={i} className={`flex items-start gap-2 p-2.5 rounded-xl border ${
-                    f.severity === "high" ? "bg-red-500/8 border-red-500/20" : f.severity === "medium" ? "bg-amber-500/8 border-amber-500/20" : "bg-emerald-500/8 border-emerald-500/20"
-                  }`}>
-                    <span className={`text-[10px] px-1.5 py-0.5 rounded border shrink-0 ${
-                      f.severity === "high" ? "bg-red-500/20 border-red-500/30 text-red-400" : f.severity === "medium" ? "bg-amber-500/20 border-amber-500/30 text-amber-400" : "bg-emerald-500/20 border-emerald-500/30 text-emerald-400"
-                    }`}>{f.type}</span>
-                    <p className="text-[11px] text-white/80 leading-relaxed">{f.desc}</p>
-                  </div>
-                ))}
-              </div>
-            </Card>
+                  {/* Similar domains */}
+                  {result.similarDomains.length > 0 && (
+                    <Card padding="p-4">
+                      <p className="text-xs text-white/80 mb-2 flex items-center gap-1"><ExternalLink size={10} /> 공식 도메인 (참고)</p>
+                      <div className="flex flex-wrap gap-2">
+                        {result.similarDomains.map((d) => (
+                          <span key={d} className="text-xs px-2 py-1 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 font-mono">{d}</span>
+                        ))}
+                      </div>
+                    </Card>
+                  )}
 
-            <button onClick={() => { setResult(null); setInput(""); }}
+                  {/* Flags */}
+                  <Card padding="p-4">
+                    <p className="text-xs text-white/80 mb-3 flex items-center gap-1"><Shield size={10} /> 위험 징후</p>
+                    <div className="space-y-2">
+                      {result.flags.map((f, i) => (
+                        <div key={i} className={`flex items-start gap-2 p-2.5 rounded-xl border ${
+                          f.severity === "high" ? "bg-red-500/8 border-red-500/20" : f.severity === "medium" ? "bg-amber-500/8 border-amber-500/20" : "bg-emerald-500/8 border-emerald-500/20"
+                        }`}>
+                          <span className={`text-[10px] px-1.5 py-0.5 rounded border shrink-0 ${
+                            f.severity === "high" ? "bg-red-500/20 border-red-500/30 text-red-400" : f.severity === "medium" ? "bg-amber-500/20 border-amber-500/30 text-amber-400" : "bg-emerald-500/20 border-emerald-500/30 text-emerald-400"
+                          }`}>{f.type}</span>
+                          <p className="text-[11px] text-white/80 leading-relaxed">{f.desc}</p>
+                        </div>
+                      ))}
+                    </div>
+                  </Card>
+                </motion.div>
+              ) : (
+                <motion.div
+                  key="details"
+                  initial={{ opacity: 0, y: 4 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -4 }}
+                  transition={{ duration: 0.15 }}
+                  className="space-y-4"
+                >
+                  {/* 카테고리 + 태그 */}
+                  <Card padding="p-4">
+                    <p className="text-xs text-white/80 mb-3 flex items-center gap-1"><Tag size={10} /> 카테고리 및 태그</p>
+                    <div className="flex items-center gap-2 mb-3">
+                      <span className={`text-[10px] px-2 py-0.5 rounded border ${
+                        result.details.category === "phishing"
+                          ? "bg-red-500/15 border-red-500/30 text-red-400"
+                          : result.details.category === "benign"
+                          ? "bg-emerald-500/15 border-emerald-500/30 text-emerald-400"
+                          : "bg-white/5 border-white/10 text-white/60"
+                      }`} style={{ fontWeight: 600 }}>{result.details.category.toUpperCase()}</span>
+                    </div>
+                    <div className="flex flex-wrap gap-1.5">
+                      {result.details.tags.map((t) => (
+                        <span key={t} className="text-[10px] px-2 py-0.5 rounded bg-white/5 border border-white/10 text-white/60 font-mono">{t}</span>
+                      ))}
+                    </div>
+                  </Card>
+
+                  {/* HTTP 메타 */}
+                  <Card padding="p-4">
+                    <p className="text-xs text-white/80 mb-3 flex items-center gap-1"><Server size={10} /> HTTP 응답</p>
+                    <div className="grid grid-cols-2 gap-2">
+                      {[
+                        { k: "HTTP 상태", v: `${result.details.httpStatus} ${result.details.httpStatus === 200 ? "OK" : ""}` },
+                        { k: "콘텐츠 타입", v: result.details.contentType },
+                        { k: "콘텐츠 길이", v: `${(result.details.contentLength / 1024).toFixed(1)} KB` },
+                        { k: "서버", v: result.details.server },
+                      ].map((s) => (
+                        <div key={s.k} className="bg-white/3 rounded-lg p-2">
+                          <p className="text-[10px] text-white/60">{s.k}</p>
+                          <p className="text-xs text-white/80 mt-0.5 font-mono break-all">{s.v}</p>
+                        </div>
+                      ))}
+                    </div>
+                  </Card>
+
+                  {/* 서버 위치 */}
+                  <Card padding="p-4">
+                    <p className="text-xs text-white/80 mb-3 flex items-center gap-1"><Globe size={10} /> 서버 위치</p>
+                    <div className="grid grid-cols-2 gap-2">
+                      {[
+                        { k: "IP 주소", v: result.details.ip },
+                        { k: "ASN", v: result.details.asn },
+                        { k: "위치", v: result.details.serverLocation },
+                        { k: "최종 URL", v: result.details.lastFinalUrl },
+                      ].map((s) => (
+                        <div key={s.k} className="bg-white/3 rounded-lg p-2">
+                          <p className="text-[10px] text-white/60">{s.k}</p>
+                          <p className="text-xs text-white/80 mt-0.5 font-mono break-all">{s.v}</p>
+                        </div>
+                      ))}
+                    </div>
+                  </Card>
+
+                  {/* WHOIS / 등록 정보 */}
+                  <Card padding="p-4">
+                    <p className="text-xs text-white/80 mb-3 flex items-center gap-1"><Calendar size={10} /> WHOIS 등록 정보</p>
+                    <div className="grid grid-cols-2 gap-2">
+                      {[
+                        { k: "등록일", v: result.details.registeredDate },
+                        { k: "만료일", v: result.details.expiryDate },
+                        { k: "등록 대행", v: result.details.registrar },
+                        { k: "WHOIS 이메일", v: result.details.whoisEmail },
+                      ].map((s) => (
+                        <div key={s.k} className="bg-white/3 rounded-lg p-2">
+                          <p className="text-[10px] text-white/60">{s.k}</p>
+                          <p className="text-xs text-white/80 mt-0.5 font-mono break-all">{s.v}</p>
+                        </div>
+                      ))}
+                    </div>
+                  </Card>
+
+                  {/* 분석 이력 */}
+                  <Card padding="p-4">
+                    <p className="text-xs text-white/80 mb-3 flex items-center gap-1"><Clock size={10} /> 분석 이력</p>
+                    <div className="grid grid-cols-2 gap-2">
+                      {[
+                        { k: "최종 분석", v: result.details.lastAnalysis },
+                        { k: "최초 등록", v: result.details.firstSubmission },
+                        { k: "분석 모델", v: "url-classifier-v1.0" },
+                        { k: "분석 방식", v: "rule + heuristic" },
+                      ].map((s) => (
+                        <div key={s.k} className="bg-white/3 rounded-lg p-2">
+                          <p className="text-[10px] text-white/60">{s.k}</p>
+                          <p className="text-xs text-white/80 mt-0.5">{s.v}</p>
+                        </div>
+                      ))}
+                    </div>
+                  </Card>
+                </motion.div>
+              )}
+            </AnimatePresence>
+
+            <button onClick={() => { setResult(null); setInput(""); setTab("detection"); }}
               className="flex items-center gap-1.5 text-xs text-white/70 hover:text-white/80 transition-all">
               <RefreshCw size={11} /> 새 URL 분석
             </button>
