@@ -11,13 +11,14 @@
  * 각 Admin 페이지는 React.lazy 로 동적 import → 첫 페이지 로드 시
  * prod 번들에서 제외되어 초기 번들 크기 감소.
  *
- * 라우트 정리 (6/19):
- *   - 24개 라우트 → 5개로 축소 (실제 사용 라우트만 유지)
- *   - 유지: dashboard, compare, benchmark, ab-test, health
- *   - 제거 (dead 컴포넌트 16개 + 라우트 19개):
+ * 라우트 정리 (6/19, 6/22):
+ *   - 24개 라우트 → 4개로 축소 (실제 사용 라우트만 유지)
+ *   - 유지: admin (AdminLogin), dashboard, compare, health
+ *   - 제거 (dead 컴포넌트 18개 + 라우트 21개):
  *     simulator, live-feed, export, attention, bulk, patterns,
- *     dataset, model, zero-day, api, settings, admin, error-analysis,
- *     redteam, audit, feature-importance, ioc, feedback
+ *     dataset, model, zero-day, api, settings, error-analysis,
+ *     redteam, audit, feature-importance, ioc, feedback,
+ *     benchmark, ab-test
  */
 import { lazy } from "react";
 import { redirect, type RouteObject } from "react-router";
@@ -33,7 +34,6 @@ const SystemHealth = lazy(() => import("./components/SystemHealth").then((m) => 
  *
  * 라우트 가드: nb_admin_auth(localStorage) 체크 → 권한 없으면 "/" redirect.
  * Dashboard는 자체 LoginGate를 가지므로 별도 가드 없이 진입 가능.
- * /admin은 어드민 로그인 페이지 — 미로그인 사용자도 접근 가능.
  * React Router 7는 Response.redirect 대신 throw redirect(...) 사용.
  */
 const STORAGE_KEY = "nb_admin_auth";
@@ -49,10 +49,10 @@ function adminGuard() {
 }
 
 export const adminRoutes: RouteObject[] = import.meta.env.DEV
-    ? [
+  ? [
       { path: "admin", Component: AdminLogin },
-      { path: "compare", Component: CompareAnalysis, loader: adminGuard },
       { path: "dashboard", Component: Dashboard },
+      { path: "compare", Component: CompareAnalysis, loader: adminGuard },
       { path: "health", Component: SystemHealth, loader: adminGuard },
     ]
   : [];
