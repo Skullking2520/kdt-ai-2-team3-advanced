@@ -337,13 +337,11 @@ export function URLAnalyzer() {
                     </div>
                   )}
 
-                  {/* Detail cards */}
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                  {/* Detail cards (VT 매핑: Whois 도메인 등록일 + IP Information 국가) */}
+                  <div className="grid grid-cols-2 gap-3">
                     {[
                       { label: "도메인 나이", value: `${result.domainAge}일`, icon: Clock, warn: result.domainAge < 60 },
-                      { label: "SSL 인증서", value: result.ssl.valid ? "유효" : "무효", icon: Lock, warn: !result.ssl.valid },
                       { label: "서버 국가", value: result.ipCountry, icon: Globe, warn: result.ipCountry !== "KR" },
-                      { label: "리다이렉션", value: `${result.redirects.length}회`, icon: RefreshCw, warn: result.redirects.length > 0 },
                     ].map((c) => (
                       <div key={c.label} className={`rounded-2xl border p-3 text-center ${c.warn ? "bg-red-500/8 border-red-500/20" : "bg-white/3 border-white/8"}`}>
                         <c.icon size={13} className={`mx-auto mb-1 ${c.warn ? "text-red-400" : "text-white/60"}`} />
@@ -353,52 +351,7 @@ export function URLAnalyzer() {
                     ))}
                   </div>
 
-                  {/* SSL detail */}
-                  <Card padding="p-4">
-                    <p className="text-xs text-white/80 mb-2 flex items-center gap-1"><Lock size={10} /> SSL 인증서 상세</p>
-                    <div className="grid grid-cols-2 gap-2">
-                      {[
-                        { k: "발급 기관", v: result.ssl.issuer },
-                        { k: "만료일", v: result.ssl.expiry },
-                        { k: "유효 여부", v: result.ssl.valid ? "유효" : "무효/만료" },
-                        { k: "HTTPS", v: result.url.startsWith("https") ? "사용" : "미사용" },
-                      ].map((s) => (
-                        <div key={s.k} className="bg-white/3 rounded-lg p-2">
-                          <p className="text-[10px] text-white/60">{s.k}</p>
-                          <p className="text-xs text-white/60 mt-0.5">{s.v}</p>
-                        </div>
-                      ))}
-                    </div>
-                  </Card>
-
-                  {/* Redirects */}
-                  {result.redirects.length > 0 && (
-                    <Card padding="p-4">
-                      <p className="text-xs text-white/80 mb-2">리다이렉션 체인</p>
-                      <div className="space-y-1.5">
-                        {result.redirects.map((r, i) => (
-                          <div key={i} className="flex items-center gap-2">
-                            <span className="text-[10px] px-1.5 py-0.5 rounded bg-amber-500/15 text-amber-400 border border-amber-500/25">{r.status}</span>
-                            <span className="text-xs text-white/80 font-mono truncate">{r.url}</span>
-                          </div>
-                        ))}
-                      </div>
-                    </Card>
-                  )}
-
-                  {/* Similar domains */}
-                  {result.similarDomains.length > 0 && (
-                    <Card padding="p-4">
-                      <p className="text-xs text-white/80 mb-2 flex items-center gap-1"><ExternalLink size={10} /> 공식 도메인 (참고)</p>
-                      <div className="flex flex-wrap gap-2">
-                        {result.similarDomains.map((d) => (
-                          <span key={d} className="text-xs px-2 py-1 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 font-mono">{d}</span>
-                        ))}
-                      </div>
-                    </Card>
-                  )}
-
-                  {/* Flags */}
+                  {/* Flags (사용자 유지 합의 — 한국형 사칭 패턴은 VT가 못 잡는 영역) */}
                   <Card padding="p-4">
                     <p className="text-xs text-white/80 mb-3 flex items-center gap-1"><Shield size={10} /> 위험 징후</p>
                     <div className="space-y-2">
