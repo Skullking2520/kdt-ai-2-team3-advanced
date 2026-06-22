@@ -76,11 +76,10 @@ const PHISHING_TYPES = [
   },
 ];
 
-const RECENT_WARNINGS = [
-  { text: "CJ대한통운 사칭 스미싱 주의보", time: "2시간 전", level: "긴급" },
-  { text: "건강보험공단 사칭 피싱 신고 급증", time: "5시간 전", level: "경고" },
-  { text: "청첩장 위장 악성 링크 주의", time: "1일 전", level: "주의" },
-];
+// 정직한 처리: 정부기관(KISA·경찰청·금감원·과기부) RSS/API는 일반인이 직접 연결할 수 없음.
+// mock에서 가짜 사건·기관 알림을 만들면 정직하지 않음. 빈 배열 + UI에서 '기관 알림 미연동' 안내.
+// 백엔드 운영팀이 KISA 공공데이터·경찰청 사이버범죄 통계 RSS를 연동하면 자동으로 적재됨.
+const RECENT_WARNINGS: { text: string; time: string; level: string }[] = [];
 
 export function Landing() {
   const navigate = useNavigate();
@@ -184,33 +183,54 @@ export function Landing() {
 
           <div>
             <p className="text-xs font-semibold text-gray-400 dark:text-white/40 mb-4 uppercase tracking-widest">최신 보안 경보</p>
-            <div className="space-y-2 mb-4">
-              {RECENT_WARNINGS.map(({ text, time, level }, i) => (
-                <motion.div
-                  key={text}
-                  initial={{ opacity: 0, x: 8 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: i * 0.08 }}
-                  className="flex items-start gap-3 p-4 bg-white dark:bg-[#111c30] border border-gray-100 dark:border-white/8 rounded-xl"
+            {RECENT_WARNINGS.length > 0 ? (
+              <>
+                <div className="space-y-2 mb-4">
+                  {RECENT_WARNINGS.map(({ text, time, level }, i) => (
+                    <motion.div
+                      key={text}
+                      initial={{ opacity: 0, x: 8 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ delay: i * 0.08 }}
+                      className="flex items-start gap-3 p-4 bg-white dark:bg-[#111c30] border border-gray-100 dark:border-white/8 rounded-xl"
+                    >
+                      <AlertTriangle size={14} className="text-orange-500 dark:text-orange-400 shrink-0 mt-0.5" />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm text-gray-800 dark:text-white/80 leading-snug">{text}</p>
+                        <div className="flex items-center gap-2 mt-1">
+                          <span className="text-[10px] text-gray-400 dark:text-white/40">{time}</span>
+                          <span className="text-[10px] px-1.5 py-0.5 rounded bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 font-medium">{level}</span>
+                        </div>
+                      </div>
+                    </motion.div>
+                  ))}
+                </div>
+                <button
+                  onClick={() => navigate("/cases")}
+                  className="w-full py-2.5 rounded-xl border border-gray-200 dark:border-white/10 text-sm text-gray-500 dark:text-white/40 hover:bg-gray-50 dark:hover:bg-white/5 transition-all flex items-center justify-center gap-1"
                 >
-                  <AlertTriangle size={14} className="text-orange-500 dark:text-orange-400 shrink-0 mt-0.5" />
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm text-gray-800 dark:text-white/80 leading-snug">{text}</p>
-                    <div className="flex items-center gap-2 mt-1">
-                      <span className="text-[10px] text-gray-400 dark:text-white/40">{time}</span>
-                      <span className="text-[10px] px-1.5 py-0.5 rounded bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 font-medium">{level}</span>
-                    </div>
+                  전체 피해 사례 보기
+                  <ChevronRight size={13} />
+                </button>
+              </>
+            ) : (
+              <div className="p-4 rounded-xl border border-dashed border-amber-500/40 bg-amber-500/5">
+                <div className="flex items-start gap-3">
+                  <div className="mt-0.5 grid h-6 w-6 place-items-center rounded-full bg-amber-500/15 text-amber-700 text-xs" style={{ fontWeight: 700 }}>
+                    !
                   </div>
-                </motion.div>
-              ))}
-            </div>
-            <button
-              onClick={() => navigate("/cases")}
-              className="w-full py-2.5 rounded-xl border border-gray-200 dark:border-white/10 text-sm text-gray-500 dark:text-white/40 hover:bg-gray-50 dark:hover:bg-white/5 transition-all flex items-center justify-center gap-1"
-            >
-              전체 피해 사례 보기
-              <ChevronRight size={13} />
-            </button>
+                  <div>
+                    <p className="text-sm text-amber-800 dark:text-amber-200" style={{ fontWeight: 600 }}>
+                      최신 보안 경보 (KISA·경찰청 RSS/API 미연동)
+                    </p>
+                    <p className="mt-1 text-xs text-amber-700/80 dark:text-amber-300/80 leading-relaxed">
+                      정부기관(KISA·경찰청·금감원·과기부) RSS/API는 일반인이 직접 연결할 수 없으므로, mock에서 가짜 사건·기관 알림을 만들면 정직하지 않습니다.
+                      백엔드 운영팀이 KISA 공공데이터·경찰청 사이버범죄 통계 RSS를 연동하면 자동으로 적재됩니다.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </section>
