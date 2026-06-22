@@ -13,6 +13,7 @@ class PredictRequest(BaseModel):
     content: str
     sender: Optional[str] = None
     receivedAt: Optional[str] = None
+    imageId: Optional[str] = None
     allowTrainingUse: Optional[bool] = False
 
 
@@ -23,10 +24,16 @@ class DetectionReason(BaseModel):
     matched: bool
 
 
+class ActionGuideContact(BaseModel):
+    name: str
+    number: str
+
+
 class ActionGuideItem(BaseModel):
     priority: ActionPriority
     action: str
     detail: Optional[str] = None
+    contact: Optional[ActionGuideContact] = None
 
 
 class SimilarCase(BaseModel):
@@ -35,12 +42,14 @@ class SimilarCase(BaseModel):
     similarity: int
     year: str
     category: str
+    preview: Optional[str] = None
 
 
-class GovernmentCriterion(BaseModel):
-    id: str
-    label: str
-    matched: bool
+class DamageStep(BaseModel):
+    step: int
+    icon: Literal["message", "click", "site", "info", "damage"]
+    title: str
+    description: str
 
 
 class SslInfo(BaseModel):
@@ -75,13 +84,18 @@ class PredictResponse(BaseModel):
     reasons: List[DetectionReason]
     actionGuide: List[ActionGuideItem]
     similarCases: List[SimilarCase]
-    governmentCriteria: List[GovernmentCriterion]
+    damageScenario: Optional[List[DamageStep]] = None
     modelVersion: str
-    processingTime: int
-    cacheHit: bool
+    processingTime: Optional[int] = None
+    cacheHit: Optional[bool] = None
     createdAt: str
+    senderNumber: Optional[str] = None
     extractedUrl: Optional[str] = None
+    urlAnalysis: Optional[UrlDetails] = None
     urlDetails: Optional[UrlDetails] = None
+    ocrText: Optional[str] = None
+    imageId: Optional[str] = None
+    imageUrl: Optional[str] = None
 
 
 class EncoderClassificationOutput(BaseModel):

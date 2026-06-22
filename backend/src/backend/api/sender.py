@@ -40,8 +40,6 @@ async def lookup_sender(
             "lastReportedAt": pattern.created_at.isoformat() if pattern.created_at else None,
             "categories": [p.description for p in matches if p.description],
             "history": [],
-            "isp": "알 수 없음",
-            "region": "알 수 없음",
         }
 
     return {
@@ -52,6 +50,4 @@ async def lookup_sender(
         "lastReportedAt": None,
         "categories": [],
         "history": [],
-        "isp": "알 수 없음",
-        "region": "알 수 없음",
     }

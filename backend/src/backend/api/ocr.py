@@ -10,7 +10,8 @@ async def ocr(request: OcrRequest):
     이미지 OCR 요청.
 
     TODO:
-    - PaddleOCR 또는 외부 OCR 서비스 연동
+    - backend.ocr.ocr_service 연동 후 imageId, text, confidence, blocks 반환
     - imageId 발급 및 결과 캐싱
+    - FE는 이 응답의 imageId를 /api/predict image 요청에 전달할 수 있음
     """
     raise HTTPException(status_code=501, detail="TODO: implement /api/ocr")

@@ -420,9 +420,16 @@ async def predict_smishing(
         "id": str(log.id),
         "type": request.type,
         "content": content,
+        "senderNumber": request.sender,
         "modelVersion": settings.MODEL_VERSION,
         "processingTime": int((time.monotonic() - start_time) * 1000),
         "cacheHit": False,
         "createdAt": log.created_at.isoformat(),
     })
+    if request.type == "sms" and result.get("urlDetails"):
+        result["urlAnalysis"] = result["urlDetails"]
+        result.pop("urlDetails", None)
+    if request.type == "image":
+        result["ocrText"] = content
+        result["imageId"] = request.imageId or str(log.id)
     return result
