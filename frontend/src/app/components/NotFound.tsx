@@ -7,8 +7,8 @@ import { Home, Search, ShieldCheck, ArrowLeft, Compass } from "lucide-react";
 const POPULAR_LINKS = [
   { to: "/analyze", icon: ShieldCheck, label: "문자 검사", desc: "스미싱 의심 문자 확인" },
   { to: "/url", icon: Search, label: "URL 검사", desc: "의심 링크 분석" },
-  { to: "/cases", icon: Compass, label: "피해 사례", desc: "최근 스미싱 사례 보기" },
   { to: "/guide", icon: Home, label: "안전 가이드", desc: "스미싱 예방법" },
+  { to: "/report", icon: Compass, label: "신고하기", desc: "피해·의심 문자 신고" },
 ];
 
 export function NotFound() {

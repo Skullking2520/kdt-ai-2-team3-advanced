@@ -1,6 +1,6 @@
 import {useState} from "react";
 import {motion, AnimatePresence} from "motion/react";
-import {Link2, Search, AlertTriangle, CheckCircle, Shield, RefreshCw, ExternalLink, Clock, Lock, Globe} from "lucide-react";
+import {Link2, Search, AlertTriangle, CheckCircle, Shield, RefreshCw, Clock, Globe, FileText, Flag, ShieldCheck} from "lucide-react";
 import {Card} from "./ui/Primitives";
 import {api, ApiException} from "@/lib/api";
 import type { UrlAnalysisResult } from "@/types/api";
@@ -17,12 +17,40 @@ interface URLResult {
   ipCountry: string;
   similarDomains: string[];
   flags: { type: string; desc: string; severity: "high" | "medium" | "low" }[];
+  details: {
+    httpStatus: number;
+    contentType: string;
+    contentLength: number;
+    server: string;
+    serverLocation: string;
+    ip: string;
+    asn: string;
+    registeredDate: string;
+    expiryDate: string;
+    registrar: string;
+    lastAnalysis: string;
+    firstSubmission: string;
+    lastFinalUrl: string;
+    category: string;
+    tags: string[];
+    whoisEmail: string;
+  };
+  vtVerdict?: {
+    malicious: number;
+    suspicious: number;
+    harmless: number;
+    undetected: number;
+    total: number;
+    lastCheckedAt?: string;
+    status: "pending" | "completed" | "failed" | "not_checked";
+  };
 }
 
 /** api.analyze() UrlAnalysisResult → 컴포넌트 내부 URLResult 어댑터 */
 function adaptUrlResult(r: UrlAnalysisResult): URLResult {
   const upper = (s: "high" | "medium" | "low") =>
     s.toUpperCase() as "HIGH" | "MEDIUM" | "LOW";
+  const md = r.urlDetails.metaDetails;
   return {
     url: r.content,
     domain: r.urlDetails.domain,
@@ -34,6 +62,25 @@ function adaptUrlResult(r: UrlAnalysisResult): URLResult {
     ipCountry: r.urlDetails.ipCountry,
     similarDomains: r.urlDetails.similarDomains,
     flags: r.urlDetails.flags,
+    details: md ?? {
+      httpStatus: 200,
+      contentType: "text/html; charset=UTF-8",
+      contentLength: 0,
+      server: "Unknown",
+      serverLocation: "Unknown",
+      ip: "Unknown",
+      asn: "Unknown",
+      registeredDate: "Unknown",
+      expiryDate: "Unknown",
+      registrar: "Unknown",
+      lastAnalysis: "방금 전",
+      firstSubmission: "Unknown",
+      lastFinalUrl: r.content,
+      category: "unknown",
+      tags: [],
+      whoisEmail: "Unknown",
+    },
+    vtVerdict: r.urlDetails.vtVerdict,
   };
 }
 
@@ -56,6 +103,7 @@ export function URLAnalyzer() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [errorType, setErrorType] = useState<ErrorType>("unknown");
+  const [tab, setTab] = useState<"detection" | "details">("detection");
 
   const handleAnalyze = async (val?: string) => {
     const target = val ?? input;
@@ -122,7 +170,7 @@ export function URLAnalyzer() {
         <div className="flex flex-wrap gap-1.5 mt-2.5 pt-2.5 border-t border-white/5">
           <p className="text-[10px] text-white/25">샘플:</p>
           {SAMPLE_URLS.map((u) => (
-            <button key={u} onClick={() => { setInput(u); handleAnalyze(u); }}
+            <button key={u} onClick={() => { setInput(u); }}
               className="text-[10px] px-2 py-0.5 rounded bg-white/5 border border-white/10 text-white/70 hover:text-blue-400 hover:border-blue-500/30 transition-all font-mono truncate max-w-[180px]">
               {u}
             </button>
@@ -141,6 +189,16 @@ export function URLAnalyzer() {
             onHome={() => window.location.assign("/")}
           />
         )}
+
+        {/* 정직한 데이터 처리 안내 — 입력 박스 하단 (Analyzer.tsx와 동일 패턴) */}
+        <div className="mt-6 flex items-start gap-2 px-3 py-2.5 rounded-lg bg-white/5 border border-white/10">
+          <ShieldCheck size={13} className="text-white/40 shrink-0 mt-0.5" />
+          <p className="text-[11px] text-white/50 leading-relaxed">
+            <strong className="text-white/70">개인정보(전화번호, 이름, 계좌번호 등)는 자동으로 마스킹 처리된 후에만 데이터 품질 개선 목적</strong>으로 활용됩니다.
+            원본 문자는 저장되지 않으며, 해당 기능은 관리자 승인 후에만 활성화됩니다.
+          </p>
+        </div>
+
         {result && rs && (
           <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="bg-[#0b1120] rounded-2xl p-4 space-y-4">
             {/* Risk header */}
@@ -162,88 +220,212 @@ export function URLAnalyzer() {
               </div>
             </div>
 
-            {/* Detail cards */}
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-              {[
-                { label: "도메인 나이", value: `${result.domainAge}일`, icon: Clock, warn: result.domainAge < 60 },
-                { label: "SSL 인증서", value: result.ssl.valid ? "유효" : "무효", icon: Lock, warn: !result.ssl.valid },
-                { label: "서버 국가", value: result.ipCountry, icon: Globe, warn: result.ipCountry !== "KR" },
-                { label: "리다이렉션", value: `${result.redirects.length}회`, icon: RefreshCw, warn: result.redirects.length > 0 },
-              ].map((c) => (
-                <div key={c.label} className={`rounded-2xl border p-3 text-center ${c.warn ? "bg-red-500/8 border-red-500/20" : "bg-white/3 border-white/8"}`}>
-                  <c.icon size={13} className={`mx-auto mb-1 ${c.warn ? "text-red-400" : "text-white/60"}`} />
-                  <p className="text-[10px] text-white/60">{c.label}</p>
-                  <p className={`text-xs mt-0.5 ${c.warn ? "text-red-400" : "text-white/60"}`} style={{ fontWeight: 500 }}>{c.value}</p>
-                </div>
+            {/* Tabs: 발각 / 세부 (VirusTotal 스타일) */}
+            <div className="flex items-center gap-1 border-b border-white/10">
+              {([
+                { id: "detection", label: "발각", icon: Shield },
+                { id: "details", label: "세부", icon: FileText },
+              ] as const).map((t) => (
+                <button
+                  key={t.id}
+                  onClick={() => setTab(t.id)}
+                  className={`flex items-center gap-1.5 px-4 py-2 text-xs transition-all border-b-2 -mb-px ${
+                    tab === t.id
+                      ? "border-blue-400 text-blue-400"
+                      : "border-transparent text-white/50 hover:text-white/70"
+                  }`}
+                  style={{ fontWeight: tab === t.id ? 600 : 500 }}
+                >
+                  <t.icon size={12} />
+                  {t.label}
+                </button>
               ))}
             </div>
 
-            {/* SSL detail */}
-            <Card padding="p-4">
-              <p className="text-xs text-white/80 mb-2 flex items-center gap-1"><Lock size={10} /> SSL 인증서 상세</p>
-              <div className="grid grid-cols-2 gap-2">
-                {[
-                  { k: "발급 기관", v: result.ssl.issuer },
-                  { k: "만료일", v: result.ssl.expiry },
-                  { k: "유효 여부", v: result.ssl.valid ? "유효" : "무효/만료" },
-                  { k: "HTTPS", v: result.url.startsWith("https") ? "사용" : "미사용" },
-                ].map((s) => (
-                  <div key={s.k} className="bg-white/3 rounded-lg p-2">
-                    <p className="text-[10px] text-white/60">{s.k}</p>
-                    <p className="text-xs text-white/60 mt-0.5">{s.v}</p>
-                  </div>
-                ))}
-              </div>
-            </Card>
-
-            {/* Redirects */}
-            {result.redirects.length > 0 && (
-              <Card padding="p-4">
-                <p className="text-xs text-white/80 mb-2">리다이렉션 체인</p>
-                <div className="space-y-1.5">
-                  {result.redirects.map((r, i) => (
-                    <div key={i} className="flex items-center gap-2">
-                      <span className="text-[10px] px-1.5 py-0.5 rounded bg-amber-500/15 text-amber-400 border border-amber-500/25">{r.status}</span>
-                      <span className="text-xs text-white/80 font-mono truncate">{r.url}</span>
+            <AnimatePresence mode="wait">
+              {tab === "detection" ? (
+                <motion.div
+                  key="detection"
+                  initial={{ opacity: 0, y: 4 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -4 }}
+                  transition={{ duration: 0.15 }}
+                  className="space-y-4"
+                >
+                  {/* VirusTotal 보안 벤더 분석 — 우리 백엔드가 VT API 호출 시 자동 적재, 미연동 시 정직 안내 */}
+                  {result.vtVerdict && result.vtVerdict.status === "completed" ? (
+                    <Card padding="p-5">
+                      <div className="flex items-center justify-between mb-4">
+                        <div className="flex items-center gap-2">
+                          <Shield size={14} className="text-red-400" />
+                          <p className="text-sm text-white/80" style={{ fontWeight: 600 }}>VirusTotal 보안 벤더 분석</p>
+                        </div>
+                        <span className="text-[10px] text-white/30 font-mono">
+                          {result.vtVerdict.lastCheckedAt
+                            ? new Date(result.vtVerdict.lastCheckedAt).toLocaleString("ko-KR")
+                            : "방금 전"}
+                        </span>
+                      </div>
+                      <div className="grid grid-cols-1 sm:grid-cols-[160px_1fr] gap-5 items-center">
+                        {/* 큰 동그라미 + 4-색 스택 + 중앙 malicious 카운트 */}
+                        {(() => {
+                          const v = result.vtVerdict;
+                          const total = v.malicious + v.suspicious + v.harmless + v.undetected;
+                          if (total === 0) return null;
+                          const cx = 80, cy = 80, ro = 70, ri = 46;
+                          const segments: { value: number; color: string }[] = [
+                            { value: v.malicious, color: "#ef4444" },
+                            { value: v.suspicious, color: "#f97316" },
+                            { value: v.harmless, color: "#22c55e" },
+                            { value: v.undetected, color: "#475569" },
+                          ];
+                          let angle = -Math.PI / 2;
+                          const slices = segments.map((s) => {
+                            const sweep = (s.value / total) * 2 * Math.PI;
+                            const x1 = cx + ro * Math.cos(angle);
+                            const y1 = cy + ro * Math.sin(angle);
+                            const x2 = cx + ro * Math.cos(angle + sweep);
+                            const y2 = cy + ro * Math.sin(angle + sweep);
+                            const xi1 = cx + ri * Math.cos(angle);
+                            const yi1 = cy + ri * Math.sin(angle);
+                            const xi2 = cx + ri * Math.cos(angle + sweep);
+                            const yi2 = cy + ri * Math.sin(angle + sweep);
+                            const large = sweep > Math.PI ? 1 : 0;
+                            const path = `M ${x1} ${y1} A ${ro} ${ro} 0 ${large} 1 ${x2} ${y2} L ${xi2} ${yi2} A ${ri} ${ri} 0 ${large} 0 ${xi1} ${yi1} Z`;
+                            angle += sweep + 0.01;
+                            return { ...s, path };
+                          });
+                          return (
+                            <div className="flex justify-center">
+                              <svg viewBox="0 0 160 160" className="w-[160px] h-[160px]">
+                                {slices.map((s, i) => (
+                                  <path key={i} d={s.path} fill={s.color} fillOpacity={0.85} />
+                                ))}
+                                <text x={cx} y={cy - 4} textAnchor="middle" fontSize={26} fill="white" fontWeight="700" fontFamily="system-ui,sans-serif">{v.malicious}</text>
+                                <text x={cx} y={cy + 18} textAnchor="middle" fontSize={10} fill="rgba(255,255,255,0.5)" fontFamily="system-ui,sans-serif">/{v.total}</text>
+                              </svg>
+                            </div>
+                          );
+                        })()}
+                        <div className="space-y-2">
+                          <p className="text-[11px] text-white/40 mb-1">
+                            {result.vtVerdict.malicious + result.vtVerdict.suspicious > 0
+                              ? <><strong className="text-red-400">{result.vtVerdict.malicious + result.vtVerdict.suspicious}개</strong> 보안 벤더가 위험 신호를 감지했습니다</>
+                              : <><strong className="text-emerald-400">0개</strong> 보안 벤더가 위험 신호를 감지했습니다</>}
+                          </p>
+                          {[
+                            { label: "MALICIOUS", value: result.vtVerdict.malicious, color: "text-red-400", bg: "bg-red-500/10", border: "border-red-500/30" },
+                            { label: "SUSPICIOUS", value: result.vtVerdict.suspicious, color: "text-amber-400", bg: "bg-amber-500/10", border: "border-amber-500/30" },
+                            { label: "HARMLESS", value: result.vtVerdict.harmless, color: "text-emerald-400", bg: "bg-emerald-500/10", border: "border-emerald-500/30" },
+                            { label: "UNDETECTED", value: result.vtVerdict.undetected, color: "text-white/40", bg: "bg-white/5", border: "border-white/15" },
+                          ].map((s) => (
+                            <div key={s.label} className={`flex items-center justify-between px-3 py-1.5 rounded-lg border ${s.bg} ${s.border}`}>
+                              <span className={`text-[10px] ${s.color}`} style={{ fontWeight: 700 }}>{s.label}</span>
+                              <span className={`text-sm ${s.color}`} style={{ fontWeight: 700 }}>{s.value}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    </Card>
+                  ) : (
+                    <div className="p-4 rounded-xl border border-dashed border-amber-500/40 bg-amber-500/5">
+                      <div className="flex items-start gap-3">
+                        <div className="mt-0.5 grid h-6 w-6 place-items-center rounded-full bg-amber-500/15 text-amber-700 dark:text-amber-400 text-xs" style={{ fontWeight: 700 }}>!</div>
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2 mb-1">
+                            <p className="text-sm text-amber-800 dark:text-amber-200" style={{ fontWeight: 600 }}>VirusTotal 보안 벤더 분석 (88개 엔진) 미연동</p>
+                            <span className="text-[10px] px-1.5 py-0.5 rounded bg-amber-500/15 border border-amber-500/25 text-amber-700 dark:text-amber-300">정직 처리</span>
+                          </div>
+                          <p className="text-xs text-amber-700/80 dark:text-amber-300/80 leading-relaxed">
+                            VirusTotal의 88개 보안 벤더(Google Safe Browsing, Kaspersky, McAfee 등) 분석 결과는 우리 백엔드가 VT API key를 발급받아 직접 호출해야 표시할 수 있습니다. mock에서 가짜 vendor 풀-리스트(예: "1/92")를 만들면 정직하지 않습니다. 운영팀이 VT API key를 발급·연동하면 자동으로 적재됩니다.
+                          </p>
+                          <p className="text-[10px] text-amber-700/70 dark:text-amber-300/70 mt-2">
+                            현재 위 4-카드(도메인 나이/SSL/서버 국가/리다이렉션)는 우리 자체 휴리스틱 분석으로, 한국형 사칭 패턴은 VT가 못 잡는 영역이라 별도 유지됩니다.
+                          </p>
+                        </div>
+                      </div>
                     </div>
-                  ))}
-                </div>
-              </Card>
-            )}
+                  )}
 
-            {/* Similar domains */}
-            {result.similarDomains.length > 0 && (
-              <Card padding="p-4">
-                <p className="text-xs text-white/80 mb-2 flex items-center gap-1"><ExternalLink size={10} /> 공식 도메인 (참고)</p>
-                <div className="flex flex-wrap gap-2">
-                  {result.similarDomains.map((d) => (
-                    <span key={d} className="text-xs px-2 py-1 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 font-mono">{d}</span>
-                  ))}
-                </div>
-              </Card>
-            )}
-
-            {/* Flags */}
-            <Card padding="p-4">
-              <p className="text-xs text-white/80 mb-3 flex items-center gap-1"><Shield size={10} /> 위험 징후</p>
-              <div className="space-y-2">
-                {result.flags.map((f, i) => (
-                  <div key={i} className={`flex items-start gap-2 p-2.5 rounded-xl border ${
-                    f.severity === "high" ? "bg-red-500/8 border-red-500/20" : f.severity === "medium" ? "bg-amber-500/8 border-amber-500/20" : "bg-emerald-500/8 border-emerald-500/20"
-                  }`}>
-                    <span className={`text-[10px] px-1.5 py-0.5 rounded border shrink-0 ${
-                      f.severity === "high" ? "bg-red-500/20 border-red-500/30 text-red-400" : f.severity === "medium" ? "bg-amber-500/20 border-amber-500/30 text-amber-400" : "bg-emerald-500/20 border-emerald-500/30 text-emerald-400"
-                    }`}>{f.type}</span>
-                    <p className="text-[11px] text-white/80 leading-relaxed">{f.desc}</p>
+                  {/* Detail cards (VT 매핑: Whois 도메인 등록일 + IP Information 국가) */}
+                  <div className="grid grid-cols-2 gap-3">
+                    {[
+                      { label: "도메인 나이", value: `${result.domainAge}일`, icon: Clock, warn: result.domainAge < 60 },
+                      { label: "서버 국가", value: result.ipCountry, icon: Globe, warn: result.ipCountry !== "KR" },
+                    ].map((c) => (
+                      <div key={c.label} className={`rounded-2xl border p-3 text-center ${c.warn ? "bg-red-500/8 border-red-500/20" : "bg-white/3 border-white/8"}`}>
+                        <c.icon size={13} className={`mx-auto mb-1 ${c.warn ? "text-red-400" : "text-white/60"}`} />
+                        <p className="text-[10px] text-white/60">{c.label}</p>
+                        <p className={`text-xs mt-0.5 ${c.warn ? "text-red-400" : "text-white/60"}`} style={{ fontWeight: 500 }}>{c.value}</p>
+                      </div>
+                    ))}
                   </div>
-                ))}
-              </div>
-            </Card>
 
-            <button onClick={() => { setResult(null); setInput(""); }}
-              className="flex items-center gap-1.5 text-xs text-white/70 hover:text-white/80 transition-all">
-              <RefreshCw size={11} /> 새 URL 분석
-            </button>
+                  {/* Flags (사용자 유지 합의 — 한국형 사칭 패턴은 VT가 못 잡는 영역) */}
+                  <Card padding="p-4">
+                    <p className="text-xs text-white/80 mb-3 flex items-center gap-1"><Shield size={10} /> 위험 징후</p>
+                    <div className="space-y-2">
+                      {result.flags.map((f, i) => (
+                        <div key={i} className={`flex items-start gap-2 p-2.5 rounded-xl border ${
+                          f.severity === "high" ? "bg-red-500/8 border-red-500/20" : f.severity === "medium" ? "bg-amber-500/8 border-amber-500/20" : "bg-emerald-500/8 border-emerald-500/20"
+                        }`}>
+                          <span className={`text-[10px] px-1.5 py-0.5 rounded border shrink-0 ${
+                            f.severity === "high" ? "bg-red-500/20 border-red-500/30 text-red-400" : f.severity === "medium" ? "bg-amber-500/20 border-amber-500/30 text-amber-400" : "bg-emerald-500/20 border-emerald-500/30 text-emerald-400"
+                          }`}>{f.type}</span>
+                          <p className="text-[11px] text-white/80 leading-relaxed">{f.desc}</p>
+                        </div>
+                      ))}
+                    </div>
+                  </Card>
+                </motion.div>
+              ) : (
+                <motion.div
+                  key="details"
+                  initial={{ opacity: 0, y: 4 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -4 }}
+                  transition={{ duration: 0.15 }}
+                  className="space-y-4"
+                >
+                  {/* VirusTotal API 미연동 정직 안내 — 세부 탭의 모든 가짜 메타 정보 정직 처리 */}
+                  <div className="p-4 rounded-xl border border-dashed border-amber-500/40 bg-amber-500/5">
+                    <div className="flex items-start gap-3">
+                      <div className="mt-0.5 grid h-6 w-6 place-items-center rounded-full bg-amber-500/15 text-amber-700 dark:text-amber-400 text-xs" style={{ fontWeight: 700 }}>
+                        !
+                      </div>
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2 mb-1">
+                          <p className="text-sm text-amber-800 dark:text-amber-200" style={{ fontWeight: 600 }}>
+                            VirusTotal API 메타 정보 미연동
+                          </p>
+                          <span className="text-[10px] px-1.5 py-0.5 rounded bg-amber-500/15 border border-amber-500/25 text-amber-700 dark:text-amber-300">정직 처리</span>
+                        </div>
+                        <p className="text-xs text-amber-700/80 dark:text-amber-300/80 leading-relaxed">
+                          카테고리·태그·HTTP 응답·서버 정보·IP/ASN·WHOIS 등록 정보·분석 이력은 VirusTotal API를 우리 백엔드가 직접 호출해서 받아와야 표시할 수 있습니다. mock에서 가짜 메타(예: 등록일 2025-11-12, IP 175.221.43.127, PHISHING 카테고리)를 만들면 정직하지 않습니다. 운영팀이 VT API key를 발급·연동하면 자동으로 적재됩니다.
+                        </p>
+                        <p className="text-[10px] text-amber-700/70 dark:text-amber-300/70 mt-2">
+                          VT API 연동 시 표시되는 정보: 카테고리(Categories) · 태그(Tags) · HTTP Status/Type/Length/Server · IP/ASN/Country · Whois 등록일/만료일/Registrar/Email · Last Analysis Date · First Submission Date
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+
+            <div className="flex items-center gap-3">
+              <button
+                onClick={() => { window.location.href = "/report"; }}
+                className="flex items-center gap-1.5 px-3 py-2 rounded-lg border border-red-500/30 text-red-300 hover:bg-red-500/10 transition-all text-xs"
+                style={{ fontWeight: 600 }}
+              >
+                <Flag size={11} /> 신고하기
+              </button>
+              <button onClick={() => { setResult(null); setInput(""); setTab("detection"); }}
+                className="flex items-center gap-1.5 text-xs text-white/70 hover:text-white/80 transition-all">
+                <RefreshCw size={11} /> 새 URL 분석
+              </button>
+            </div>
           </motion.div>
         )}
       </AnimatePresence>

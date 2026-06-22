@@ -1,0 +1,27 @@
+{
+  "name": "newbiz-shield-monorepo",
+  "version": "0.1.0",
+  "private": true,
+  "description": "NewBiz Shield — AI 기반 스미싱/피싱 탐지 플랫폼 (frontend + backend + ai_service). 본 디렉토리는 모노레포 루트. 각 subdir에 진입해서 작업.",
+  "workspaces": [
+    "frontend"
+  ],
+  "scripts": {
+    "dev": "cd frontend && npm install && npm run dev",
+    "build": "cd frontend && npm install && npm run build",
+    "preview": "cd frontend && npm install && npm run preview",
+    "lint": "cd frontend && npm install && npm run lint",
+    "install:all": "cd frontend && npm install"
+  },
+  "engines": {
+    "node": ">=18.0.0",
+    "npm": ">=9.0.0"
+  },
+  "keywords": [
+    "smishing",
+    "phishing",
+    "ai",
+    "korean",
+    "monorepo"
+  ]
+}

@@ -17,12 +17,12 @@ import type {
   HistoryItem,
   Paginated,
   ReportResponse,
+  ReportStats,
   ShareResponse,
   CaseStudy,
   DamageStep,
   DetectionReason,
   SimilarCase,
-  GovernmentCriterion,
   ActionGuideItem,
 } from '@/types/api';
 
@@ -64,23 +64,70 @@ const urlDetails = (url: string): UrlAnalysisResult['urlDetails'] => {
           { type: '의심 TLD', desc: '피싱에 자주 사용되는 패턴', severity: 'medium' },
         ]
       : [{ type: '이상 없음', desc: '명시적인 위험 징후가 발견되지 않았습니다', severity: 'low' }],
+    // 정직 처리: metaDetails는 VirusTotal API를 우리 백엔드가 직접 호출해서 받아와야 표시할 수 있음.
+    // mock에서 가짜 메타(등록일 2025-11-12, IP 175.221.43.127, PHISHING 카테고리 등)를 만들면 정직하지 않음.
+    // 백엔드 운영팀이 VT API key를 발급·연동하면 자동으로 적재됨.
   };
 };
 
-const damageSteps: DamageStep[] = [
-  { step: 1, icon: 'message', title: '문자 수신', description: '의심 문자가 휴대폰에 도착합니다' },
-  { step: 2, icon: 'click', title: '링크 클릭', description: '문자 안의 URL을 클릭합니다' },
-  { step: 3, icon: 'site', title: '가짜 사이트 이동', description: '공식과 유사한 피싱 사이트로 이동합니다' },
-  { step: 4, icon: 'info', title: '개인정보 입력', description: '주민번호, 계좌번호, 인증번호 등을 입력합니다' },
-  { step: 5, icon: 'damage', title: '금전 피해', description: '계좌 이체, 카드 부정사용 등 금전 피해 발생' },
-];
+// 정직 처리: 피해 시나리오를 SmishingType별로 동적 분기.
+// 발표 시연에서 "이 문자는 가족 사칭이라 이런 피해, 공공기관 사칭이라 다른 피해" 식으로
+// 사용자가 각 사칭 유형에 따른 실제 피해 흐름을 명확히 인지 가능.
+// 백엔드 연동 시 backend의 진짜 분석 결과로 대체 가능.
+const damageStepsByType: Record<SmsAnalysisResult['smishingType'], DamageStep[]> = {
+  '가족/지인 사칭': [
+    { step: 1, icon: 'message', title: '문자 수신', description: '자녀/친척 등 가족이나 지인을 사칭한 문자가 도착합니다' },
+    { step: 2, icon: 'click', title: '긴급 호소 클릭', description: '휴대폰 고장·번호 변경·급한 부탁 등 긴급한 상황을 호소합니다' },
+    { step: 3, icon: 'info', title: '금전 요청', description: '상품권, 계좌이체, 대출 등 금전을 직접 요청합니다' },
+    { step: 4, icon: 'damage', title: '금전 송금', description: '상품권 번호 전달 또는 계좌이체를 진행합니다' },
+    { step: 5, icon: 'damage', title: '금전 피해 확정', description: '회수 어려운 금전적 피해가 발생합니다' },
+  ],
+  '공공기관 사칭': [
+    { step: 1, icon: 'message', title: '문자 수신', description: '국민건강보험·국세청·경찰청 등 공공기관을 사칭한 문자가 도착합니다' },
+    { step: 2, icon: 'click', title: '가짜 안내 클릭', description: '환급금·미납·본인인증 등 안내 링크를 클릭합니다' },
+    { step: 3, icon: 'site', title: '피싱 사이트 진입', description: '공식과 매우 유사한 가짜 사이트로 이동합니다' },
+    { step: 4, icon: 'info', title: '개인정보 입력', description: '주민번호, 계좌번호, 인증번호 등을 입력합니다' },
+    { step: 5, icon: 'damage', title: '계좌 탈취', description: '입력한 정보로 계좌가 탈취되거나 부정 사용됩니다' },
+  ],
+  '금융 피싱': [
+    { step: 1, icon: 'message', title: '문자 수신', description: '은행·카드사를 사칭한 문자가 도착합니다' },
+    { step: 2, icon: 'click', title: '본인확인 링크 클릭', description: '본인확인·카드 정지 안내 링크를 클릭합니다' },
+    { step: 3, icon: 'site', title: '가짜 은행 사이트', description: '공식과 유사한 피싱 사이트로 이동합니다' },
+    { step: 4, icon: 'info', title: '인증정보 입력', description: '아이디, 비밀번호, 인증번호, 보안카드 번호를 입력합니다' },
+    { step: 5, icon: 'damage', title: '계좌 탈취', description: '입력한 정보로 금융자산이 탈취됩니다' },
+  ],
+  '택배 사칭': [
+    { step: 1, icon: 'message', title: '문자 수신', description: 'CJ대한통운 등 택배사를 사칭한 문자가 도착합니다' },
+    { step: 2, icon: 'click', title: '가짜 배송 조회 클릭', description: '배송 조회·주소 확인 링크를 클릭합니다' },
+    { step: 3, icon: 'site', title: '피싱 사이트 진입', description: '공식과 유사한 가짜 택배 사이트로 이동합니다' },
+    { step: 4, icon: 'info', title: '개인정보 입력', description: '주소, 이름, 연락처, 결제 정보 등을 입력합니다' },
+    { step: 5, icon: 'damage', title: '정보 유출', description: '개인정보 유출 및 카드 부정 사용' },
+  ],
+  '이벤트 사기': [
+    { step: 1, icon: 'message', title: '문자 수신', description: '이벤트 당첨·쿠폰 발송 사칭 문자가 도착합니다' },
+    { step: 2, icon: 'click', title: '당첨 확인 클릭', description: '경품·쿠폰 수령 링크를 클릭합니다' },
+    { step: 3, icon: 'site', title: '피싱 사이트', description: '경품 수령을 가장한 가짜 사이트로 이동합니다' },
+    { step: 4, icon: 'info', title: '개인정보 입력', description: '배송비·세금 명목 개인정보·결제 정보 입력' },
+    { step: 5, icon: 'damage', title: '피해 확정', description: '소액 결제 발생 및 개인정보 유출' },
+  ],
+  '대출 사기': [
+    { step: 1, icon: 'message', title: '문자 수신', description: '저금리·무심사 대출 사칭 문자가 도착합니다' },
+    { step: 2, icon: 'click', title: '대출 신청 클릭', description: '신속한 대출 진행 링크를 클릭합니다' },
+    { step: 3, icon: 'site', title: '가짜 대출 사이트', description: '선취手续费·보험료 명목의 가짜 사이트로 이동합니다' },
+    { step: 4, icon: 'info', title: '선입금 요구', description: '대출 전 수수료·보증금·세금 입금을 요구합니다' },
+    { step: 5, icon: 'damage', title: '선입금 피해', description: '입금 후 연락 두절·금전 피해 발생' },
+  ],
+  '기타 사기': [
+    { step: 1, icon: 'message', title: '문자 수신', description: '의심스러운 문자가 도착합니다' },
+    { step: 2, icon: 'click', title: 'URL 클릭', description: '문자 안의 링크를 클릭합니다' },
+    { step: 3, icon: 'site', title: '피싱 사이트 진입', description: '의심 사이트로 이동합니다' },
+    { step: 4, icon: 'info', title: '개인정보 입력', description: '주민번호, 계좌번호, 인증번호 등을 입력합니다' },
+    { step: 5, icon: 'damage', title: '금전 피해', description: '계좌 이체, 카드 부정사용 등 금전 피해 발생' },
+  ],
+  '정상 문자': [],
+};
 
-const govCriteria: GovernmentCriterion[] = [
-  { id: 'url_included', label: '의심 URL 포함', matched: false },
-  { id: 'impersonation', label: '기관 또는 지인 사칭', matched: false },
-  { id: 'payment_request', label: '금전 또는 결제 요구', matched: false },
-  { id: 'personal_info_request', label: '개인정보 입력 유도', matched: false },
-];
+
 
 // ───────────────────────────────────────────
 // SMS 분석 응답 생성
@@ -156,25 +203,17 @@ function buildSmsResult(req: AnalysisRequest & { content: string }): SmsAnalysis
     actionGuide.push({ priority: 'normal', action: '그래도 개인정보나 금융정보 입력을 요구한다면 반드시 의심하세요' });
   }
 
-  const similarCases: SimilarCase[] =
-    riskLevel === 'high'
-      ? [
-          { id: 'c1', title: '택배 회사 사칭 배송 주소 확인 유도형', similarity: 87, year: '2024', category: '공공기관 사칭' },
-          { id: 'c2', title: '공공기관 환급금 명목 피싱', similarity: 74, year: '2024', category: '공공기관 사칭' },
-          { id: 'c3', title: '가족 사칭 상품권 요구형', similarity: 69, year: '2026', category: '가족/지인 사칭' },
-        ]
-      : riskLevel === 'medium'
-        ? [
-            { id: 'c4', title: '단축 URL 포함 확인 유도 문자', similarity: 71, year: '2025', category: '기타 사기' },
-            { id: 'c5', title: '이벤트 당첨 가장 링크 연결형', similarity: 58, year: '2025', category: '이벤트 사기' },
-          ]
-        : [];
+  // 정직 처리: similarCases는 RAG 파이프라인(Pinecone + OpenAI)이 실제로 매칭한 결과여야 정직.
+  // mock에서 5건 가짜 사례(택배 사칭/공공기관 환급/가족 사칭/단축 URL/이벤트 당첨)를 만들면
+  // 정직하지 않음 — 가짜 매칭은 사용자에게 "유사 사례 있음" 으로 오해 유발.
+  // lib/smsAnalysis.ts의 SIMILAR_CASES_HIGH/MEDIUM 도 이미 빈 배열로 정직 처리됨.
+  // RAG 연동 시 real fetch가 Pinecone 검색 결과로 채움. mock fallback은 빈 배열 반환.
+  const similarCases: SimilarCase[] = [];
 
-  const governmentCriteria: GovernmentCriterion[] = govCriteria.map((c) => {
-    if (c.id === 'url_included') return { ...c, matched: !!url };
-    if (c.id === 'impersonation') return { ...c, matched: impersonation };
-    if (c.id === 'payment_request') return { ...c, matched: hasPayment };
-    if (c.id === 'personal_info_request') return { ...c, matched: hasPersonalInfo };
+  const reasonsWithMatched: DetectionReason[] = reasons.map((c) => {
+    if (c.code === 'impersonation') return { ...c, matched: impersonation };
+    if (c.code === 'payment_request') return { ...c, matched: hasPayment };
+    if (c.code === 'personal_info_request') return { ...c, matched: hasPersonalInfo };
     return c;
   });
 
@@ -185,11 +224,10 @@ function buildSmsResult(req: AnalysisRequest & { content: string }): SmsAnalysis
     riskLevel,
     riskScore,
     smishingType,
-    reasons,
+    reasons: reasonsWithMatched,
     actionGuide,
     similarCases,
-    governmentCriteria,
-    damageScenario: riskLevel !== 'low' ? damageSteps : undefined,
+    damageScenario: riskLevel !== 'low' ? damageStepsByType[smishingType] : undefined,
     modelVersion: 'kc-electra-v1.2.3',
     processingTime: 800 + Math.floor(Math.random() * 800),
     cacheHit: false,
@@ -226,13 +264,11 @@ function buildUrlResult(req: AnalysisRequest & { content: string }): UrlAnalysis
           { priority: 'normal', action: '의심 URL을 신고해주세요', contact: { name: 'KISA 사이버신고센터', number: '118' } },
         ]
       : [{ priority: 'normal', action: '공식 도메인을 다시 한번 확인하세요' }],
-    similarCases: isDanger
-      ? [
-          { id: 'c1', title: '피싱 도메인 사칭 사례', similarity: 82, year: '2025', category: '기타 사기' },
-        ]
-      : [],
-    governmentCriteria: govCriteria,
-    damageScenario: isDanger ? damageSteps : undefined,
+    // 정직 처리: similarCases는 RAG가 실제로 매칭한 결과여야 정직.
+    // 가짜 '피싱 도메인 사칭 사례' 1건은 mock에서 만든 데이터로 정직하지 않음.
+    // RAG 연동 시 backend가 Pinecone 검색 결과로 채움. mock fallback은 빈 배열.
+    similarCases: [],
+    damageScenario: isDanger ? damageStepsByType['기타 사기'] : undefined,
     modelVersion: 'url-classifier-v1.0',
     processingTime: 600 + Math.floor(Math.random() * 500),
     cacheHit: false,
@@ -274,8 +310,6 @@ const senderDb: Record<string, SenderLookupResult> = {
       { date: '2026.05.28', type: '보험 피싱', count: 31 },
       { date: '2026.05.21', type: '공공기관 사칭', count: 28 },
     ],
-    isp: 'KT',
-    region: '서울',
   },
   '010-3392-1847': {
     number: '010-3392-1847',
@@ -288,8 +322,6 @@ const senderDb: Record<string, SenderLookupResult> = {
       { date: '2026.06.05', type: '보이스피싱', count: 22 },
       { date: '2026.05.29', type: '기관 사칭', count: 18 },
     ],
-    isp: 'SKT',
-    region: '경기',
   },
   '1588-1234': {
     number: '1588-1234',
@@ -299,8 +331,6 @@ const senderDb: Record<string, SenderLookupResult> = {
     lastReportedAt: null,
     categories: [],
     history: [],
-    isp: 'SKT',
-    region: '서울',
   },
 };
 
@@ -314,8 +344,6 @@ function mockSenderLookup(number: string): SenderLookupResult {
       lastReportedAt: null,
       categories: [],
       history: [],
-      isp: ['SKT', 'KT', 'LGU+'][Math.floor(Math.random() * 3)],
-      region: ['서울', '경기', '부산'][Math.floor(Math.random() * 3)],
     }
   );
 }
@@ -406,11 +434,11 @@ class MockRouter {
   }
 
   has(path: string, method: string): boolean {
-    return this.routes.has(`${method.toUpperCase()} ${path.toUpperCase()}`);
+    return this.routes.has(`${method.toUpperCase()} ${path.split('?')[0].toUpperCase()}`);
   }
 
   invoke<T>(path: string, method: string, body: unknown): T {
-    const key = `${method.toUpperCase()} ${path.toUpperCase()}`;
+    const key = `${method.toUpperCase()} ${path.split('?')[0].toUpperCase()}`;
     const handler = this.routes.get(key);
     if (!handler) {
       throw {
@@ -426,8 +454,8 @@ export const mockHandle = new MockRouter();
 
 // ── 라우트 등록 ──
 
-// 분석
-mockHandle.register('POST', '/api/analyze', (body) => {
+// 분석 (backend path /api/predict 와 일치 — lib/api.ts의 path 매핑 결과)
+mockHandle.register('POST', '/api/predict', (body) => {
   const req = body as AnalysisRequest;
   if (req.type === 'sms') return buildSmsResult({ type: 'sms', content: req.content, sender: req.sender });
   if (req.type === 'url') return buildUrlResult({ type: 'url', content: req.content });
@@ -459,10 +487,6 @@ mockHandle.register('GET', '/api/history', () => ({
   hasMore: false,
 } satisfies Paginated<HistoryItem>));
 
-mockHandle.register('GET', '/api/history/h1', () => buildSmsResult({ type: 'sms', content: mockHistoryItems[0].content }));
-mockHandle.register('GET', '/api/history/h3', () => buildSmsResult({ type: 'sms', content: mockHistoryItems[2].content }));
-mockHandle.register('GET', '/api/history/h4', () => buildUrlResult({ type: 'url', content: mockHistoryItems[3].content }));
-
 // 신고
 mockHandle.register('POST', '/api/reports', (_body) => {
   const id = receiptId();
@@ -479,6 +503,20 @@ mockHandle.register('GET', '/api/reports/NB20260605-001234', () => ({
   status: 'received',
   createdAt: '2026-06-05T14:32:00+09:00',
 } satisfies ReportResponse));
+
+mockHandle.register('GET', '/api/reports/stats', () => ({
+  total: 996,
+  byCategory: [
+    { category: '공공기관 사칭', count: 342 },
+    { category: '금융 피싱', count: 218 },
+    { category: '택배 사칭', count: 156 },
+    { category: '이벤트 사기', count: 124 },
+    { category: '대출 사기', count: 89 },
+    { category: '기타 사기', count: 67 },
+  ],
+  byStatus: [{ status: 'received', count: 996 }],
+  period: { from: '2026-06-01T00:00:00+09:00', to: nowIso() },
+} satisfies ReportStats));
 
 // 피드백
 mockHandle.register('POST', '/api/feedback', () => ({ ok: true as const }));

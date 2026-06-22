@@ -74,41 +74,6 @@ export function MetricBig({
   );
 }
 
-/* ───────────────────────── 큰 액션 버튼 (앱 홈의 4분할 그리드용) ───────────────────────── */
-export function ActionTile({
-  icon: Icon, label, sub, onClick, color = "cyan", badge,
-}: {
-  icon: LucideIcon;
-  label: string;
-  sub?: string;
-  onClick?: () => void;
-  color?: "cyan" | "amber" | "rose" | "emerald" | "violet" | "sky";
-  badge?: string;
-}) {
-  const palette = {
-    cyan: "from-cyan-500 to-blue-600 shadow-cyan-500/25",
-    amber: "from-amber-500 to-orange-600 shadow-amber-500/25",
-    rose: "from-rose-500 to-red-600 shadow-rose-500/25",
-    emerald: "from-emerald-500 to-teal-600 shadow-emerald-500/25",
-    violet: "from-violet-500 to-purple-600 shadow-violet-500/25",
-    sky: "from-sky-500 to-blue-500 shadow-sky-500/25",
-  }[color];
-
-  return (
-    <button onClick={onClick}
-      className={`relative w-full text-left p-4 rounded-2xl bg-gradient-to-br ${palette} shadow-lg active:scale-95 hover:scale-[1.02] transition-all`}>
-      {badge && (
-        <span className="absolute top-2 right-2 text-[9px] px-1.5 py-0.5 rounded-full bg-white/25 text-white" style={{ fontWeight: 600 }}>
-          {badge}
-        </span>
-      )}
-      <Icon size={22} className="text-white mb-2" />
-      <p className="text-white text-sm" style={{ fontWeight: 700 }}>{label}</p>
-      {sub && <p className="text-white/80 text-[11px] mt-0.5">{sub}</p>}
-    </button>
-  );
-}
-
 /* ───────────────────────── 섹션 헤더 ───────────────────────── */
 export function SectionHeader({ title, action, sub }: {
   title: string; action?: { label: string; onClick: () => void }; sub?: string;
@@ -160,24 +125,4 @@ export function FeedItem({
   );
 }
 
-/* ───────────────────────── Chip (트렌드 유형) ───────────────────────── */
-export function Chip({ label, count, hot, onClick }: {
-  label: string; count?: number; hot?: boolean; onClick?: () => void;
-}) {
-  return (
-    <button onClick={onClick}
-      className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs border transition-all ${
-        hot ? "bg-red-500/12 border-red-500/30 text-red-300 hover:bg-red-500/20"
-            : "bg-white/5 border-white/10 text-white/60 hover:bg-white/10"
-      }`}>
-      {hot && <span className="text-[10px]">🔥</span>}
-      <span style={{ fontWeight: 500 }}>{label}</span>
-      {typeof count === "number" && <span className="text-[10px] text-white/40">{count}</span>}
-    </button>
-  );
-}
 
-/* ───────────────────────── Skeleton (로딩) ───────────────────────── */
-export function Skeleton({ className = "" }: { className?: string }) {
-  return <div className={`bg-white/5 rounded-lg animate-pulse ${className}`} />;
-}

@@ -2,10 +2,11 @@ import {Outlet, NavLink, useLocation, useNavigate} from "react-router";
 import {
   ShieldCheck, Menu, X, MessageSquareWarning, Link2, ImageIcon,
   Flag, ChevronDown, Bell, Search, Sun, Moon, BookOpen,
-  History, TrendingUp, Phone, HelpCircle, Zap, Type,
-  AlertTriangle,
-  LayoutDashboard, Database, ClipboardList, Settings2,
-  LogOut, MessageSquare,
+  Zap, Type,
+  LayoutDashboard,
+  LogOut,
+  GitCompareArrows,
+  Activity,
 } from "lucide-react";
 import {useState, useEffect, useRef} from "react";
 import {useAdmin} from "../context/AdminContext";
@@ -15,7 +16,7 @@ import {motion, AnimatePresence} from "motion/react";
 
 const TREND_ALERT = "이번 주 택배·공공기관 사칭 스미싱 급증 — 링크 클릭 전 꼭 확인하세요";
 
-const ADMIN_PATH_PREFIXES = ["/admin", "/dashboard", "/patterns", "/audit", "/feedback", "/settings", "/simulator", "/live-feed", "/export", "/attention", "/bulk", "/compare", "/benchmark", "/dataset", "/model", "/zero-day", "/api", "/error-analysis", "/redteam", "/ab-test", "/feature-importance", "/ioc", "/health"];
+const ADMIN_PATH_PREFIXES = ["/dashboard", "/compare", "/health"];
 
 /* ─── 실시간 검사 드롭다운 ─── */
 const SCAN_ITEMS = [
@@ -49,55 +50,10 @@ const SCAN_ITEMS = [
     tag: null,
     tagColor: "",
   },
-  {
-    to: "/sender",
-    icon: Phone,
-    label: "발신번호 조회",
-    desc: "발신 번호가 안전한지 바로 확인",
-    color: "text-orange-600 dark:text-orange-400",
-    bg: "bg-orange-50 dark:bg-orange-900/20",
-    tag: null,
-    tagColor: "",
-  },
 ];
 
-/* ─── 피해 사례 드롭다운 ─── */
-const CASES_ITEMS = [
-  {
-    to: "/cases",
-    icon: AlertTriangle,
-    label: "최근 피해 사례",
-    desc: "최신 스미싱 피해 신고 모음",
-  },
-  {
-    to: "/history",
-    icon: History,
-    label: "검사 이력",
-    desc: "이전에 검사한 문자 다시 보기",
-  },
-  {
-    to: "/trend",
-    icon: TrendingUp,
-    label: "최신 피싱 트렌드",
-    desc: "요즘 가장 많이 나오는 유형",
-  },
-];
-
-/* ─── 안전 가이드 드롭다운 ─── */
-const GUIDE_ITEMS = [
-  {
-    to: "/guide",
-    icon: BookOpen,
-    label: "스미싱 예방법 총정리",
-    desc: "유형별 대응법을 한눈에 정리",
-  },
-  {
-    to: "/quiz",
-    icon: HelpCircle,
-    label: "스미싱 퀴즈",
-    desc: "나는 얼마나 잘 구별할까?",
-  },
-];
+/* ─── 피해 사례 드롭다운 (전부 cleanup되어 빈 배열 — 헤더 자동 숨김) ─── */
+const CASES_ITEMS: DropItem[] = [];
 
 /* ─── 공통 드롭다운 컴포넌트 ─── */
 interface DropItem {
@@ -237,15 +193,18 @@ export function Layout() {
   const { isAdmin, logout } = useAdmin();
   const { senior: seniorMode, toggle: setSeniorMode, setSenior } = useSenior();
 
-  // 시니어 모드 진입/해제 시 다크 강제 (SeniorHome/SeniorAnalyzer 다크 전용 디자인)
-  // 진입: 다크 강제 / 해제: 라이트로 복귀 (어르신 친화 = 다크, 일반 = 라이트)
+  // 어드민 라우트 정의 (시니어/다크 모드 useEffect에서 공통 사용)
+  const isAdminRoute = ADMIN_PATH_PREFIXES.some((p) => location.pathname === p || location.pathname.startsWith(p + "/"));
+
+  // 시니어 모드 또는 어드민 라우트 = 다크 강제 (둘 다 다크 전용 디자인)
+  // 일반 사용자 = 라이트. 어드민 진입 시 seniorMode가 false여도 다크로 강제.
   useEffect(() => {
-    if (seniorMode) {
+    if (seniorMode || isAdminRoute) {
       setIsDark(true);
     } else {
       setIsDark(false);
     }
-  }, [seniorMode]);
+  }, [seniorMode, isAdminRoute]);
 
   useEffect(() => {
     document.documentElement.classList.toggle("dark", isDark);
@@ -261,7 +220,6 @@ export function Layout() {
   }, [location.pathname]);
 
   // 어드민 라우트 진입 시 시니어 모드 자동 해제 (admin UI는 senior-mode CSS 무효화)
-  const isAdminRoute = ADMIN_PATH_PREFIXES.some((p) => location.pathname === p || location.pathname.startsWith(p + "/"));
   useEffect(() => {
     if (isAdminRoute && seniorMode) {
       setSenior(false);
@@ -272,8 +230,6 @@ export function Layout() {
   const isScanActive = scanPaths.includes(location.pathname);
   const casesPaths = CASES_ITEMS.map((s) => s.to);
   const isCasesActive = casesPaths.includes(location.pathname);
-  const guidePaths = GUIDE_ITEMS.map((s) => s.to);
-  const isGuideActive = guidePaths.includes(location.pathname);
 
   const navCls = (isActive: boolean) =>
     `flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm transition-colors whitespace-nowrap ${
@@ -347,10 +303,6 @@ export function Layout() {
                     <ImageIcon size={14} />
                     사진으로 검사하기
                   </NavLink>
-                  <NavLink to="/sender" className={({ isActive }) => navCls(isActive)}>
-                    <Phone size={14} />
-                    전화번호 조회
-                  </NavLink>
                   <NavLink to="/report" className={({ isActive }) => navCls(isActive)}>
                     <Flag size={14} />
                     신고하기
@@ -369,17 +321,18 @@ export function Layout() {
                     triggerIcon={Zap}
                   />
 
-                  <NavDropdown
-                    label="피해 사례"
-                    items={CASES_ITEMS}
-                    isActive={isCasesActive}
-                  />
+                  {CASES_ITEMS.length > 0 && (
+                    <NavDropdown
+                      label="피해 사례"
+                      items={CASES_ITEMS}
+                      isActive={isCasesActive}
+                    />
+                  )}
 
-                  <NavDropdown
-                    label="안전 가이드"
-                    items={GUIDE_ITEMS}
-                    isActive={isGuideActive}
-                  />
+                  <NavLink to="/guide" className={({ isActive }) => navCls(isActive)}>
+                    <BookOpen size={14} />
+                    안전 가이드
+                  </NavLink>
 
                   <NavLink to="/report" className={({ isActive }) => navCls(isActive)}>
                     <Flag size={14} />
@@ -395,12 +348,9 @@ export function Layout() {
                         isActive={ADMIN_PATH_PREFIXES.some((p: string) => location.pathname === p || location.pathname.startsWith(p + "/"))}
                         triggerIcon={LayoutDashboard}
                         items={[
-                          { to: "/admin", icon: LayoutDashboard, label: "모델 성능", desc: "모델 비교 분석" },
                           { to: "/dashboard", icon: LayoutDashboard, label: "대시보드", desc: "탐지 현황 대시보드" },
-                          { to: "/patterns", icon: Database, label: "패턴 DB", desc: "피싱 패턴 라이브러리" },
-                          { to: "/audit", icon: ClipboardList, label: "보안 감사", desc: "감사 로그 및 신고 검토" },
-                          { to: "/feedback", icon: MessageSquare, label: "피드백 분석", desc: "정확도 피드백 분석" },
-                          { to: "/settings", icon: Settings2, label: "설정", desc: "시스템 설정" },
+                          { to: "/compare", icon: GitCompareArrows, label: "비교 분석", desc: "다중 분석 결과 비교" },
+                          { to: "/health", icon: Activity, label: "헬스 체크", desc: "서버·API 상태 모니터링" },
                         ]}
                       />
                       <button
@@ -534,27 +484,26 @@ export function Layout() {
                       </NavLink>
                     ))}
 
-                    {/* 피해 사례 */}
-                    <div className="px-3 pt-3">
-                      <p className="text-[10px] text-gray-400 dark:text-white/30 uppercase tracking-widest mb-1.5" style={{ fontWeight: 600 }}>피해 사례</p>
-                    </div>
-                    {CASES_ITEMS.map(({ to, icon: Icon, label }) => (
-                      <NavLink key={to} to={to} className={({ isActive }) => `flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm transition-colors ${isActive ? "bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400 font-semibold" : "text-gray-700 dark:text-white/60 hover:bg-gray-50 dark:hover:bg-white/5"}`}>
-                        <Icon size={14} className="text-gray-400 dark:text-white/35 shrink-0" />
-                        {label}
-                      </NavLink>
-                    ))}
+                    {/* 피해 사례 (cleanup으로 빈 배열 — 섹션 자동 숨김) */}
+                    {CASES_ITEMS.length > 0 && (
+                      <>
+                        <div className="px-3 pt-3">
+                          <p className="text-[10px] text-gray-400 dark:text-white/30 uppercase tracking-widest mb-1.5" style={{ fontWeight: 600 }}>피해 사례</p>
+                        </div>
+                        {CASES_ITEMS.map(({ to, icon: Icon, label }) => (
+                          <NavLink key={to} to={to} className={({ isActive }) => `flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm transition-colors ${isActive ? "bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400 font-semibold" : "text-gray-700 dark:text-white/60 hover:bg-gray-50 dark:hover:bg-white/5"}`}>
+                            <Icon size={14} className="text-gray-400 dark:text-white/35 shrink-0" />
+                            {label}
+                          </NavLink>
+                        ))}
+                      </>
+                    )}
 
                     {/* 안전 가이드 */}
-                    <div className="px-3 pt-3">
-                      <p className="text-[10px] text-gray-400 dark:text-white/30 uppercase tracking-widest mb-1.5" style={{ fontWeight: 600 }}>안전 가이드</p>
-                    </div>
-                    {GUIDE_ITEMS.map(({ to, icon: Icon, label }) => (
-                      <NavLink key={to} to={to} className={({ isActive }) => `flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm transition-colors ${isActive ? "bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400 font-semibold" : "text-gray-700 dark:text-white/60 hover:bg-gray-50 dark:hover:bg-white/5"}`}>
-                        <Icon size={14} className="text-gray-400 dark:text-white/35 shrink-0" />
-                        {label}
-                      </NavLink>
-                    ))}
+                    <NavLink to="/guide" className={({ isActive }) => `flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm transition-colors ${isActive ? "bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400 font-semibold" : "text-gray-700 dark:text-white/60 hover:bg-gray-50 dark:hover:bg-white/5"}`}>
+                      <BookOpen size={14} className="text-gray-400 dark:text-white/35 shrink-0" />
+                      안전 가이드
+                    </NavLink>
                   </>
                 )}
 
@@ -622,11 +571,7 @@ export function Layout() {
           <div className="flex items-center gap-4 text-xs text-gray-400 dark:text-white/30">
             <NavLink to="/guide"     className="hover:text-blue-600 dark:hover:text-blue-400 transition-colors">안전 가이드</NavLink>
             <span>·</span>
-            <NavLink to="/cases"     className="hover:text-blue-600 dark:hover:text-blue-400 transition-colors">피해 사례</NavLink>
-            <span>·</span>
             <NavLink to="/report"    className="hover:text-blue-600 dark:hover:text-blue-400 transition-colors">신고하기</NavLink>
-            <span>·</span>
-            <NavLink to="/changelog" className="hover:text-blue-600 dark:hover:text-blue-400 transition-colors">변경 이력</NavLink>
           </div>
         </div>
       </footer>
