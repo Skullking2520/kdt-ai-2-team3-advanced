@@ -10,15 +10,11 @@ import { URLAnalyzer } from "./components/URLAnalyzer";
 import { ImageAnalyzer } from "./components/ImageAnalyzer";
 import { SeniorImageAnalyzer } from "./components/SeniorImageAnalyzer";
 import { SenderLookup } from "./components/SenderLookup";
-import { History } from "./components/History";
 import { CaseStudies } from "./components/CaseStudies";
-import { TrendReport } from "./components/TrendReport";
-import { Quiz } from "./components/Quiz";
 import { VulnerableGuide } from "./components/VulnerableGuide";
 import { ReportPage } from "./components/ReportPage";
 import { AnalysisProgress } from "./components/AnalysisProgress";
 import { AnalysisResult } from "./components/AnalysisResult";
-import { Changelog } from "./components/Changelog";
 import { Emergency } from "./components/Emergency";
 
 import type { RouteObject } from "react-router";
@@ -34,12 +30,8 @@ export const publicRoutes: RouteObject[] = [
   { path: "image", Component: ImageAnalyzer },
   { path: "senior-image", Component: SeniorImageAnalyzer },
   { path: "sender", Component: SenderLookup },
-  { path: "history", Component: History },
   { path: "cases", Component: CaseStudies },
-  { path: "trend", Component: TrendReport },
-  { path: "quiz", Component: Quiz },
   { path: "guide", Component: VulnerableGuide },
   { path: "report", Component: ReportPage },
-  { path: "changelog", Component: Changelog },
   { path: "emergency", Component: Emergency },
 ];

@@ -23,9 +23,7 @@ import { lazy } from "react";
 import type { RouteObject } from "react-router";
 
 const Dashboard = lazy(() => import("./components/Dashboard").then((m) => ({ default: m.Dashboard })));
-const Benchmark = lazy(() => import("./components/Benchmark").then((m) => ({ default: m.Benchmark })));
 const CompareAnalysis = lazy(() => import("./components/CompareAnalysis").then((m) => ({ default: m.CompareAnalysis })));
-const ABTest = lazy(() => import("./components/ABTest").then((m) => ({ default: m.ABTest })));
 const SystemHealth = lazy(() => import("./components/SystemHealth").then((m) => ({ default: m.SystemHealth })));
 
 /**
@@ -48,11 +46,9 @@ function adminGuard({ request }: { request: Request }) {
 }
 
 export const adminRoutes: RouteObject[] = import.meta.env.DEV
-  ? [
+    ? [
       { path: "compare", Component: CompareAnalysis, loader: adminGuard },
       { path: "dashboard", Component: Dashboard },
-      { path: "benchmark", Component: Benchmark, loader: adminGuard },
-      { path: "ab-test", Component: ABTest, loader: adminGuard },
       { path: "health", Component: SystemHealth, loader: adminGuard },
     ]
   : [];

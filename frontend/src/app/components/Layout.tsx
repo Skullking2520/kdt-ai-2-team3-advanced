@@ -620,8 +620,6 @@ export function Layout() {
             <NavLink to="/cases"     className="hover:text-blue-600 dark:hover:text-blue-400 transition-colors">피해 사례</NavLink>
             <span>·</span>
             <NavLink to="/report"    className="hover:text-blue-600 dark:hover:text-blue-400 transition-colors">신고하기</NavLink>
-            <span>·</span>
-            <NavLink to="/changelog" className="hover:text-blue-600 dark:hover:text-blue-400 transition-colors">변경 이력</NavLink>
           </div>
         </div>
       </footer>
