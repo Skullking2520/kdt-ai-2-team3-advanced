@@ -42,7 +42,7 @@ async def _warmup_ocr() -> None:
     from .core.pydantic_settings import settings
     if settings.USE_MOCK_OCR:
         return
-    if settings.CLOVA_OCR_URL and settings.CLOVA_OCR_SECRET:
+    if settings.USE_CLOVA_ONLY and settings.CLOVA_OCR_URL and settings.CLOVA_OCR_SECRET:
         logger.info("[startup] CLOVA 전용 모드 — PaddleOCR 워밍업 스킵")
         return
     try:
