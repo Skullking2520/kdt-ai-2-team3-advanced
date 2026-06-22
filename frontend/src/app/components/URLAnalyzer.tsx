@@ -497,15 +497,13 @@ export function URLAnalyzer() {
                     </div>
                   </Card>
 
-                  {/* 분석 이력 */}
+                  {/* 분석 이력 (VirusTotal Last Analysis Date / First Submission Date) */}
                   <Card padding="p-4">
                     <p className="text-xs text-white/80 mb-3 flex items-center gap-1"><Clock size={10} /> 분석 이력</p>
                     <div className="grid grid-cols-2 gap-2">
                       {[
                         { k: "최종 분석", v: result.details.lastAnalysis },
                         { k: "최초 등록", v: result.details.firstSubmission },
-                        { k: "분석 모델", v: "url-classifier-v1.0" },
-                        { k: "분석 방식", v: "rule + heuristic" },
                       ].map((s) => (
                         <div key={s.k} className="bg-white/3 rounded-lg p-2">
                           <p className="text-[10px] text-white/60">{s.k}</p>
