@@ -4,7 +4,6 @@ from ..schemas.ocr_api import OcrRequest, OcrResponse
 
 router = APIRouter(prefix="/api/ocr", tags=["OCR"])
 
-
 @router.post("", response_model=OcrResponse)
 async def ocr(request: OcrRequest):
     """
