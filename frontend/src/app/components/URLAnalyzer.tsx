@@ -1,6 +1,6 @@
 import {useState} from "react";
 import {motion, AnimatePresence} from "motion/react";
-import {Link2, Search, AlertTriangle, CheckCircle, Shield, RefreshCw, ExternalLink, Clock, Lock, Globe, FileText, Server, Tag, Calendar} from "lucide-react";
+import {Link2, Search, AlertTriangle, CheckCircle, Shield, Clock, Globe, FileText, Server, Tag, Calendar} from "lucide-react";
 import {Card} from "./ui/Primitives";
 import {api, ApiException} from "@/lib/api";
 import type { UrlAnalysisResult } from "@/types/api";
