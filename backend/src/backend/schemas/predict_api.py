@@ -13,6 +13,7 @@ class PredictRequest(BaseModel):
     content: str
     sender: Optional[str] = None
     receivedAt: Optional[str] = None
+    imageId: Optional[str] = None
     allowTrainingUse: Optional[bool] = False
 
 
@@ -82,6 +83,9 @@ class PredictResponse(BaseModel):
     createdAt: str
     extractedUrl: Optional[str] = None
     urlDetails: Optional[UrlDetails] = None
+    ocrText: Optional[str] = None
+    imageId: Optional[str] = None
+    imageUrl: Optional[str] = None
 
 
 class EncoderClassificationOutput(BaseModel):

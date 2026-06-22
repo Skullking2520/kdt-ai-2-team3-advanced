@@ -1,58 +1,45 @@
 import { useState, useEffect } from "react";
 import { useNavigate, Link } from "react-router";
 import { Shield, Eye, EyeOff } from "lucide-react";
-
-const ADMIN_PASSWORD = "newbiz2026";
-const ADMIN_TOKEN_KEY = "newbiz_admin_token";
-
-function getAdminToken(): string | null {
-  try {
-    return localStorage.getItem(ADMIN_TOKEN_KEY);
-  } catch {
-    return null;
-  }
-}
-
-function setAdminToken(token: string): void {
-  try {
-    localStorage.setItem(ADMIN_TOKEN_KEY, token);
-  } catch {
-    // localStorage 사용 불가 환경
-  }
-}
+import { useAdmin } from "@/app/context/AdminContext";
 
 /**
  * 어드민 로그인 페이지 (/admin)
- * 라우트 정의는 routes.admin.tsx (가드 없음 — 누구나 진입 가능, 비밀번호로 인증)
- * 비밀번호는 VITE_ADMIN_PASSWORD (학원 데모용 = newbiz2026)
- * 성공 시 localStorage에 token 저장 → /dashboard로 이동
- * 인증된 상태로 진입 시 /dashboard로 자동 리다이렉트
+ * - useAdmin() hook으로 AdminContext 사용 → STORAGE_KEY "nb_admin_auth" + "true" 값 자동 일치
+ * - 비밀번호는 VITE_ADMIN_PASSWORD 환경변수 (.env: newbiz2026)
+ * - 성공 시: AdminContext.login() → isAdmin=true + localStorage "nb_admin_auth"="true"
+ *   → routes.admin.tsx adminGuard 통과 + Dashboard 렌더
+ * - 실패 시: "비밀번호가 일치하지 않습니다" 메시지
+ * - 이미 인증된 상태로 진입 시 useEffect로 /dashboard 자동 navigate
+ *
+ * 회귀 이력:
+ * - 첫 commit (e2362f6) 에서 AdminLogin이 자체 ADMIN_TOKEN_KEY="newbiz_admin_token" + 임의 토큰 값 사용
+ *   → AdminContext의 "nb_admin_auth"="true" 와 불일치 → Dashboard 진입해도 adminGuard 통과 못함
+ *   → Layout/Dashboard 모두 어드민 상태 미인식 → 빈 화면
+ * - 본 픽스: AdminContext.useAdmin() 사용으로 키/값 일치 + 단일 진실 출처 (single source of truth)
  */
 export function AdminLogin() {
   const navigate = useNavigate();
+  const { isAdmin, login } = useAdmin();
   const [password, setPassword] = useState("");
   const [showPw, setShowPw] = useState(false);
   const [err, setErr] = useState("");
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    if (getAdminToken()) {
+    if (isAdmin) {
       navigate("/dashboard", { replace: true });
     }
-  }, [navigate]);
+  }, [isAdmin, navigate]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setErr("");
     setLoading(true);
 
-    if (password === ADMIN_PASSWORD) {
-      const token = `admin_${Date.now()}_${Math.random().toString(36).slice(2)}`;
-      setAdminToken(token);
-      // 약간의 지연으로 자연스러운 UX
-      setTimeout(() => {
-        navigate("/dashboard", { replace: true });
-      }, 150);
+    const success = login(password);
+    if (success) {
+      // isAdmin useEffect가 navigate("/dashboard") 처리
     } else {
       setErr("비밀번호가 일치하지 않습니다");
       setLoading(false);

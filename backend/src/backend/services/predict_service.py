@@ -241,6 +241,10 @@ async def _ocr_extract(image_data: str) -> str:
         raise HTTPException(status_code=503, detail=str(exc)) from exc
 
 
+async def extract_ocr_text(image_data: str) -> str:
+    return await _ocr_extract(image_data)
+
+
 async def _predict_url(
     db: AsyncSession,
     request: PredictRequest,
@@ -377,4 +381,9 @@ async def predict_smishing(
         "cacheHit": False,
         "createdAt": log.created_at.isoformat(),
     })
+    if request.type == "image":
+        result.update({
+            "ocrText": content,
+            "imageId": request.imageId or str(log.id),
+        })
     return result

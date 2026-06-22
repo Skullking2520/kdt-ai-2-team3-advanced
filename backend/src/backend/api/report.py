@@ -2,8 +2,8 @@ from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..db.session import get_db
-from ..schemas.report_api import ReportRequest, ReportResponse
-from ..services.report_service import save_report_static_patterns
+from ..schemas.report_api import ReportRequest, ReportResponse, ReportStats
+from ..services.report_service import build_report_stats, save_report_static_patterns
 
 router = APIRouter(prefix="/api/reports")
 
@@ -18,3 +18,10 @@ async def report_smishing(
     """
 
     return await save_report_static_patterns(db, request)
+
+
+@router.get("/stats", response_model=ReportStats)
+async def get_report_stats(
+    db: AsyncSession = Depends(get_db),
+):
+    return await build_report_stats(db)
