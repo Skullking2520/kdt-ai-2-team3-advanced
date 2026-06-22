@@ -5,6 +5,8 @@ import {
   Zap, Type,
   LayoutDashboard,
   LogOut,
+  GitCompareArrows,
+  Activity,
 } from "lucide-react";
 import {useState, useEffect, useRef} from "react";
 import {useAdmin} from "../context/AdminContext";
@@ -360,6 +362,8 @@ export function Layout() {
                         triggerIcon={LayoutDashboard}
                         items={[
                           { to: "/dashboard", icon: LayoutDashboard, label: "대시보드", desc: "탐지 현황 대시보드" },
+                          { to: "/compare", icon: GitCompareArrows, label: "비교 분석", desc: "다중 분석 결과 비교" },
+                          { to: "/health", icon: Activity, label: "헬스 체크", desc: "서버·API 상태 모니터링" },
                         ]}
                       />
                       <button
