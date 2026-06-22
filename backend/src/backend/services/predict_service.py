@@ -72,7 +72,7 @@ async def _find_static_pattern_matches(
 
 def _require_encoder_settings() -> tuple[str, str]:
     api_key = settings.ENCODER_API_KEY
-    endpoint = settings.ENCODER_INFERENCE_ENDPOINT or settings.HF_SMISHING_ENCODER_URL
+    endpoint = settings.ENCODER_INFERENCE_ENDPOINT
 
     if not api_key or not endpoint:
         raise HTTPException(
@@ -156,7 +156,7 @@ async def request_encoder_prediction(text: str) -> EncoderClassificationOutput:
         return EncoderClassificationOutput(label="smishing", score=0.85)
 
     api_key = settings.ENCODER_API_KEY
-    endpoint = settings.ENCODER_INFERENCE_ENDPOINT or settings.HF_SMISHING_ENCODER_URL
+    endpoint = settings.ENCODER_INFERENCE_ENDPOINT
     if not api_key or not endpoint:
         logger.warning("[encoder] API 키 또는 엔드포인트 미설정 → mock fallback")
         return EncoderClassificationOutput(label="smishing", score=0.85)

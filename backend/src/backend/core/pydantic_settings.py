@@ -28,16 +28,14 @@ class Settings(BaseSettings):
     # 만약 .env에 필수값으로 두지 않고 기본값을 주려면 아래처럼 선언합니다.
     # SQLALCHEMY_DATABASE_URL: str = "sqlite:///./test.db"
 
-    # Hugging Face Inference Endpoint 설정
-    HF_SMISHING_ENCODER_URL: str | None = Field(default=None)
-    HF_SMISHING_DECODER_URL: str | None = Field(default=None)
-    HF_TOKEN: str | None = Field(default=None)
-    HF_TIMEOUT_SECONDS: int = Field(default=30)
-    HF_DECODER_MAX_NEW_TOKENS: int = Field(default=128)
+    # 인코더 (HuggingFace Inference Endpoint)
     ENCODER_API_KEY: str | None = Field(default=None)
     ENCODER_INFERENCE_ENDPOINT: str | None = Field(default=None)
+    HF_TIMEOUT_SECONDS: int = Field(default=30)
+
+    # 디코더 (Modal LangGraph RAG 서비스)
     DECODER_ENDPOINT_URL: str | None = Field(default=None)
-    EXPLAINER_MODEL: str = Field(default="Qwen/Qwen3-1.7B")
+
     USE_MOCK_MODEL: bool = Field(default=False)
     USE_MOCK_OCR: bool = Field(default=False)
     MODEL_VERSION: str = Field(default="unknown")
