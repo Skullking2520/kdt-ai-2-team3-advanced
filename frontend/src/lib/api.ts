@@ -48,19 +48,15 @@ export class ApiException extends Error {
 // Mock 가드
 // ───────────────────────────────────────────
 
-// backend main에 실제 구현된 endpoint. USE_MOCK=false 모드에서
-// 이 path들은 real fetch, 나머지는 mock fallback (history, cases, jobs 등 backend 미구현).
-const REAL_PATH_SET = new Set(['/api/predict', '/api/ocr', '/api/reports']);
-const REAL_PATH_PREFIXES = ['/api/sender/'];
-
-function isMockPath(path: string, method: string): boolean {
-  if (env.USE_MOCK) {
-    return mockHandle.has(path, method);
-  }
-  // USE_MOCK=false: backend에 구현된 path만 real fetch
-  if (REAL_PATH_SET.has(path)) return false;
-  if (REAL_PATH_PREFIXES.some((p) => path.startsWith(p))) return false;
-  return true;  // 나머지 (history, cases, jobs, share, feedback 등) → mock fallback
+// 라운드6+ 정직성 cleanup: 단순화.
+// - VITE_USE_MOCK=true (dev/발표 시연): 무조건 mock fallback (mockHandle 사용)
+// - VITE_USE_MOCK=false + VITE_API_BASE_URL 설정: real fetch (모든 path)
+// - VITE_USE_MOCK=false + API_BASE_URL 없음: mock fallback
+//
+// 발표 환경에서 backend 못 띄우면 VITE_USE_MOCK=true 유지.
+// backend 띄울 수 있으면 VITE_USE_MOCK=false + API_BASE_URL 설정으로 진짜 실연결.
+function isMockPath(_path: string, _method: string): boolean {
+  return env.USE_MOCK || !env.API_BASE_URL;
 }
 
 // ───────────────────────────────────────────

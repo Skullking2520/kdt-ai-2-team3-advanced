@@ -454,8 +454,8 @@ export const mockHandle = new MockRouter();
 
 // ── 라우트 등록 ──
 
-// 분석
-mockHandle.register('POST', '/api/analyze', (body) => {
+// 분석 (backend path /api/predict 와 일치 — lib/api.ts의 path 매핑 결과)
+mockHandle.register('POST', '/api/predict', (body) => {
   const req = body as AnalysisRequest;
   if (req.type === 'sms') return buildSmsResult({ type: 'sms', content: req.content, sender: req.sender });
   if (req.type === 'url') return buildUrlResult({ type: 'url', content: req.content });
