@@ -1,5 +1,5 @@
 import { useState, useRef, useCallback } from "react";
-import { ImageIcon, Upload, FileText, ChevronRight, RotateCcw, CheckCircle2, Loader2, AlertCircle, Edit3, Save } from "lucide-react";
+import { ImageIcon, Upload, FileText, ChevronRight, RotateCcw, CheckCircle2, Loader2, AlertCircle,   Edit3, Save, Flag, ShieldCheck } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { useNavigate } from "react-router";
 import { selectImageFiles } from "@/lib/imageFiles";
@@ -241,6 +241,15 @@ export function ImageAnalyzer() {
           </button>
         )}
 
+        {/* 정직한 데이터 처리 안내 — 입력 박스 하단 (Analyzer.tsx와 동일 패턴) */}
+        <div className="mt-6 flex items-start gap-2 px-3 py-2.5 rounded-lg bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10">
+          <ShieldCheck size={13} className="text-gray-400 dark:text-white/40 shrink-0 mt-0.5" />
+          <p className="text-[11px] text-gray-500 dark:text-white/50 leading-relaxed">
+            <strong className="text-gray-700 dark:text-white/70">개인정보(전화번호, 이름, 계좌번호 등)는 자동으로 마스킹 처리된 후에만 데이터 품질 개선 목적</strong>으로 활용됩니다.
+            원본 문자는 저장되지 않으며, 해당 기능은 관리자 승인 후에만 활성화됩니다.
+          </p>
+        </div>
+
         {/* OCR 진행 단계 */}
         <AnimatePresence>
           {ocrRunning && ocrStep >= 0 && (
@@ -406,26 +415,35 @@ export function ImageAnalyzer() {
                 )}
               </div>
 
-              {!isEditing && (
-                <>
-                  <button
-                    onClick={handleAnalyze}
-                    className="w-full flex items-center justify-center gap-2 px-5 py-3.5 sm:py-4 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 text-white hover:opacity-90 transition-all shadow-md text-sm sm:text-base"
-                    style={{ fontWeight: 700 }}
-                  >
-                    이 텍스트로 스미싱 검사하기
-                    <ChevronRight size={16} />
-                  </button>
+                {!isEditing && (
+                  <>
+                    <button
+                      onClick={handleAnalyze}
+                      className="w-full flex items-center justify-center gap-2 px-5 py-3.5 sm:py-4 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 text-white hover:opacity-90 transition-all shadow-md text-sm sm:text-base"
+                      style={{ fontWeight: 700 }}
+                    >
+                      이 텍스트로 스미싱 검사하기
+                      <ChevronRight size={16} />
+                    </button>
 
-                  <button
-                    onClick={handleReset}
-                    className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl border border-gray-200 dark:border-white/10 text-gray-600 dark:text-white/60 hover:bg-gray-50 dark:hover:bg-white/5 transition-all text-sm"
-                  >
-                    <RotateCcw size={14} />
-                    다른 이미지 검사하기
-                  </button>
-                </>
-              )}
+                    <button
+                      onClick={() => nav("/report")}
+                      className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl border border-red-200 dark:border-red-700/30 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/15 transition-all text-sm"
+                      style={{ fontWeight: 600 }}
+                    >
+                      <Flag size={14} />
+                      신고하기
+                    </button>
+
+                    <button
+                      onClick={handleReset}
+                      className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl border border-gray-200 dark:border-white/10 text-gray-600 dark:text-white/60 hover:bg-gray-50 dark:hover:bg-white/5 transition-all text-sm"
+                    >
+                      <RotateCcw size={14} />
+                      다른 이미지 검사하기
+                    </button>
+                  </>
+                )}
             </motion.div>
           )}
         </AnimatePresence>

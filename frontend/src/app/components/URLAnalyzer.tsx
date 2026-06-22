@@ -1,6 +1,6 @@
 import {useState} from "react";
 import {motion, AnimatePresence} from "motion/react";
-import {Link2, Search, AlertTriangle, CheckCircle, Shield, RefreshCw, Clock, Globe, FileText} from "lucide-react";
+import {Link2, Search, AlertTriangle, CheckCircle, Shield, RefreshCw, Clock, Globe, FileText, Flag, ShieldCheck} from "lucide-react";
 import {Card} from "./ui/Primitives";
 import {api, ApiException} from "@/lib/api";
 import type { UrlAnalysisResult } from "@/types/api";
@@ -189,6 +189,16 @@ export function URLAnalyzer() {
             onHome={() => window.location.assign("/")}
           />
         )}
+
+        {/* 정직한 데이터 처리 안내 — 입력 박스 하단 (Analyzer.tsx와 동일 패턴) */}
+        <div className="mt-6 flex items-start gap-2 px-3 py-2.5 rounded-lg bg-white/5 border border-white/10">
+          <ShieldCheck size={13} className="text-white/40 shrink-0 mt-0.5" />
+          <p className="text-[11px] text-white/50 leading-relaxed">
+            <strong className="text-white/70">개인정보(전화번호, 이름, 계좌번호 등)는 자동으로 마스킹 처리된 후에만 데이터 품질 개선 목적</strong>으로 활용됩니다.
+            원본 문자는 저장되지 않으며, 해당 기능은 관리자 승인 후에만 활성화됩니다.
+          </p>
+        </div>
+
         {result && rs && (
           <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="bg-[#0b1120] rounded-2xl p-4 space-y-4">
             {/* Risk header */}
@@ -403,10 +413,19 @@ export function URLAnalyzer() {
               )}
             </AnimatePresence>
 
-            <button onClick={() => { setResult(null); setInput(""); setTab("detection"); }}
-              className="flex items-center gap-1.5 text-xs text-white/70 hover:text-white/80 transition-all">
-              <RefreshCw size={11} /> 새 URL 분석
-            </button>
+            <div className="flex items-center gap-3">
+              <button
+                onClick={() => { window.location.href = "/report"; }}
+                className="flex items-center gap-1.5 px-3 py-2 rounded-lg border border-red-500/30 text-red-300 hover:bg-red-500/10 transition-all text-xs"
+                style={{ fontWeight: 600 }}
+              >
+                <Flag size={11} /> 신고하기
+              </button>
+              <button onClick={() => { setResult(null); setInput(""); setTab("detection"); }}
+                className="flex items-center gap-1.5 text-xs text-white/70 hover:text-white/80 transition-all">
+                <RefreshCw size={11} /> 새 URL 분석
+              </button>
+            </div>
           </motion.div>
         )}
       </AnimatePresence>

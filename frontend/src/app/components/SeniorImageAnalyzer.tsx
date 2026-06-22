@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from "motion/react";
 import { useNavigate } from "react-router";
 import {
   ImageIcon, Upload, FileText, ChevronRight, RotateCcw,
-  CheckCircle2, Loader2, AlertCircle, Edit3, Save, ShieldAlert,
+  CheckCircle2, Loader2, AlertCircle, Edit3, Save, ShieldAlert, Flag,
 } from "lucide-react";
 import { useSenior } from "@/app/context/SeniorContext";
 import { selectImageFiles } from "@/lib/imageFiles";
@@ -461,6 +461,15 @@ export function SeniorImageAnalyzer() {
                       <ShieldAlert size={26} />
                       위험한지 검사하기
                       <ChevronRight size={24} />
+                    </button>
+
+                    <button
+                      onClick={() => nav("/report")}
+                      className="w-full flex items-center justify-center gap-3 px-5 py-4 rounded-2xl border-2 border-red-300 dark:border-red-700/40 text-red-700 dark:text-red-200 hover:bg-red-50 dark:hover:bg-red-900/15 transition-all text-xl"
+                      style={{ fontWeight: 700, lineHeight: 1.2 }}
+                    >
+                      <Flag size={22} />
+                      신고하기
                     </button>
 
                     <button
