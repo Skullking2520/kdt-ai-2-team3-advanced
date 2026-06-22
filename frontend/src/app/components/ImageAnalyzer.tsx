@@ -127,29 +127,19 @@ export function ImageAnalyzer() {
       </div>
 
       <div className="space-y-4">
-        {/* 업로드 영역 — button + onClick 패턴 (label-for 일부 브라우저 미작동 대비) */}
+        {/* 업로드 영역 — label native htmlFor 패턴 (브라우저 native, 가장 robust)
+            회귀 이력:
+            - f852cd9: label onClick에 e.preventDefault() 추가 → label native click이 막혀 file picker 안 뜸
+            - bbf56cd: button + ref.click() 패턴 → React synthetic event 안이라 브라우저 정책에 막힘
+            - e6967c9: button + 새 input 생성 → 동일 synthetic event user gesture 문제
+            - 본 픽스: label의 native htmlFor 패턴으로 복구 (브라우저 native, React 거치지 않음) */}
         {!preview ? (
-          <button
-            type="button"
-            onClick={() => {
-              // 가장 robust한 파일 피커 fallback:
-              // label-for / ref.click() 패턴은 일부 브라우저/HMR 환경에서 작동 안 함
-              // (label-for 미작동, ref stale state, React state 동기화 이슈).
-              // 매번 새 input element를 만들어 native click() 호출 = user gesture 안이라
-              // 브라우저 정책 통과, ref/HMR 의존성 0.
-              const input = document.createElement("input");
-              input.type = "file";
-              input.accept = "image/*";
-              input.onchange = (e) => {
-                const f = (e.target as HTMLInputElement).files?.[0];
-                if (f) handleFile(f);
-              };
-              input.click();
-            }}
+          <label
+            htmlFor="file-input-image"
             onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
             onDragLeave={() => setDragOver(false)}
             onDrop={handleDrop}
-            className={`relative w-full text-left rounded-2xl border-2 border-dashed p-8 sm:p-12 flex flex-col items-center gap-4 cursor-pointer transition-all
+            className={`relative rounded-2xl border-2 border-dashed p-8 sm:p-12 flex flex-col items-center gap-4 cursor-pointer transition-all
               ${dragOver
                 ? "border-emerald-500/60 bg-emerald-50 dark:bg-emerald-900/10"
                 : "border-gray-300 dark:border-white/10 hover:border-emerald-500/40 hover:bg-gray-50 dark:hover:bg-white/5"
@@ -171,7 +161,7 @@ export function ImageAnalyzer() {
               className="hidden"
               onChange={(e) => { const f = e.target.files?.[0]; if (f) handleFile(f); }}
             />
-          </button>
+          </label>
         ) : (
           <div className="bg-white dark:bg-[#111c30] border border-gray-200 dark:border-white/10 rounded-2xl p-4">
             <div className="flex items-center justify-between mb-3">
