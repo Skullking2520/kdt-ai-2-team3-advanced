@@ -127,15 +127,40 @@ export function ImageAnalyzer() {
       </div>
 
       <div className="space-y-4">
-        {/* 업로드 영역 — label native htmlFor 패턴 (브라우저 native, 가장 robust)
-            회귀 이력:
-            - f852cd9: label onClick에 e.preventDefault() 추가 → label native click이 막혀 file picker 안 뜸
-            - bbf56cd: button + ref.click() 패턴 → React synthetic event 안이라 브라우저 정책에 막힘
-            - e6967c9: button + 새 input 생성 → 동일 synthetic event user gesture 문제
-            - 본 픽스: label의 native htmlFor 패턴으로 복구 (브라우저 native, React 거치지 않음) */}
+        {/* 업로드 영역 — multi-fallback (가장 robust):
+            회귀 이력 (모두 React synthetic event 안의 click() → 브라우저 정책에 막힘):
+            - f852cd9: label onClick + e.preventDefault() + fileRef.current?.click()
+            - bbf56cd: button + ref.click()
+            - e6967c9: button + 새 input 생성 + input.click()
+            - 1e0e9ec: label native htmlFor (브라우저 native, fallback)
+            - 본 픽스: 1순위 showOpenFilePicker (Chrome 86+/Edge 86+/Safari 15.4+ native API, secure context, 100% 작동) + 2순위 label native htmlFor fallback (Firefox 등 미지원 시)
+            showOpenFilePicker는 user gesture 인정 — React onClick 안에서도 await으로 호출 가능, native dialog 보장.
+            showOpenFilePicker 미지원 시 (Firefox) onClick이 preventDefault 호출 안 함 → label native htmlFor click이 자동으로 input click trigger. */}
         {!preview ? (
           <label
             htmlFor="file-input-image"
+            onClick={async (e) => {
+              const w = window as unknown as { showOpenFilePicker?: (opts: unknown) => Promise<unknown[]> };
+              if (typeof w.showOpenFilePicker === "function") {
+                e.preventDefault();
+                try {
+                  const handles = (await w.showOpenFilePicker({
+                    types: [{ description: "Images", accept: { "image/*": [".png", ".jpg", ".jpeg", ".webp"] } }],
+                    excludeAcceptAllOption: false,
+                    multiple: false,
+                  })) as Array<{ getFile: () => Promise<File> }>;
+                  if (handles && handles.length > 0) {
+                    const file = await handles[0].getFile();
+                    handleFile(file);
+                  }
+                } catch {
+                  // user cancelled (AbortError) 또는 권한 거부 — 조용히 무시
+                }
+                // showOpenFilePicker 처리 완료 → label native click 안 트리거
+                return;
+              }
+              // showOpenFilePicker 미지원 (Firefox) → label native htmlFor click이 input click 자동 trigger
+            }}
             onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
             onDragLeave={() => setDragOver(false)}
             onDrop={handleDrop}
