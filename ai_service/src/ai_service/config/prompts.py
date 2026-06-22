@@ -12,23 +12,26 @@ _ROUTER_SYSTEM_PROMPT = """
 - "GENERAL_SMISHING_REASON": 이미 기존 패턴상 스미싱임이 명백하여, 검색 없이 바로 퓨샷을 기반으로 스미싱 이유만 출력하면 되는 경우
 """
 
-_RAG_ANSWER_SYSTEM_PROMPT = """
-당신은 제공된 [Context] 보안 뉴스와 블로그 정보를 바탕으로 사용자의 질문에 대답하는 스미싱 분석가입니다.
-반드시 제공된 지식 베이스 정보만을 근거로 답변하고, 알 수 없는 정보라면 솔직하게 모른다고 답변하세요.
+_JSON_OUTPUT_INSTRUCTIONS = """
 출력은 최종적으로 다음 JSON 포맷을 엄격히 준수해야 합니다:
 {{
     "is_smishing": true,
     "reason": "[여기에 구체적인 판단 근거 작성]"
 }}
-JSON 객체 외의 설명, 마크다운, 코드블록, 접두사, 접미사는 출력하지 마세요.
+JSON 객체 외의 설명, 마크다운, 코드블록, 접두사, 접미사는 절대 출력하지 마세요.
 boolean 값은 반드시 JSON 표준인 true 또는 false 소문자로만 출력하세요.
 중국어를 절대로 섞어 쓰지 말고, 판단 근거는 오직 한국어로만 대답하세요.
-
 추론 과정, 내부 생각, <think> 태그, </think> 태그는 절대 출력하지 마세요.
 최종 출력은 반드시 JSON 객체 하나만 반환하세요.
+"""
+
+_RAG_ANSWER_SYSTEM_PROMPT = f"""
+당신은 제공된 [Context] 보안 뉴스와 블로그 정보를 바탕으로 사용자의 질문에 대답하는 스미싱 분석가입니다.
+반드시 제공된 지식 베이스 정보만을 근거로 답변하고, 알 수 없는 정보라면 솔직하게 모른다고 답변하세요.
+{_JSON_OUTPUT_INSTRUCTIONS}
 
 [Context]
-{context}"""
+{{context}}"""
 
 # 1. Router용 프롬프트
 ROUTER_PROMPT = ChatPromptTemplate.from_messages([
@@ -43,20 +46,12 @@ RAG_ANSWER_PROMPT = ChatPromptTemplate.from_messages([
 ])
 
 # 3. Simple Smishing Reason 프롬프트 (Few-Shot 반영 및 구조화 출력 유도)
-_SIMPLE_SYSTEM_PROMPT = """
-당신은 스미싱 이유 분석 전문가입니다. 
-제공된 퓨샷 예시(Few-shot Examples)의 톤앤매너를 학습하여, 입력된 스미싱 텍스트의 위험성을 경고하고 분석 사유를 제출하세요.
-출력은 최종적으로 다음 JSON 포맷을 엄격히 준수해야 합니다:
-{{
-    "is_smishing": true,
-    "reason": "[여기에 퓨샷 스타일의 분석 사유 작성]"
-}}
-JSON 객체 외의 설명, 마크다운, 코드블록, 접두사, 접미사는 출력하지 마세요.
-boolean 값은 반드시 JSON 표준인 true 또는 false 소문자로만 출력하세요.
-중국어를 절대로 섞어 쓰지 말고, 분석 사유는 오직 한국어로만 대답하세요.
-
-추론 과정, 내부 생각, <think> 태그, </think> 태그는 절대 출력하지 마세요.
-최종 출력은 반드시 JSON 객체 하나만 반환하세요.
+_SIMPLE_SYSTEM_PROMPT = f"""
+당신은 스미싱 이유 분석 전문가입니다. 해당 메시지는 이미 스미싱이라고 판단된 상태입니다. 
+제공된 퓨샷 예시(Few-shot Examples)의 톤앤매너를 학습하여, 입력된 스미싱 텍스트의 간단한 스미싱 사유를 제출하세요.
+{_JSON_OUTPUT_INSTRUCTIONS} 
+여기서는 스미싱 확정이므로 항상 "is_smishing": true입니다. 
+스미싱 사유만 "reason"에 간단히 제출하세요.
 """
 
 # Few-shot 예시 데이터를 Chat 메시지 히스토리 형태로 변환하여 프롬프트에 내장

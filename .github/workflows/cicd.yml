@@ -1,8 +1,8 @@
 name: Smishing Project CICD
 
 on:
-  push:
-    branches: ["main"]
+  push: # main, deploy 브랜치에 푸시하면 실행
+    branches: ["main", "deploy"]
 
 jobs:
   build-and-deploy:
