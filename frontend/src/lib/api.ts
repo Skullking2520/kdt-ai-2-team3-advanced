@@ -21,6 +21,7 @@ import type {
   Paginated,
   ReportRequest,
   ReportResponse,
+  ReportStats,
   FeedbackRequest,
   ShareRequest,
   ShareResponse,
@@ -158,6 +159,9 @@ export const api = {
 
   getReport: (receiptId: string) =>
     request<ReportResponse>(`/api/reports/${encodeURIComponent(receiptId)}`),
+
+  getReportStats: () =>
+    request<ReportStats>('/api/reports/stats'),
 
   // ── 피드백 ──────────────────────────────
   submitFeedback: (req: FeedbackRequest) =>

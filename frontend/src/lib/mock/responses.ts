@@ -17,6 +17,7 @@ import type {
   HistoryItem,
   Paginated,
   ReportResponse,
+  ReportStats,
   ShareResponse,
   CaseStudy,
   DamageStep,
@@ -392,11 +393,11 @@ class MockRouter {
   }
 
   has(path: string, method: string): boolean {
-    return this.routes.has(`${method.toUpperCase()} ${path.toUpperCase()}`);
+    return this.routes.has(`${method.toUpperCase()} ${path.split('?')[0].toUpperCase()}`);
   }
 
   invoke<T>(path: string, method: string, body: unknown): T {
-    const key = `${method.toUpperCase()} ${path.toUpperCase()}`;
+    const key = `${method.toUpperCase()} ${path.split('?')[0].toUpperCase()}`;
     const handler = this.routes.get(key);
     if (!handler) {
       throw {
@@ -465,6 +466,20 @@ mockHandle.register('GET', '/api/reports/NB20260605-001234', () => ({
   status: 'received',
   createdAt: '2026-06-05T14:32:00+09:00',
 } satisfies ReportResponse));
+
+mockHandle.register('GET', '/api/reports/stats', () => ({
+  total: 996,
+  byCategory: [
+    { category: '공공기관 사칭', count: 342 },
+    { category: '금융 피싱', count: 218 },
+    { category: '택배 사칭', count: 156 },
+    { category: '이벤트 사기', count: 124 },
+    { category: '대출 사기', count: 89 },
+    { category: '기타 사기', count: 67 },
+  ],
+  byStatus: [{ status: 'received', count: 996 }],
+  period: { from: '2026-06-01T00:00:00+09:00', to: nowIso() },
+} satisfies ReportStats));
 
 // 피드백
 mockHandle.register('POST', '/api/feedback', () => ({ ok: true as const }));

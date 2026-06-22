@@ -300,6 +300,13 @@ export interface ReportResponse {
   createdAt: string;
 }
 
+export interface ReportStats {
+  total: number;
+  byCategory: { category: SmishingType | string; count: number }[];
+  byStatus: { status: ReportStatus | string; count: number }[];
+  period: { from: string; to: string };
+}
+
 // ───────────────────────────────────────────
 // 15. 피드백
 // ───────────────────────────────────────────

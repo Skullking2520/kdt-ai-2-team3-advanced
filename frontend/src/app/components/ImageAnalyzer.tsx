@@ -127,44 +127,10 @@ export function ImageAnalyzer() {
       </div>
 
       <div className="space-y-4">
-        {/* 업로드 영역 — multi-fallback (가장 robust):
-            회귀 이력 (모두 React synthetic event 안의 click() → 브라우저 정책에 막힘):
-            - f852cd9: label onClick + e.preventDefault() + fileRef.current?.click()
-            - bbf56cd: button + ref.click()
-            - e6967c9: button + 새 input 생성 + input.click()
-            - 1e0e9ec: label native htmlFor (브라우저 native, fallback)
-            - 본 픽스: 1순위 showOpenFilePicker (Chrome 86+/Edge 86+/Safari 15.4+ native API, secure context, 100% 작동) + 2순위 label native htmlFor fallback (Firefox 등 미지원 시)
-            showOpenFilePicker는 user gesture 인정 — React onClick 안에서도 await으로 호출 가능, native dialog 보장.
-            showOpenFilePicker 미지원 시 (Firefox) onClick이 preventDefault 호출 안 함 → label native htmlFor click이 자동으로 input click trigger. */}
+        {/* 업로드 영역 — native label/htmlFor 연결로 파일 선택창을 연다. */}
         {!preview ? (
           <label
             htmlFor="file-input-image"
-            onClick={(e) => {
-              const w = window as unknown as { showOpenFilePicker?: (opts: unknown) => Promise<Array<{ getFile: () => Promise<File> }>> };
-              if (typeof w.showOpenFilePicker === "function") {
-                // showOpenFilePicker는 top-level user gesture(transient activation) 안에서 호출되어야 함.
-                // async/await의 await는 microtask boundary에서 activation을 잃게 만들어 AbortError로 reject됨.
-                // 즉시 호출 + .then() Promise chain으로 activation 유지.
-                e.preventDefault();
-                const pickerPromise = w.showOpenFilePicker({
-                  types: [{ description: "Images", accept: { "image/*": [".png", ".jpg", ".jpeg", ".webp"] } }],
-                  excludeAcceptAllOption: false,
-                  multiple: false,
-                });
-                pickerPromise
-                  .then((handles) => {
-                    if (handles && handles.length > 0) {
-                      handles[0].getFile().then((file) => handleFile(file)).catch(() => {});
-                    }
-                  })
-                  .catch(() => {
-                    // user cancel(AbortError) 또는 권한 거부 — 조용히 무시
-                  });
-                return;
-              }
-              // showOpenFilePicker 미지원(Firefox 등) → onClick이 preventDefault 호출 안 함
-              // → label native htmlFor click이 input click 자동 trigger
-            }}
             onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
             onDragLeave={() => setDragOver(false)}
             onDrop={handleDrop}
@@ -184,10 +150,12 @@ export function ImageAnalyzer() {
               <p className="text-xs sm:text-sm text-gray-500 dark:text-white/40">PNG, JPG, WEBP 지원 · 최대 10MB</p>
             </div>
             <input
+              id="file-input-image"
               ref={fileRef}
               type="file"
               accept="image/*"
-              className="hidden"
+              aria-label="이미지 파일 선택"
+              className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
               onChange={(e) => { const f = e.target.files?.[0]; if (f) handleFile(f); }}
             />
           </label>

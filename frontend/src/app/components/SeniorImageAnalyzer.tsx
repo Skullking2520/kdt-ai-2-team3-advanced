@@ -193,7 +193,8 @@ export function SeniorImageAnalyzer() {
               ref={fileRef}
               type="file"
               accept="image/*"
-              className="hidden"
+              aria-label="이미지 파일 선택"
+              className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
               onChange={(e) => { const f = e.target.files?.[0]; if (f) handleFile(f); }}
             />
           </label>
