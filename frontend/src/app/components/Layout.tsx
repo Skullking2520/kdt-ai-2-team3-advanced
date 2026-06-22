@@ -201,15 +201,18 @@ export function Layout() {
   const { isAdmin, logout } = useAdmin();
   const { senior: seniorMode, toggle: setSeniorMode, setSenior } = useSenior();
 
-  // 시니어 모드 진입/해제 시 다크 강제 (SeniorHome/SeniorAnalyzer 다크 전용 디자인)
-  // 진입: 다크 강제 / 해제: 라이트로 복귀 (어르신 친화 = 다크, 일반 = 라이트)
+  // 어드민 라우트 정의 (시니어/다크 모드 useEffect에서 공통 사용)
+  const isAdminRoute = ADMIN_PATH_PREFIXES.some((p) => location.pathname === p || location.pathname.startsWith(p + "/"));
+
+  // 시니어 모드 또는 어드민 라우트 = 다크 강제 (둘 다 다크 전용 디자인)
+  // 일반 사용자 = 라이트. 어드민 진입 시 seniorMode가 false여도 다크로 강제.
   useEffect(() => {
-    if (seniorMode) {
+    if (seniorMode || isAdminRoute) {
       setIsDark(true);
     } else {
       setIsDark(false);
     }
-  }, [seniorMode]);
+  }, [seniorMode, isAdminRoute]);
 
   useEffect(() => {
     document.documentElement.classList.toggle("dark", isDark);
@@ -225,7 +228,6 @@ export function Layout() {
   }, [location.pathname]);
 
   // 어드민 라우트 진입 시 시니어 모드 자동 해제 (admin UI는 senior-mode CSS 무효화)
-  const isAdminRoute = ADMIN_PATH_PREFIXES.some((p) => location.pathname === p || location.pathname.startsWith(p + "/"));
   useEffect(() => {
     if (isAdminRoute && seniorMode) {
       setSenior(false);

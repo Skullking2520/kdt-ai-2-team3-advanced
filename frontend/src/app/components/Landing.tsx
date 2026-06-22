@@ -4,7 +4,9 @@ import {
   MessageSquareWarning, Link2, ImageIcon, Flag,
   ShieldCheck, ArrowRight, AlertTriangle,
   Package, Building2, Heart, CreditCard, ChevronRight,
+  Accessibility,
 } from "lucide-react";
+import { useSenior } from "../context/SeniorContext";
 
 const QUICK_ACTIONS = [
   {
@@ -83,6 +85,12 @@ const RECENT_WARNINGS: { text: string; time: string; level: string }[] = [];
 
 export function Landing() {
   const navigate = useNavigate();
+  const { setSenior } = useSenior();
+
+  const enterSeniorMode = () => {
+    setSenior(true);
+    navigate("/senior-home");
+  };
 
   return (
     <div>
@@ -111,6 +119,14 @@ export function Landing() {
                 <MessageSquareWarning size={16} style={{ color: "white" }} />
                 문자 검사 시작
                 <ArrowRight size={14} style={{ color: "white" }} />
+              </button>
+              <button
+                onClick={enterSeniorMode}
+                className="flex items-center justify-center gap-2 px-6 py-3 rounded-xl text-gray-700 dark:text-white/70 text-sm bg-gray-100 dark:bg-white/8 hover:bg-gray-200 dark:hover:bg-white/12 transition-all cursor-pointer"
+                style={{ fontWeight: 500 }}
+              >
+                <Accessibility size={16} />
+                어르신 예방 가이드
               </button>
               <button
                 onClick={() => navigate("/guide")}
