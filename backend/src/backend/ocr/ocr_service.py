@@ -398,12 +398,26 @@ async def extract_text_from_image(data_uri: str) -> str:
     """
     base64 data URI 이미지에서 텍스트를 추출한다.
 
-    1. PaddleOCR 1차 인식
-    2. 품질 기준 미달 시 CLOVA OCR fallback
-    3. CLOVA 실패 또는 빈 결과면 PaddleOCR 결과 반환
+    CLOVA_OCR_URL·CLOVA_OCR_SECRET이 설정되어 있으면 CLOVA만 사용한다.
+    미설정 시: PaddleOCR 1차 인식 → 품질 기준 미달 시 CLOVA fallback.
     """
     image_bytes, mime_type, ext = _parse_data_uri(data_uri)
 
+    # CLOVA 설정이 있으면 PaddleOCR 없이 CLOVA만 호출
+    if settings.CLOVA_OCR_URL and settings.CLOVA_OCR_SECRET:
+        logger.info("[OCR] CLOVA 전용 모드")
+        try:
+            clova_text = _run_clova_ocr(image_bytes, mime_type, ext)
+            if clova_text:
+                logger.info("[OCR] CLOVA 성공 | text=%r", clova_text[:80])
+                return clova_text
+            raise RuntimeError("CLOVA OCR 결과가 비어 있습니다.")
+        except RuntimeError:
+            raise
+        except Exception as e:
+            raise RuntimeError(f"CLOVA OCR 호출 실패: {e}") from e
+
+    # CLOVA 미설정: PaddleOCR → CLOVA fallback 파이프라인
     paddle_text, avg_conf, min_conf = _run_paddle_ocr(image_bytes, ext)
     quality = _ocr_quality_score(paddle_text)
 
