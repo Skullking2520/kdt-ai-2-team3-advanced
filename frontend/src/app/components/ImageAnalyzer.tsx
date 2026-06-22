@@ -139,27 +139,31 @@ export function ImageAnalyzer() {
         {!preview ? (
           <label
             htmlFor="file-input-image"
-            onClick={async (e) => {
-              const w = window as unknown as { showOpenFilePicker?: (opts: unknown) => Promise<unknown[]> };
+            onClick={(e) => {
+              const w = window as unknown as { showOpenFilePicker?: (opts: unknown) => Promise<Array<{ getFile: () => Promise<File> }>> };
               if (typeof w.showOpenFilePicker === "function") {
+                // showOpenFilePicker는 top-level user gesture(transient activation) 안에서 호출되어야 함.
+                // async/await의 await는 microtask boundary에서 activation을 잃게 만들어 AbortError로 reject됨.
+                // 즉시 호출 + .then() Promise chain으로 activation 유지.
                 e.preventDefault();
-                try {
-                  const handles = (await w.showOpenFilePicker({
-                    types: [{ description: "Images", accept: { "image/*": [".png", ".jpg", ".jpeg", ".webp"] } }],
-                    excludeAcceptAllOption: false,
-                    multiple: false,
-                  })) as Array<{ getFile: () => Promise<File> }>;
-                  if (handles && handles.length > 0) {
-                    const file = await handles[0].getFile();
-                    handleFile(file);
-                  }
-                } catch {
-                  // user cancelled (AbortError) 또는 권한 거부 — 조용히 무시
-                }
-                // showOpenFilePicker 처리 완료 → label native click 안 트리거
+                const pickerPromise = w.showOpenFilePicker({
+                  types: [{ description: "Images", accept: { "image/*": [".png", ".jpg", ".jpeg", ".webp"] } }],
+                  excludeAcceptAllOption: false,
+                  multiple: false,
+                });
+                pickerPromise
+                  .then((handles) => {
+                    if (handles && handles.length > 0) {
+                      handles[0].getFile().then((file) => handleFile(file)).catch(() => {});
+                    }
+                  })
+                  .catch(() => {
+                    // user cancel(AbortError) 또는 권한 거부 — 조용히 무시
+                  });
                 return;
               }
-              // showOpenFilePicker 미지원 (Firefox) → label native htmlFor click이 input click 자동 trigger
+              // showOpenFilePicker 미지원(Firefox 등) → onClick이 preventDefault 호출 안 함
+              // → label native htmlFor click이 input click 자동 trigger
             }}
             onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
             onDragLeave={() => setDragOver(false)}

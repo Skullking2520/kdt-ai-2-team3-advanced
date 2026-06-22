@@ -63,18 +63,22 @@ describe("analyzeSms — 시그널 플래그", () => {
   });
 });
 
-describe("analyzeSms — 유사 사례", () => {
-  it("high → 3건", () => {
+describe("analyzeSms — 유사 사례 (RAG 정직 처리)", () => {
+  // 라운드6 정직 처리: RAG(과거 스미싱 사례 검색)는 백엔드 미연동 상태.
+  // 가짜 사례 추측은 정직하지 않으므로 빈 배열을 반환하고, UI에서 "RAG 미연동" 안내.
+  // 백엔드 Pinecone RAG 연동 시 이 테스트는 length>0 으로 교체 필요.
+  // 참고: smsAnalysis.ts:58-66 의도 코멘트.
+  it("high → RAG 미연동으로 0건 반환 (정직 처리)", () => {
     const r = analyzeSms("엄마 나 폰 고장나서 번호 바뀌었어. 급하게 상품권 결제 좀 해줘.");
-    expect(r.similar_cases.length).toBe(3);
+    expect(r.similar_cases.length).toBe(0);
   });
 
-  it("medium (긴급성) → 2건", () => {
+  it("medium (긴급성) → RAG 미연동으로 0건 반환 (정직 처리)", () => {
     const r = analyzeSms("긴급 정지 즉시 환급");
-    expect(r.similar_cases.length).toBe(2);
+    expect(r.similar_cases.length).toBe(0);
   });
 
-  it("low → 0건", () => {
+  it("low → 0건 (기존과 동일)", () => {
     const r = analyzeSms("안녕하세요");
     expect(r.similar_cases.length).toBe(0);
   });
