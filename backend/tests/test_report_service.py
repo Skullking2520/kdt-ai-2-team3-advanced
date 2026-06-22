@@ -20,7 +20,7 @@ def test_report_commits_url_candidate_and_phone_pattern_together(
     )
     monkeypatch.setattr(
         report_service,
-        "create_static_patterns_if_new",
+        "upsert_static_patterns",
         create_phones,
     )
 
@@ -29,7 +29,7 @@ def test_report_commits_url_candidate_and_phone_pattern_together(
             db,
             ReportRequest(
                 type="smishing",
-                text="http://fake.com/path 010-1234-5678",
+                content="http://fake.com/path 010-1234-5678",
             ),
         )
     )

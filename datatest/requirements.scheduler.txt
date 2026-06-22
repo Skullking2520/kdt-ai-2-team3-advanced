@@ -1,0 +1,6 @@
+apscheduler==3.11.2
+boto3==1.43.18
+pymysql==1.2.0
+python-dotenv==1.2.2
+requests==2.34.2
+tzlocal==5.3.1

@@ -23,7 +23,7 @@ def _to_phone_pattern_rows(request: ReportRequest) -> list[dict]:
         {
             "pattern_type": PatternType.PHONE,
             "pattern_value": phone,
-            "description": description,
+            "category": description,
         }
         for phone in extracted["phones"]
     ]
@@ -31,7 +31,7 @@ def _to_phone_pattern_rows(request: ReportRequest) -> list[dict]:
         rows.append({
             "pattern_type": PatternType.PHONE,
             "pattern_value": request.sender,
-            "description": description,
+            "category": description,
         })
     return rows
 
@@ -51,7 +51,8 @@ async def save_report_static_patterns(
 
     # 전화번호는 정적 패턴에 직접 저장
     phone_rows = _to_phone_pattern_rows(request)
-    await upsert_static_patterns(db, phone_rows, commit=True)
+    await upsert_static_patterns(db, phone_rows, commit=False)
+    await db.commit()
 
     return ReportResponse(
         receiptId=_generate_receipt_id(),
