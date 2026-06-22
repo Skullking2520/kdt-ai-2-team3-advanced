@@ -8,7 +8,6 @@ import {
   AlertTriangle,
   TrendingUp,
   History,
-  type LucideIcon,
 } from "lucide-react";
 
 /* ────────────────────────── 데이터 없는 상태 (공통) ────────────────────────── */

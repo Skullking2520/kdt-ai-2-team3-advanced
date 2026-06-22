@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "motion/react";
-import { Map, TrendingUp, Info } from "lucide-react";
+import { Map, TrendingUp } from "lucide-react";
 
 interface Region {
   id: string;
@@ -114,9 +114,6 @@ export function ThreatMap() {
 
               {/* Korea outline — simplified ellipses per region */}
               {REGIONS.map((r) => {
-                const val = filter === "all" ? r.reports / MAX_REPORTS
-                  : filter === "high" ? r.highPct / 40
-                  : (r.trend + 5) / 25;
                 const rad = getRadius(r.reports);
                 const col = filter === "all" ? getHeatColor(r.reports)
                   : filter === "high" ? `hsl(${(1 - r.highPct / 40) * 120},80%,55%)`
