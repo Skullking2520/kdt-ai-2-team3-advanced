@@ -248,7 +248,7 @@ async def generate_explanation(
     try:
         import httpx
         # 서버리스 특성상 Cold Start 지연이 있을 수 있으므로 충분한 timeout(60초)을 부여합니다.
-        async with httpx.AsyncClient(timeout=60.0) as client:
+        async with httpx.AsyncClient(timeout=8.0) as client:
             response = await client.post(
                 invoke_url,
                 json=payload,
