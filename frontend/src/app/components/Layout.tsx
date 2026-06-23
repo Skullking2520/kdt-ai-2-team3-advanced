@@ -3,10 +3,8 @@ import {
   ShieldCheck, Menu, X, MessageSquareWarning, Link2, ImageIcon,
   Flag, ChevronDown, Bell, Search, Sun, Moon, BookOpen,
   Zap, Type,
-  LayoutDashboard,
   LogOut,
   GitCompareArrows,
-  Activity,
 } from "lucide-react";
 import {useState, useEffect, useRef} from "react";
 import {useAdmin} from "../context/AdminContext";
@@ -16,7 +14,7 @@ import {motion, AnimatePresence} from "motion/react";
 
 const TREND_ALERT = "이번 주 택배·공공기관 사칭 스미싱 급증 — 링크 클릭 전 꼭 확인하세요";
 
-const ADMIN_PATH_PREFIXES = ["/dashboard", "/compare", "/health"];
+const ADMIN_PATH_PREFIXES = ["/compare"];
 
 /* ─── 실시간 검사 드롭다운 ─── */
 const SCAN_ITEMS = [
@@ -347,11 +345,9 @@ export function Layout() {
                       <NavDropdown
                         label="운영 도구"
                         isActive={ADMIN_PATH_PREFIXES.some((p: string) => location.pathname === p || location.pathname.startsWith(p + "/"))}
-                        triggerIcon={LayoutDashboard}
+                        triggerIcon={GitCompareArrows}
                         items={[
-                          { to: "/dashboard", icon: LayoutDashboard, label: "대시보드", desc: "탐지 현황 대시보드" },
                           { to: "/compare", icon: GitCompareArrows, label: "비교 분석", desc: "다중 분석 결과 비교" },
-                          { to: "/health", icon: Activity, label: "헬스 체크", desc: "서버·API 상태 모니터링" },
                         ]}
                       />
                       <button
