@@ -47,13 +47,19 @@ class StaticPattern(Base):
     )
 
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
-    pattern_type: Mapped[PatternType] = mapped_column(Enum(PatternType), nullable=False)
+    # DB ENUM은 소문자('url','phone','domain')이므로
+    # 값(소문자)으로 저장/조회하도록 values_callable을 지정한다.
+    pattern_type: Mapped[PatternType] = mapped_column(
+        Enum(PatternType, values_callable=lambda obj: [e.value for e in obj]),
+        nullable=False,
+    )
     pattern_value: Mapped[str] = mapped_column(Text, nullable=False)
     pattern_hash: Mapped[str] = mapped_column(String(64), nullable=False)
     category: Mapped[str | None] = mapped_column(String(255), nullable=True)
     source: Mapped[str | None] = mapped_column(String(32), nullable=True)
     severity: Mapped[Severity] = mapped_column(
-        Enum(Severity), nullable=False, default=Severity.MEDIUM
+        Enum(Severity, values_callable=lambda obj: [e.value for e in obj]),
+        nullable=False, default=Severity.MEDIUM,
     )
     first_seen_at: Mapped[datetime | None] = mapped_column(TIMESTAMP, nullable=True)
     last_seen_at: Mapped[datetime | None] = mapped_column(TIMESTAMP, nullable=True)
