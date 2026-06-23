@@ -25,6 +25,7 @@ import { lazy } from "react";
 import { redirect, type RouteObject } from "react-router";
 
 const AdminLogin = lazy(() => import("./components/AdminLogin").then((m) => ({ default: m.AdminLogin })));
+const Dashboard = lazy(() => import("./components/Dashboard").then((m) => ({ default: m.Dashboard })));
 const CompareAnalysis = lazy(() => import("./components/CompareAnalysis").then((m) => ({ default: m.CompareAnalysis })));
 
 /**
@@ -37,18 +38,15 @@ const CompareAnalysis = lazy(() => import("./components/CompareAnalysis").then((
 const STORAGE_KEY = "nb_admin_auth";
 
 function adminGuard() {
-  if (import.meta.env.DEV) {
-    const isAdmin = localStorage.getItem(STORAGE_KEY) === "true";
-    if (!isAdmin) {
-      throw redirect("/");
-    }
+  const isAdmin = localStorage.getItem(STORAGE_KEY) === "true";
+  if (!isAdmin) {
+    throw redirect("/");
   }
   return null;
 }
 
-export const adminRoutes: RouteObject[] = import.meta.env.DEV
-  ? [
-      { path: "admin", Component: AdminLogin },
-      { path: "compare", Component: CompareAnalysis, loader: adminGuard },
-    ]
-  : [];
+export const adminRoutes: RouteObject[] = [
+  { path: "admin", Component: AdminLogin },
+  { path: "dashboard", Component: Dashboard, loader: adminGuard },
+  { path: "compare", Component: CompareAnalysis, loader: adminGuard },
+];

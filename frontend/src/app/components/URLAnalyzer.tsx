@@ -1,7 +1,7 @@
 import {useState} from "react";
 import {useNavigate} from "react-router";
 import {motion, AnimatePresence} from "motion/react";
-import {Link2, Search, Shield, ShieldCheck, RefreshCw, Globe, Flag} from "lucide-react";
+import {Link2, Search, ShieldCheck, RefreshCw, Globe, Flag} from "lucide-react";
 import {Card} from "./ui/Primitives";
 import {api, ApiException} from "@/lib/api";
 import type { UrlAnalysisResult } from "@/types/api";
@@ -215,9 +215,6 @@ function SuccessResultPanel({
   onReport: () => void;
   onReset: () => void;
 }) {
-  const vtAvailable =
-    data.vtVerdict !== undefined && data.vtVerdict.status === "completed";
-
   return (
     <motion.div
       key="url-result-card"
@@ -238,114 +235,6 @@ function SuccessResultPanel({
         <p className="text-[11px] text-white/40 mt-1 break-all">{data.url}</p>
       </div>
 
-      {/* 추가 보안 검사 (VirusTotal) */}
-      <div>
-        <p className="text-xs text-white/60 mb-2 flex items-center gap-1.5">
-          <Shield size={11} />
-          추가 보안 검사
-        </p>
-        {vtAvailable ? (
-          <Card padding="p-5">
-            <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center gap-2">
-                <Shield size={14} className="text-blue-400" />
-                <p className="text-sm text-white/80" style={{ fontWeight: 600 }}>VirusTotal 보안 벤더 분석</p>
-              </div>
-              <span className="text-[10px] text-slate-600 dark:text-white/30 font-mono">
-                {data.vtVerdict?.lastCheckedAt
-                  ? new Date(data.vtVerdict.lastCheckedAt).toLocaleString("ko-KR")
-                  : "방금 전"}
-              </span>
-            </div>
-            <div className="grid grid-cols-1 sm:grid-cols-[160px_1fr] gap-5 items-center">
-              {(() => {
-                const v = data.vtVerdict!;
-                const total = v.malicious + v.suspicious + v.harmless + v.undetected;
-                if (total === 0) return null;
-                const cx = 80, cy = 80, ro = 70, ri = 46;
-                const segments: { value: number; color: string }[] = [
-                  { value: v.malicious, color: "#ef4444" },
-                  { value: v.suspicious, color: "#f97316" },
-                  { value: v.harmless, color: "#22c55e" },
-                  { value: v.undetected, color: "#475569" },
-                ];
-                let angle = -Math.PI / 2;
-                const slices = segments.map((s) => {
-                  const sweep = (s.value / total) * 2 * Math.PI;
-                  const x1 = cx + ro * Math.cos(angle);
-                  const y1 = cy + ro * Math.sin(angle);
-                  const x2 = cx + ro * Math.cos(angle + sweep);
-                  const y2 = cy + ro * Math.sin(angle + sweep);
-                  const xi1 = cx + ri * Math.cos(angle);
-                  const yi1 = cy + ri * Math.sin(angle);
-                  const xi2 = cx + ri * Math.cos(angle + sweep);
-                  const yi2 = cy + ri * Math.sin(angle + sweep);
-                  const large = sweep > Math.PI ? 1 : 0;
-                  const path = `M ${x1} ${y1} A ${ro} ${ro} 0 ${large} 1 ${x2} ${y2} L ${xi2} ${yi2} A ${ri} ${ri} 0 ${large} 0 ${xi1} ${yi1} Z`;
-                  angle += sweep + 0.01;
-                  return { ...s, path };
-                });
-                return (
-                  <div className="flex justify-center text-slate-900 dark:text-white">
-                    <svg viewBox="0 0 160 160" className="w-[160px] h-[160px]">
-                      {slices.map((s, i) => (
-                        <path key={`slice-${i}-${s.color}`} d={s.path} fill={s.color} fillOpacity={0.85} />
-                      ))}
-                      <text x={cx} y={cy - 4} textAnchor="middle" fontSize={26} fill="currentColor" fontWeight="700" fontFamily="system-ui,sans-serif">{v.malicious}</text>
-                      <text x={cx} y={cy + 18} textAnchor="middle" fontSize={10} fill="currentColor" opacity="0.5" fontFamily="system-ui,sans-serif">/{v.total}</text>
-                    </svg>
-                  </div>
-                );
-              })()}
-              <div className="space-y-2">
-                <p className="text-[11px] text-white/40 mb-1">
-                  {(() => {
-                    const v = data.vtVerdict!;
-                    if (v.malicious > 0) {
-                      return <><strong className="text-red-400">{v.malicious} / {v.total}</strong> 보안 업체에서 이 URL을 악성으로 표시했습니다.</>;
-                    }
-                    if (v.suspicious > 0) {
-                      return <><strong className="text-amber-400">{v.suspicious} / {v.total}</strong> 보안 업체에서 이 URL을 의심 대상으로 표시했습니다.</>;
-                    }
-                    return <>{v.total}개 엔진 분석 결과 악성 탐지가 없습니다.</>;
-                  })()}
-                </p>
-                {[
-                  { label: "악성 (Malicious)", value: data.vtVerdict!.malicious, color: "text-red-400", bg: "bg-red-500/10", border: "border-red-500/30" },
-                  { label: "의심 (Suspicious)", value: data.vtVerdict!.suspicious, color: "text-amber-400", bg: "bg-amber-500/10", border: "border-amber-500/30" },
-                  { label: "정상 (Harmless)", value: data.vtVerdict!.harmless, color: "text-emerald-400", bg: "bg-emerald-500/10", border: "border-emerald-500/30" },
-                  { label: "미분류 (Undetected)", value: data.vtVerdict!.undetected, color: "text-slate-700 dark:text-white/40", bg: "bg-white/5", border: "border-white/15" },
-                ].map((s, i) => (
-                  <div key={`stat-${i}-${s.label}`} className={`flex items-center justify-between px-3 py-1.5 rounded-lg border ${s.bg} ${s.border}`}>
-                    <span className={`text-[10px] ${s.color}`} style={{ fontWeight: 700 }}>{s.label}</span>
-                    <span className={`text-sm ${s.color}`} style={{ fontWeight: 700 }}>{s.value}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </Card>
-        ) : (
-          /* VT 결과가 없을 때 — amber 안내 */
-          <div className="p-4 rounded-xl border border-dashed border-amber-500/40 bg-amber-500/5">
-            <div className="flex items-start gap-3">
-              <div className="mt-0.5 grid h-6 w-6 place-items-center rounded-full bg-amber-500/15 text-amber-700 dark:text-amber-400 text-xs shrink-0" style={{ fontWeight: 700 }}>!</div>
-              <div className="flex-1">
-                <div className="flex items-center gap-2 mb-1">
-                  <p className="text-sm text-amber-800 dark:text-amber-200" style={{ fontWeight: 600 }}>
-                    추가 보안 검사 정보를 불러올 수 없습니다
-                  </p>
-                  <span className="text-[10px] px-1.5 py-0.5 rounded bg-amber-500/15 border border-amber-500/25 text-amber-700 dark:text-amber-300">정보 부족</span>
-                </div>
-                <p className="text-xs text-amber-700/80 dark:text-amber-300/80 leading-relaxed">
-                  VirusTotal 분석 결과를 현재 사용할 수 없습니다.
-                  <br />
-                  URL 기본 분석 결과는 정상적으로 제공됩니다.
-                </p>
-              </div>
-            </div>
-          </div>
-        )}
-      </div>
 
       <div className="flex items-center gap-3">
         <button
