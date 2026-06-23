@@ -1,8 +1,8 @@
 name: Smishing Project CICD
 
 on:
-  push:
-    branches: ["main"]
+  push: # main, deploy 브랜치에 푸시하면 실행
+    branches: ["main", "deploy"]
 
 jobs:
   build-and-deploy:
@@ -12,12 +12,12 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v4
 
-      # 1. AWS 자격증명 설정
+      # 1. AWS 자격증명 설정 (ECR용)
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-access-key-id: ${{ secrets.ECR_AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.ECR_AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ vars.AWS_REGION }}
 
       # 2. ECR 로그인
@@ -41,11 +41,12 @@ jobs:
         with:
           node-version: 20
           cache: "npm"
-          cache-dependency-path: "./frontend/package-lock.json"
+          cache-dependency-path: "./package-lock.json"
 
-      - name: Install Frontend Dependencies
-        working-directory: ./frontend
-        run: npm ci
+      # npm workspace 구조이므로 의존성은 루트에서 한 번에 설치한다.
+      # (frontend 단독 설치 시 rollup optional dependency가 hoisting 과정에서 누락됨)
+      - name: Install Dependencies (workspace root)
+        run: npm install
 
       - name: Build Frontend
         working-directory: ./frontend
@@ -75,6 +76,9 @@ jobs:
           username: ${{ vars.EC2_USER }}
           key: ${{ secrets.EC2_SSH_KEY }}
           script: |
+            # S3 자격증명 .env 업데이트
+            sed -i 's|^AWS_ACCESS_KEY_ID=.*|AWS_ACCESS_KEY_ID=${{ secrets.S3_AWS_ACCESS_KEY_ID }}|' ~/.env
+            sed -i 's|^AWS_SECRET_ACCESS_KEY=.*|AWS_SECRET_ACCESS_KEY=${{ secrets.S3_AWS_SECRET_ACCESS_KEY }}|' ~/.env
             aws ecr get-login-password --region ${{ vars.AWS_REGION }} | \
               docker login --username AWS --password-stdin \
               395120012527.dkr.ecr.${{ vars.AWS_REGION }}.amazonaws.com

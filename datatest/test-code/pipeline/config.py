@@ -10,7 +10,7 @@ from dotenv import load_dotenv
 load_dotenv(override=True)
 
 # ─ S3 ─────────────────────────────────────────
-S3_BUCKET = os.getenv("S3_BUCKET", "smishing-dev-newbies-2026")
+S3_BUCKET = os.getenv("S3_BUCKET", "smishing-s3-bucket")
 S3_REGION = os.getenv("AWS_DEFAULT_REGION", "ap-northeast-2")
 
 # ─ MySQL ──────────────────────────────────────
@@ -51,4 +51,4 @@ URLHAUS_AUTH_KEY = os.getenv("URLHAUS_AUTH_KEY", "")
 # - pinecone
 PINECONE_INDEX_NAME = "smishing-cases-v01"
 EMBEDDING_MODEL = "jhgan/ko-sroberta-multitask"
-PINECONE_API_KEY = os.environ["PINECONE_API_KEY"]
+PINECONE_API_KEY = os.getenv("PINECONE_API_KEY", "")

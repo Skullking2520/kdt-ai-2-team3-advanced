@@ -29,18 +29,17 @@ logger = logging.getLogger(__name__)
 async def lifespan(app: FastAPI):
     await create_db_tables()
     await _warmup_ocr()
-    vt_task = asyncio.create_task(_start_vt_worker())
+    # VT 워커는 별도 url-validator 컨테이너에서 단독 실행한다.
+    # (API 재시작과 무관하게 동작 + 이중 실행 방지)
     yield
-    vt_task.cancel()
-    try:
-        await vt_task
-    except asyncio.CancelledError:
-        pass
 
 
 async def _warmup_ocr() -> None:
     from .core.pydantic_settings import settings
     if settings.USE_MOCK_OCR:
+        return
+    if settings.USE_CLOVA_ONLY and settings.CLOVA_OCR_URL and settings.CLOVA_OCR_SECRET:
+        logger.info("[startup] CLOVA 전용 모드 — PaddleOCR 워밍업 스킵")
         return
     try:
         from .ocr.ocr_service import _get_paddle_ocr
@@ -50,19 +49,6 @@ async def _warmup_ocr() -> None:
         logger.info("[startup] PaddleOCR 워밍업 완료")
     except Exception as e:
         logger.warning("[startup] PaddleOCR 워밍업 실패 (첫 요청이 느릴 수 있음): %s", e)
-
-
-async def _start_vt_worker() -> None:
-    from .core.pydantic_settings import settings
-    if not settings.VIRUSTOTAL_API_KEY:
-        logger.warning("[startup] VIRUSTOTAL_API_KEY 없음 - VT 워커 비활성화")
-        return
-    try:
-        from .workers.virustotal_worker import serve
-        logger.info("[startup] VT 워커 시작")
-        await serve()
-    except Exception as e:
-        logger.error("[startup] VT 워커 오류: %s", e)
 
 
 app = FastAPI(lifespan=lifespan, exception_handlers=exception_handlers)

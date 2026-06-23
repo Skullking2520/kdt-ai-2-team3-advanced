@@ -228,30 +228,7 @@ export interface SenderLookupResult {
 }
 
 // ───────────────────────────────────────────
-// 13. 검사 이력
-// ───────────────────────────────────────────
-
-export interface HistoryItem {
-  id: string;
-  type: AnalysisType;
-  content: string;                  // 미리보기 (잘린)
-  riskLevel: RiskLevel;
-  riskScore: number;
-  smishingType: SmishingType;
-  sender?: string;
-  createdAt: string;
-}
-
-export interface Paginated<T> {
-  items: T[];
-  total: number;
-  page: number;                     // 1-based
-  pageSize: number;
-  hasMore: boolean;
-}
-
-// ───────────────────────────────────────────
-// 14. 신고
+// 13. 신고
 // ───────────────────────────────────────────
 
 export interface ReportRequest {
@@ -270,73 +247,6 @@ export interface ReportResponse {
   createdAt: string;
 }
 
-export interface ReportStats {
-  total: number;
-  byCategory: { category: SmishingType | string; count: number }[];
-  byStatus: { status: ReportStatus | string; count: number }[];
-  period: { from: string; to: string };
-}
-
-// ───────────────────────────────────────────
-// 15. 피드백
-// ───────────────────────────────────────────
-
-export interface FeedbackRequest {
-  analysisId: string;
-  isCorrect: boolean;
-  userComment?: string;
-  correctLabel?: RiskLevel;          // 사용자가 생각하는 정답
-}
-
-// ───────────────────────────────────────────
-// 16. 공유
-// ───────────────────────────────────────────
-
-export type ShareChannel = 'link' | 'kakao' | 'clipboard';
-
-export interface ShareRequest {
-  analysisId: string;
-  channel: ShareChannel;
-}
-
-export interface ShareResponse {
-  shareId: string;
-  shortUrl: string;                 // 공유용 단축 URL
-  expiresAt: string;
-}
-
-// ───────────────────────────────────────────
-// 17. 비동기 작업 (OCR·샌드박스·VirusTotal)
-// ───────────────────────────────────────────
-
-export interface AsyncJob {
-  jobId: string;
-  status: 'queued' | 'processing' | 'completed' | 'failed';
-  progress: number;                 // 0~100
-  currentStep?: string;             // 'ocr' | 'vt_lookup' | 'sandbox' 등
-  result?: unknown;                 // 완료 시 결과
-  error?: ApiError;
-}
-
-// ───────────────────────────────────────────
-// 18. 사례 / 교육 콘텐츠
-// ───────────────────────────────────────────
-
-export interface CaseStudy {
-  id: string;
-  year: string;
-  title: string;
-  category: SmishingType;
-  damage: string;
-  victims: string;
-  method: string;
-  actualTexts: string[];
-  redFlags: string[];
-  prevention: string[];
-  outcome: string;
-  severity: 'critical' | 'high' | 'medium';
-  arrested: boolean;
-}
 
 // ───────────────────────────────────────────
 // 19. 표준 에러

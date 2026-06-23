@@ -17,16 +17,8 @@ import type {
   AnalysisResult,
   OcrResponse,
   SenderLookupResult,
-  HistoryItem,
-  Paginated,
   ReportRequest,
   ReportResponse,
-  ReportStats,
-  FeedbackRequest,
-  ShareRequest,
-  ShareResponse,
-  CaseStudy,
-  AsyncJob,
 } from '@/types/api';
 
 // ───────────────────────────────────────────
@@ -149,46 +141,10 @@ export const api = {
     request<OcrResponse>('/api/ocr', { method: 'POST', body: { image } }),
 
   // ── 발신번호 조회 ────────────────────────
-  lookupSender: (number: string) =>
+  sender: (number: string) =>
     request<SenderLookupResult>(`/api/sender/${encodeURIComponent(number)}`),
-
-  // ── 검사 이력 ────────────────────────────
-  getHistory: (page = 1, size = 20) =>
-    request<Paginated<HistoryItem>>(`/api/history?page=${page}&size=${size}`),
-
-  getHistoryItem: (id: string) =>
-    request<AnalysisResult>(`/api/history/${encodeURIComponent(id)}`),
 
   // ── 신고 ─────────────────────────────────
   submitReport: (req: ReportRequest) =>
     request<ReportResponse>('/api/reports', { method: 'POST', body: req }),
-
-  getReport: (receiptId: string) =>
-    request<ReportResponse>(`/api/reports/${encodeURIComponent(receiptId)}`),
-
-  getReportStats: () =>
-    request<ReportStats>('/api/reports/stats'),
-
-  // ── 피드백 ──────────────────────────────
-  submitFeedback: (req: FeedbackRequest) =>
-    request<{ ok: true }>('/api/feedback', { method: 'POST', body: req }),
-
-  // ── 공유 ─────────────────────────────────
-  share: (req: ShareRequest) =>
-    request<ShareResponse>('/api/share', { method: 'POST', body: req }),
-
-  // ── 사례 / 교육 ─────────────────────────
-  getCases: (category?: string, page = 1) => {
-    const qs = new URLSearchParams();
-    if (category) qs.set('category', category);
-    qs.set('page', String(page));
-    return request<Paginated<CaseStudy>>(`/api/cases?${qs}`);
-  },
-
-  getCase: (id: string) =>
-    request<CaseStudy>(`/api/cases/${encodeURIComponent(id)}`),
-
-  // ── 비동기 작업 폴링 ───────────────────
-  getJob: (jobId: string) =>
-    request<AsyncJob>(`/api/jobs/${encodeURIComponent(jobId)}`),
 } as const;

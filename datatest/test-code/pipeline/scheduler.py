@@ -26,6 +26,7 @@ from apscheduler.schedulers.blocking import BlockingScheduler
 
 from .config import S3_BUCKET, S3_REGION
 from .crawler import insert_from_file, run_all_crawlers
+from .web_crawler import run_all_web_crawlers
 from .mysql_io import get_conn, update_blacklist_vt
 from .s3_io import append_vt
 from .virustotal_io import can_call, check_domain, check_url, summarize_report
@@ -143,7 +144,30 @@ def job_crawl_blacklist() -> None:
 
 
 # ─────────────────────────────────────────────────
-# Job 2: S3 수동 입력 감시 (00:30)
+# Job 2: 웹 크롤링 (00:15)
+# ─────────────────────────────────────────────────
+
+def job_crawl_web() -> None:
+    """매일 00:15: 한국 스미싱 관련 게시판 Playwright 크롤링 → S3 저장."""
+    log.info("=" * 50)
+    log.info("[Scheduler] 웹 크롤링 시작 (Playwright)")
+    log.info("=" * 50)
+
+    try:
+        result = run_all_web_crawlers()
+    except Exception as e:
+        log.error(f"[Scheduler] 웹 크롤링 전체 실패 (run_all_web_crawlers): {e}")
+        return
+
+    for site, stats in result.items():
+        if "error" in stats:
+            log.warning(f"[Scheduler] {site} → 실패: {stats['error']}")
+        else:
+            log.info(f"[Scheduler] {site} → 수집 {stats['collected']}건")
+
+
+# ─────────────────────────────────────────────────
+# Job 3: S3 수동 입력 감시 (00:30)
 # ─────────────────────────────────────────────────
 
 def job_process_s3_manual() -> None:
@@ -312,6 +336,16 @@ def main() -> None:
     )
 
     scheduler.add_job(
+        job_crawl_web,
+        trigger="cron",
+        hour=0, minute=15,
+        id="crawl_web",
+        name="웹 크롤링 (Playwright)",
+        max_instances=1,
+        misfire_grace_time=3600,
+    )
+
+    scheduler.add_job(
         job_process_s3_manual,
         trigger="cron",
         hour=0, minute=30,
@@ -333,6 +367,7 @@ def main() -> None:
 
     log.info("[Scheduler] 시작")
     log.info("[Scheduler] 00:00 KST → URL 크롤링 (OpenPhish + URLhaus)")
+    log.info("[Scheduler] 00:15 KST → 웹 크롤링 (Playwright / 한국 게시판 5개)")
     log.info("[Scheduler] 00:30 KST → S3 수동 입력 처리")
     log.info("[Scheduler] 02:00 KST → VT 자동 스캔 (최대 400건)")
     log.info("[Scheduler] 종료: Ctrl+C")

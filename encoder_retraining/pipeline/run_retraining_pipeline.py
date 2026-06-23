@@ -106,6 +106,29 @@ def resolve_candidate_model(
     return str(training_results_dir / candidate_experiment / "final_model")
 
 
+def resolve_comparison_max_length(
+    *,
+    training_results_dir: Path,
+    fallback_max_length: int,
+) -> tuple[int, str]:
+    """Use the selected training length when this pipeline trained the candidate."""
+    best_params_path = training_results_dir / "best_params.json"
+    if not best_params_path.exists():
+        return fallback_max_length, "pipeline_argument"
+
+    try:
+        best_params = json.loads(best_params_path.read_text(encoding="utf-8"))
+        max_length = best_params.get("max_length")
+        if isinstance(max_length, bool) or not isinstance(max_length, int):
+            raise ValueError("max_length must be an integer")
+        if max_length < 1:
+            raise ValueError("max_length must be positive")
+    except (OSError, ValueError, json.JSONDecodeError):
+        return fallback_max_length, "pipeline_argument_invalid_best_params"
+
+    return max_length, "training_best_params"
+
+
 def run_pipeline(
     *,
     prepared_dir: Path | None,
@@ -233,6 +256,12 @@ def run_pipeline(
 
     training_succeeded = manifest["steps"]["training"].get("succeeded", True)
     if not skip_comparison and not dry_run and training_succeeded:
+        comparison_max_length, comparison_max_length_source = (
+            resolve_comparison_max_length(
+                training_results_dir=training_results_dir,
+                fallback_max_length=max_length,
+            )
+        )
         comparison_summary = compare_models(
             test_path=test_path,
             baseline_model=baseline_model,
@@ -243,9 +272,10 @@ def run_pipeline(
             max_fp_increase=max_fp_increase,
             max_fn_increase=max_fn_increase,
             batch_size=batch_size,
-            max_length=max_length,
+            max_length=comparison_max_length,
             device=device,
         )
+        comparison_summary["max_length_source"] = comparison_max_length_source
         manifest["steps"]["comparison"] = comparison_summary
     else:
         reason = "dry_run" if dry_run else "skip_comparison"
@@ -312,7 +342,15 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--max-fp-increase", type=int, default=0)
     parser.add_argument("--max-fn-increase", type=int, default=0)
     parser.add_argument("--batch-size", type=int, default=32)
-    parser.add_argument("--max-length", type=int, default=128)
+    parser.add_argument(
+        "--max-length",
+        type=int,
+        default=128,
+        help=(
+            "Fallback comparison max length when training best_params.json "
+            "is unavailable (for example, --skip-training)."
+        ),
+    )
     parser.add_argument(
         "--device",
         choices=("auto", "cpu", "mps", "cuda"),

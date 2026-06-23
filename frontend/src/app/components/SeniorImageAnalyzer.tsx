@@ -7,6 +7,16 @@ import {
 } from "lucide-react";
 import { useSenior } from "@/app/context/SeniorContext";
 import { selectImageFiles } from "@/lib/imageFiles";
+import { api } from "@/lib/api";
+
+const fileToBase64 = (file: File): Promise<string> => {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.readAsDataURL(file);
+    reader.onload = () => resolve(reader.result as string);
+    reader.onerror = (error) => reject(error);
+  });
+};
 
 const OCR_STEPS = [
   "이미지 로딩 중",
@@ -15,12 +25,7 @@ const OCR_STEPS = [
   "완료",
 ];
 
-const MOCK_OCR_RESULTS = [
-  "【CJ대한통운】배송 주소 확인이 필요합니다. 주소 오류로 반송 예정입니다. 확인: http://cj-delivery-check.com/re123",
-  "고객님 본인인증이 만료되었습니다. 즉시 재인증하지 않으면 계좌가 정지됩니다. http://kb-secure-verify.net/auth",
-  "【국민건강보험】미납 보험료 안내. 3일 이내 미납 시 급여 정지됩니다. 납부: http://nhis-pay-kr.com/check",
-  "안녕 엄마 나야 폰이 고장났어 새 번호로 바꿨어 급하게 상품권 50만원어치 필요해 010-9382-7461",
-];
+// MOCK_OCR_RESULTS 제거됨
 
 const MAX_IMAGE_BYTES = 10 * 1024 * 1024;
 
@@ -85,27 +90,33 @@ export function SeniorImageAnalyzer() {
     resetOcrState();
   };
 
-  const handleOcr = () => {
+  const handleOcr = async () => {
     if (!selectedImage || ocrRunning) return;
     setOcrRunning(true);
     setOcrStep(0);
     setOcrText(null);
     setOcrError(false);
 
-    let step = 0;
-    const interval = setInterval(() => {
-      step += 1;
-      setOcrStep(step);
-      if (step >= OCR_STEPS.length - 1) {
-        clearInterval(interval);
-        setTimeout(() => {
-          const mockText = MOCK_OCR_RESULTS[Math.floor(Math.random() * MOCK_OCR_RESULTS.length)];
-          setOcrText(mockText);
-          setEditedText(mockText);
-          setOcrRunning(false);
-        }, 400);
-      }
-    }, 650);
+    try {
+      const base64Image = await fileToBase64(selectedImage.file);
+      setOcrStep(1);
+
+      await new Promise((r) => setTimeout(r, 400));
+      setOcrStep(2);
+
+      const resp = await api.ocr(base64Image);
+
+      setOcrStep(3);
+      await new Promise((r) => setTimeout(r, 300));
+
+      setOcrText(resp.text);
+      setEditedText(resp.text);
+    } catch (e) {
+      console.error("[OCR Failed]", e);
+      setOcrError(true);
+    } finally {
+      setOcrRunning(false);
+    }
   };
 
   const handleAnalyze = () => {

@@ -123,6 +123,14 @@ def test_route_after_router_maps_message_content(message_content, expected_route
             '{"is_smishing": false, "reason": "공식 발신"}',
             {"is_smishing": False, "reason": "공식 발신"},
         ),
+        (
+            'ZERODAY_SMISHING_PATTERN_ANALYSIS_RESULT\n{"is_smishing": true, "reason": "링크 의심"}',
+            {"is_smishing": True, "reason": "링크 의심"},
+        ),
+        (
+            '{"is_smishing": true, "reason": "문자 내용에서 "모바일 청첩장"이라는 사칭을 통해 링크 클릭을 유도합니다."}',
+            {"is_smishing": True, "reason": "문자 내용에서 \"모바일 청첩장\"이라는 사칭을 통해 링크 클릭을 유도합니다."},
+        ),
     ],
 )
 def test_normalize_json_output_extracts_parseable_json(raw_content, expected):
@@ -148,8 +156,8 @@ def test_normalize_json_output_extracts_parseable_json(raw_content, expected):
     ("content", "expected"),
     [
         ("문자열", "문자열"),
-        (["문자", {"type": "text"}], "문자 {'type': 'text'}"),
-        ({"content": "값"}, "{'content': '값'}"),
+        (["문자", {"type": "text"}], "문자 {\"type\": \"text\"}"),
+        ({"content": "값"}, "{\"content\": \"값\"}"),
     ],
 )
 def test_response_content_into_str_handles_supported_content_types(content, expected):
@@ -202,7 +210,7 @@ def test_naive_rag_node_returns_context_and_normalized_json(monkeypatch):
         '설명 접두사\n{"is_smishing": True, "reason": "택배 사칭 링크와 유사합니다."}'
     )
     monkeypatch.setattr(nodes, "get_singleton_json_llm", lambda: fake_llm)
-    monkeypatch.setattr(nodes, "_search_zeroday_logic", lambda query: "택배 사칭 악성 앱 설치 사례")
+    monkeypatch.setattr(nodes, "_search_zeroday_logic", lambda query: [{"page_content": "택배 사칭 악성 앱 설치 사례"}])
 
     state: SmishingGraphState = {
         "messages": [

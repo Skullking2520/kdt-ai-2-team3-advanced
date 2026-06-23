@@ -8,7 +8,7 @@ from ..services.predict_service import predict_smishing
 router = APIRouter(prefix="/api/predict")
 
 
-@router.post("", response_model=PredictResponse)
+@router.post("", response_model=PredictResponse, response_model_exclude_none=True)
 async def predict_sms_message(
     request: PredictRequest,
     db: AsyncSession = Depends(get_db),

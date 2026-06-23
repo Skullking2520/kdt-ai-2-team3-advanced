@@ -1,0 +1,39 @@
+{
+  "dataset_version": "encoder-v4",
+  "created_at": "2026-06-18T02:12:53Z",
+  "created_by": "preprocessing_cleanlab_pipeline",
+  "source": "/Users/nyongd/Documents/GitHub/kdt-ai-2-team4-advanced/datatest/cleanlab/results/stage3/cleaned_dataset.jsonl",
+  "label_mapping": {
+    "0": "normal",
+    "1": "phishing"
+  },
+  "split_ratio": {
+    "train": 0.8,
+    "valid": 0.1,
+    "test": 0.1
+  },
+  "files": {
+    "train": "cleaned_train.jsonl",
+    "valid": "valid.jsonl",
+    "test": "test.jsonl"
+  },
+  "sample_counts": {
+    "train": {
+      "total": 71913,
+      "normal": 40971,
+      "phishing": 30942
+    },
+    "valid": {
+      "total": 8989,
+      "normal": 5121,
+      "phishing": 3868
+    },
+    "test": {
+      "total": 8990,
+      "normal": 5122,
+      "phishing": 3868
+    },
+    "total": 89892
+  },
+  "notes": "Preprocessed and Cleanlab-filtered dataset for encoder retraining."
+}

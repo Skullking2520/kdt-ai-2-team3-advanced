@@ -1,36 +1,22 @@
-from datetime import datetime, timezone
+from fastapi import APIRouter, HTTPException
 
-from fastapi import APIRouter
-from pydantic import BaseModel
+from ..schemas.ocr_api import OcrRequest, OcrResponse
+from ..services.ocr_service import run_ocr
 
-from ..services.predict_service import extract_ocr_text
-
-router = APIRouter(prefix="/api/ocr")
-
-
-class OcrRequest(BaseModel):
-    image: str
-
-
-class OcrBlock(BaseModel):
-    text: str
-    bbox: list[float]
-
-
-class OcrResponse(BaseModel):
-    imageId: str
-    text: str
-    confidence: float
-    blocks: list[OcrBlock]
-
+router = APIRouter(prefix="/api/ocr", tags=["OCR"])
 
 @router.post("", response_model=OcrResponse)
-async def extract_ocr(request: OcrRequest):
-    text = await extract_ocr_text(request.image)
-    image_id = f"img_{datetime.now(timezone.utc).strftime('%Y%m%d%H%M%S%f')}"
-    return OcrResponse(
-        imageId=image_id,
-        text=text,
-        confidence=1.0 if text.strip() else 0.0,
-        blocks=[],
-    )
+async def ocr(request: OcrRequest):
+    """
+    이미지 OCR 요청.
+
+    - backend.ocr.ocr_service 연동 후 imageId, text, confidence, blocks 반환
+    - imageId 발급 및 결과 캐싱
+    - FE는 이 응답의 imageId를 /api/predict image 요청에 전달할 수 있음
+    """
+    try:
+        return await run_ocr(request)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except RuntimeError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc

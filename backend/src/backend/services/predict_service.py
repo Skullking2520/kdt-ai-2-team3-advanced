@@ -30,7 +30,10 @@ from ..utils.preprocessor import (
     kw_pattern,
     money_pattern,
 )
-from .url_candidate_service import register_model_url_candidates
+from .url_candidate_service import (
+    register_model_url_candidates,
+    register_reported_url_candidates,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -72,7 +75,7 @@ async def _find_static_pattern_matches(
 
 def _require_encoder_settings() -> tuple[str, str]:
     api_key = settings.ENCODER_API_KEY
-    endpoint = settings.ENCODER_INFERENCE_ENDPOINT or settings.HF_SMISHING_ENCODER_URL
+    endpoint = settings.ENCODER_INFERENCE_ENDPOINT
 
     if not api_key or not endpoint:
         raise HTTPException(
@@ -156,10 +159,15 @@ async def request_encoder_prediction(text: str) -> EncoderClassificationOutput:
         return EncoderClassificationOutput(label="smishing", score=0.85)
 
     api_key = settings.ENCODER_API_KEY
-    endpoint = settings.ENCODER_INFERENCE_ENDPOINT or settings.HF_SMISHING_ENCODER_URL
+    endpoint = settings.ENCODER_INFERENCE_ENDPOINT
     if not api_key or not endpoint:
-        logger.warning("[encoder] API 키 또는 엔드포인트 미설정 → mock fallback")
-        return EncoderClassificationOutput(label="smishing", score=0.85)
+        # USE_MOCK_MODEL=false인데 키가 없으면 가짜 결과 대신 명시적으로 실패
+        # (mock이 필요하면 USE_MOCK_MODEL=true로 켜야 함)
+        logger.error("[encoder] API 키/엔드포인트 미설정 — 설정 오류로 503 반환")
+        raise HTTPException(
+            status_code=503,
+            detail="인코더 모델 설정이 누락되었습니다. (CONFIGURATION_ERROR)",
+        )
 
     logger.info("[encoder] 호출 시작 | endpoint=%s | text=%r", endpoint, text[:60])
     try:
@@ -260,7 +268,7 @@ async def generate_explanation(
             # 2. 예상 답변 구조에 맞춰 parsed_output -> reason 추출
             reason = data.get("parsed_output", {}).get("reason")
             if reason:
-                logger.info("[decoder] 응답 성공 및 추론 이유 추출 완료")
+                logger.info("[decoder] 응답 성공 | reason=%s", reason)
                 return reason
                 
             logger.warning("[decoder] 응답은 성공했으나 parsed_output.reason 필드가 없습니다: %s", data)
@@ -306,6 +314,11 @@ async def _predict_url(
         )
         result = build_static_pattern_response(url, url_matches)
     else:
+        # 블랙리스트 미등록 신규 URL도 VirusTotal 검증 큐에 등록한다.
+        # (직접 입력 URL이 검증 사각지대에 빠지지 않도록 — create_smishing_log가 commit)
+        await register_reported_url_candidates(
+            db, urls=[url], report_type="URL 직접 분석",
+        )
         log = await create_smishing_log(
             db, url, is_smishing=False, detection_type=DetectionType.STATIC_PATTERN,
             input_type=InputType.URL,
@@ -420,9 +433,16 @@ async def predict_smishing(
         "id": str(log.id),
         "type": request.type,
         "content": content,
+        "senderNumber": request.sender,
         "modelVersion": settings.MODEL_VERSION,
         "processingTime": int((time.monotonic() - start_time) * 1000),
         "cacheHit": False,
         "createdAt": log.created_at.isoformat(),
     })
+    if request.type == "sms" and result.get("urlDetails"):
+        result["urlAnalysis"] = result["urlDetails"]
+        result.pop("urlDetails", None)
+    if request.type == "image":
+        result["ocrText"] = content
+        result["imageId"] = request.imageId or str(log.id)
     return result

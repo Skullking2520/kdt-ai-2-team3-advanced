@@ -5,7 +5,8 @@ import {
   ShieldAlert, ShieldCheck, AlertTriangle, ArrowLeft, Home,
   Phone, CheckCircle2, ThumbsUp, ThumbsDown, RotateCcw,
 } from "lucide-react";
-import { analyzeSms, toLegacyRiskLevel, toSeniorReasons, toSeniorActions } from "@/lib/smsAnalysis";
+import { toLegacyRiskLevel, toSeniorReasons, toSeniorActions } from "@/lib/smsAnalysis";
+import { api, ApiException } from "@/lib/api";
 import { useSenior } from "@/app/context/SeniorContext";
 
 interface AnalysisResult {
@@ -43,7 +44,7 @@ export function SeniorAnalyzer() {
 
   useEffect(() => { textareaRef.current?.focus(); }, []);
 
-  const handleAnalyze = () => {
+  const handleAnalyze = async () => {
     setError("");
     if (!textInput.trim()) { setError("문자 내용을 입력해주세요."); return; }
     if (textInput.trim().length < 5) { setError("문자를 조금 더 입력해주세요."); return; }
@@ -52,23 +53,23 @@ export function SeniorAnalyzer() {
     setResult(null);
     setFeedback(null);
 
-    setTimeout(() => {
-      try {
-        const sms = analyzeSms(textInput);
-        setResult({
-          risk_level: toLegacyRiskLevel(sms.risk_level),
-          risk_score: sms.risk_score,
-          smishing_type: sms.smishing_type,
-          reasons: toSeniorReasons(sms.reasons),
-          action_guide: toSeniorActions(sms.action_guide),
-        });
-        setLoading(false);
-        setTimeout(() => resultRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 100);
-      } catch {
-        setError("분석 중 오류가 발생했습니다. 다시 시도해주세요.");
-        setLoading(false);
-      }
-    }, 1500);
+    try {
+      // 백엔드 분석 API 호출 (인코더/디코더). 응답을 시니어 화면 구조로 변환.
+      const resp = await api.analyze({ type: "sms", content: textInput });
+      setResult({
+        risk_level: toLegacyRiskLevel(resp.riskLevel),
+        risk_score: resp.riskScore,
+        smishing_type: resp.smishingType,
+        reasons: toSeniorReasons(resp.reasons.map((r) => r.label)),
+        action_guide: toSeniorActions(resp.actionGuide.map((a) => a.action)),
+      });
+      setLoading(false);
+      setTimeout(() => resultRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 100);
+    } catch (e) {
+      const msg = e instanceof ApiException ? e.message : "분석 중 오류가 발생했습니다. 다시 시도해주세요.";
+      setError(msg);
+      setLoading(false);
+    }
   };
 
   const handleReset = () => {

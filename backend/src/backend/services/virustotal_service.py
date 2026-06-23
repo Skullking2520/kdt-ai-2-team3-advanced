@@ -159,7 +159,7 @@ async def _request_vt(
     response = await client.request(
         method,
         url,
-        headers={"x-apikey": settings.VIRUSTOTAL_API_KEY},
+        headers={"x-apikey": settings.VIRUSTOTAL_API_KEY}, # type: ignore
         **kwargs,
     )
     if response.status_code == 429:

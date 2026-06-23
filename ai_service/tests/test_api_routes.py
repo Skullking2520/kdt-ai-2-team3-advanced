@@ -157,7 +157,10 @@ def test_graph_invoke_returns_parseable_json(monkeypatch, client, route_override
 
     # Assert
     assert response.status_code == 200
-    assert body["final_output"] == final_output
+    assert body["final_output"] == {
+        "is_smishing": True,
+        "reason": "의심스러운 링크를 포함합니다.",
+    }
     assert body["parsed_output"] == {
         "is_smishing": True,
         "reason": "의심스러운 링크를 포함합니다.",
@@ -194,7 +197,10 @@ def test_graph_invoke_falls_back_to_last_message_content(monkeypatch, client):
 
     # Assert
     assert response.status_code == 200
-    assert body["final_output"] == final_output
+    assert body["final_output"] == {
+        "is_smishing": False,
+        "reason": "정상 안내로 판단됩니다.",
+    }
     assert body["parsed_output"]["is_smishing"] is False
     assert body["parsed_output"]["reason"] == "정상 안내로 판단됩니다."
 

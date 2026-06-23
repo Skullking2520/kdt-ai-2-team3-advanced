@@ -1,0 +1,521 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
+/**
+ * NewBiz Shield 이전 Mock 응답 백업본
+ * ─────────────────────────────────
+ * frontend API 정리 작업 과정에서 제거된 미사용 API mock 코드들의 보관을 위한 파일입니다.
+ * 컴파일 및 타입 검사 에러를 방지하기 위해 사용되는 타입들을 내부에 로컬 정의해두었습니다.
+ */
+
+import type {
+  AnalysisRequest,
+  SmsAnalysisResult,
+  UrlAnalysisResult,
+  ImageAnalysisResult,
+  OcrResponse,
+  SenderLookupResult,
+  ReportResponse,
+  DamageStep,
+  DetectionReason,
+  SimilarCase,
+  ActionGuideItem,
+} from '@/types/api';
+
+// OcrResponse 컴파일 경고 방지용 export
+export type { OcrResponse };
+
+// ───────────────────────────────────────────
+// 로컬 백업용 타입 정의 (types/api.ts에서 제거됨)
+// ───────────────────────────────────────────
+
+export interface HistoryItem {
+  id: string;
+  type: string;
+  content: string;
+  riskLevel: string;
+  riskScore: number;
+  smishingType: string;
+  sender?: string;
+  createdAt: string;
+}
+
+export interface Paginated<T> {
+  items: T[];
+  total: number;
+  page: number;
+  pageSize: number;
+  hasMore: boolean;
+}
+
+export interface ReportStats {
+  total: number;
+  byCategory: { category: string; count: number }[];
+  byStatus: { status: string; count: number }[];
+  period: { from: string; to: string };
+}
+
+export interface ShareResponse {
+  shareId: string;
+  shortUrl: string;
+  expiresAt: string;
+}
+
+export interface CaseStudy {
+  id: string;
+  year: string;
+  title: string;
+  category: string;
+  damage: string;
+  victims: string;
+  method: string;
+  actualTexts: string[];
+  redFlags: string[];
+  prevention: string[];
+  outcome: string;
+  severity: 'critical' | 'high' | 'medium';
+  arrested: boolean;
+}
+
+// ───────────────────────────────────────────
+// 공통 헬퍼
+// ───────────────────────────────────────────
+
+export const nowIso = () => new Date().toISOString();
+
+export const receiptId = () => {
+  const d = new Date();
+  const ymd = `${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, '0')}${String(d.getDate()).padStart(2, '0')}`;
+  const seq = String(Math.floor(Math.random() * 999999)).padStart(6, '0');
+  return `NB${ymd}-${seq}`;
+};
+
+export const urlDetails = (url: string): UrlAnalysisResult['urlDetails'] => {
+  const isSuspicious = /(pay|secure|login|verify|kr-|-refund|nhis|hometax|loan)/i.test(url);
+  const domain = (() => {
+    try { return new URL(url.startsWith('http') ? url : `http://${url}`).hostname; }
+    catch { return url; }
+  })();
+  return {
+    domain,
+    ssl: {
+      valid: !isSuspicious,
+      issuer: isSuspicious ? 'Unknown / Self-signed' : "Let's Encrypt Authority X3",
+      expiry: isSuspicious ? '만료됨' : '2026.12.31',
+    },
+    domainAge: isSuspicious ? 12 : 1820,
+    redirects: isSuspicious
+      ? [{ url, status: 301 }, { url: `http://redir.${domain}`, status: 200 }]
+      : [],
+    ipCountry: isSuspicious ? 'CN' : 'KR',
+    similarDomains: isSuspicious ? [`${domain.split('.')[0]}.or.kr`, `${domain.split('.')[0]}.go.kr`] : [],
+    flags: isSuspicious
+      ? [
+          { type: '유사 도메인', desc: '한국 공공기관/기업명을 포함하지만 공식 도메인이 아닙니다', severity: 'high' },
+          { type: '의심 TLD', desc: '피싱에 자주 사용되는 패턴', severity: 'medium' },
+        ]
+      : [{ type: '이상 없음', desc: '명시적인 위험 징후가 발견되지 않았습니다', severity: 'low' }],
+  };
+};
+
+export const damageStepsByType: Record<string, DamageStep[]> = {
+  '가족/지인 사칭': [
+    { step: 1, icon: 'message', title: '문자 수신', description: '자녀/친척 등 가족이나 지인을 사칭한 문자가 도착합니다' },
+    { step: 2, icon: 'click', title: '긴급 호소 클릭', description: '휴대폰 고장·번호 변경·급한 부탁 등 긴급한 상황을 호소합니다' },
+    { step: 3, icon: 'info', title: '금전 요청', description: '상품권, 계좌이체, 대출 등 금전을 직접 요청합니다' },
+    { step: 4, icon: 'damage', title: '금전 송금', description: '상품권 번호 전달 또는 계좌이체를 진행합니다' },
+    { step: 5, icon: 'damage', title: '금전 피해 확정', description: '회수 어려운 금전적 피해가 발생합니다' },
+  ],
+  '공공기관 사칭': [
+    { step: 1, icon: 'message', title: '문자 수신', description: '국민건강보험·국세청·경찰청 등 공공기관을 사칭한 문자가 도착합니다' },
+    { step: 2, icon: 'click', title: '가짜 안내 클릭', description: '환급금·미납·본인인증 등 안내 링크를 클릭합니다' },
+    { step: 3, icon: 'site', title: '피싱 사이트 진입', description: '공식과 매우 유사한 가짜 사이트로 이동합니다' },
+    { step: 4, icon: 'info', title: '개인정보 입력', description: '주민번호, 계좌번호, 인증번호 등을 입력합니다' },
+    { step: 5, icon: 'damage', title: '계좌 탈취', description: '입력한 정보로 계좌가 탈취되거나 부정 사용됩니다' },
+  ],
+  '금융 피싱': [
+    { step: 1, icon: 'message', title: '문자 수신', description: '은행·카드사를 사칭한 문자가 도착합니다' },
+    { step: 2, icon: 'click', title: '본인확인 링크 클릭', description: '본인확인·카드 정지 안내 링크를 클릭합니다' },
+    { step: 3, icon: 'site', title: '가짜 은행 사이트', description: '공식과 유사한 피싱 사이트로 이동합니다' },
+    { step: 4, icon: 'info', title: '인증정보 입력', description: '아이디, 비밀번호, 인증번호, 보안카드 번호를 입력합니다' },
+    { step: 5, icon: 'damage', title: '계좌 탈취', description: '입력한 정보로 금융자산이 탈취됩니다' },
+  ],
+  '택배 사칭': [
+    { step: 1, icon: 'message', title: '문자 수신', description: 'CJ대한통운 등 택배사를 사칭한 문자가 도착합니다' },
+    { step: 2, icon: 'click', title: '가짜 배송 조회 클릭', description: '배송 조회·주소 확인 링크를 클릭합니다' },
+    { step: 3, icon: 'site', title: '피싱 사이트 진입', description: '공식과 유사한 가짜 택배 사이트로 이동합니다' },
+    { step: 4, icon: 'info', title: '개인정보 입력', description: '주소, 이름, 연락처, 결제 정보 등을 입력합니다' },
+    { step: 5, icon: 'damage', title: '정보 유출', description: '개인정보 유출 및 카드 부정 사용' },
+  ],
+  '이벤트 사기': [
+    { step: 1, icon: 'message', title: '문자 수신', description: '이벤트 당첨·쿠폰 발송 사칭 문자가 도착합니다' },
+    { step: 2, icon: 'click', title: '당첨 확인 클릭', description: '경품·쿠폰 수령 링크를 클릭합니다' },
+    { step: 3, icon: 'site', title: '피싱 사이트', description: '경품 수령을 가장한 가짜 사이트로 이동합니다' },
+    { step: 4, icon: 'info', title: '개인정보 입력', description: '배송비·세금 명목 개인정보·결제 정보 입력' },
+    { step: 5, icon: 'damage', title: '피해 확정', description: '소액 결제 발생 및 개인정보 유출' },
+  ],
+  '대출 사기': [
+    { step: 1, icon: 'message', title: '문자 수신', description: '저금리·무심사 대출 사칭 문자가 도착합니다' },
+    { step: 2, icon: 'click', title: '대출 신청 클릭', description: '신속한 대출 진행 링크를 클릭합니다' },
+    { step: 3, icon: 'site', title: '가짜 대출 사이트', description: '선취수수료·보험료 명목의 가짜 사이트로 이동합니다' },
+    { step: 4, icon: 'info', title: '선입금 요구', description: '대출 전 수수료·보증금·세금 입금을 요구합니다' },
+    { step: 5, icon: 'damage', title: '선입금 피해', description: '입금 후 연락 두절·금전 피해 발생' },
+  ],
+  '기타 사기': [
+    { step: 1, icon: 'message', title: '문자 수신', description: '의심스러운 문자가 도착합니다' },
+    { step: 2, icon: 'click', title: 'URL 클릭', description: '문자 안의 링크를 클릭합니다' },
+    { step: 3, icon: 'site', title: '피싱 사이트 진입', description: '의심 사이트로 이동합니다' },
+    { step: 4, icon: 'info', title: '개인정보 입력', description: '주민번호, 계좌번호, 인증번호 등을 입력합니다' },
+    { step: 5, icon: 'damage', title: '금전 피해', description: '계좌 이체, 카드 부정사용 등 금전 피해 발생' },
+  ],
+  '정상 문자': [],
+};
+
+// ───────────────────────────────────────────
+// SMS 분석 응답 생성
+// ───────────────────────────────────────────
+
+export function buildSmsResult(req: AnalysisRequest & { content: string }): SmsAnalysisResult {
+  const text = req.content;
+  const urlMatch = text.match(/https?:\/\/[^\s]+/);
+  const url = urlMatch?.[0];
+
+  const familyWords = ['엄마', '아빠', '아들', '딸', '폰 고장', '번호 바뀌', '급하'];
+  const hasFamilyPattern = familyWords.filter((w) => text.includes(w)).length >= 2;
+
+  const impersonation =
+    (text.includes('국민건강보험') && !url?.includes('nhis.or.kr')) ||
+    (text.includes('KB국민은행') && !url?.includes('kbstar.com')) ||
+    (text.includes('CJ대한통운') && !url?.includes('cjlogistics.com'));
+
+  const urgencyWords = ['즉시', '정지', '동결', '납부', '긴급', '비정상', '환급', '상품권', '급하', '빨리', '혐의', '차단'];
+  const urgencyCount = urgencyWords.filter((k) => text.includes(k)).length;
+  const hasPayment = text.includes('상품권') || text.includes('송금') || text.includes('결제');
+  const hasPersonalInfo = text.includes('주민번호') || text.includes('카드번호') || text.includes('비밀번호') || text.includes('인증번호');
+
+  const reasons: DetectionReason[] = [];
+  const actionGuide: ActionGuideItem[] = [];
+  let smishingType: SmsAnalysisResult['smishingType'];
+  let riskLevel: SmsAnalysisResult['riskLevel'];
+  let riskScore: number;
+
+  if (hasFamilyPattern && hasPayment) {
+    riskLevel = 'high';
+    riskScore = 92;
+    smishingType = '가족/지인 사칭';
+    reasons.push({ code: 'family_pattern', label: '가족이나 지인을 사칭하는 표현이 포함되어 있습니다', severity: 'high', matched: true });
+    reasons.push({ code: 'payment_request', label: '상품권 또는 금전 결제를 요구하고 있습니다', severity: 'high', matched: true });
+    reasons.push({ code: 'urgency', label: '긴급성을 강조하는 심리적 압박 표현이 있습니다', severity: 'high', matched: true });
+    actionGuide.push({ priority: 'critical', action: '상품권을 절대 구매하지 마세요', detail: '어떤 경우에도 상품권을 사서 번호를 알려주지 마세요' });
+    actionGuide.push({ priority: 'high', action: '기존 번호로 직접 전화해 확인하세요', contact: { name: '경찰청 사이버범죄', number: '182' } });
+    actionGuide.push({ priority: 'normal', action: '경찰청 182에 신고하세요' });
+  } else if (impersonation && url) {
+    riskLevel = 'high';
+    riskScore = 88;
+    smishingType = '공공기관 사칭';
+    reasons.push({ code: 'impersonation', label: '공공기관 또는 기업을 사칭하고 있습니다', severity: 'high', matched: true });
+    reasons.push({ code: 'suspicious_url', label: '공식 도메인이 아닌 의심스러운 URL이 포함되어 있습니다', severity: 'high', matched: true });
+    reasons.push({ code: 'urgency', label: '긴급성을 강조하는 표현이 포함되어 있습니다', severity: 'medium', matched: urgencyCount > 0 });
+    actionGuide.push({ priority: 'critical', action: '링크를 절대 클릭하지 마세요' });
+    actionGuide.push({ priority: 'critical', action: '개인정보나 인증번호를 입력하지 마세요' });
+    actionGuide.push({ priority: 'normal', action: '공식 앱이나 대표번호(1577-1000 등)로 직접 확인하세요' });
+  } else if (url && hasPersonalInfo) {
+    riskLevel = 'high';
+    riskScore = 78;
+    smishingType = '기타 사기';
+    reasons.push({ code: 'suspicious_url', label: '의심스러운 URL과 개인정보 요구가 있습니다', severity: 'high', matched: true });
+    reasons.push({ code: 'personal_info_request', label: '개인정보 입력을 요구하고 있습니다', severity: 'high', matched: true });
+    actionGuide.push({ priority: 'critical', action: '절대 개인정보를 입력하지 마세요' });
+    actionGuide.push({ priority: 'normal', action: '공식 경로로 확인하세요' });
+  } else if (urgencyCount >= 2) {
+    riskLevel = 'medium';
+    riskScore = 48;
+    smishingType = '기타 사기';
+    reasons.push({ code: 'urgency', label: '긴급성을 강조하는 표현이 여러 개 포함되어 있습니다', severity: 'medium', matched: true });
+    reasons.push({ code: 'pressure', label: '심리적 압박을 유발하는 패턴이 감지됩니다', severity: 'medium', matched: true });
+    actionGuide.push({ priority: 'high', action: '서두르지 말고 공식 경로로 확인하세요' });
+    actionGuide.push({ priority: 'normal', action: '개인정보 입력 요구 시 반드시 의심하세요' });
+  } else {
+    riskLevel = 'low';
+    riskScore = 18;
+    smishingType = '정상 문자';
+    reasons.push({ code: 'no_url', label: '위험 URL이 발견되지 않았습니다', severity: 'low', matched: false });
+    reasons.push({ code: 'no_payment', label: '금전 요구 표현이 발견되지 않았습니다', severity: 'low', matched: false });
+    reasons.push({ code: 'no_impersonation', label: '사칭 의심 표현이 낮습니다', severity: 'low', matched: false });
+    actionGuide.push({ priority: 'normal', action: '그래도 개인정보나 금융정보 입력을 요구한다면 반드시 의심하세요' });
+  }
+
+  const similarCases: SimilarCase[] = [];
+
+  const reasonsWithMatched: DetectionReason[] = reasons.map((c) => {
+    if (c.code === 'impersonation') return { ...c, matched: impersonation };
+    if (c.code === 'payment_request') return { ...c, matched: hasPayment };
+    if (c.code === 'personal_info_request') return { ...c, matched: hasPersonalInfo };
+    return c;
+  });
+
+  return {
+    id: `anl_${Date.now()}`,
+    type: 'sms',
+    content: text,
+    riskLevel,
+    riskScore,
+    smishingType,
+    reasons: reasonsWithMatched,
+    actionGuide,
+    similarCases,
+    damageScenario: riskLevel !== 'low' ? damageStepsByType[smishingType] : undefined,
+    modelVersion: 'kc-electra-v1.2.3',
+    processingTime: 800 + Math.floor(Math.random() * 800),
+    cacheHit: false,
+    createdAt: nowIso(),
+    senderNumber: req.sender,
+    extractedUrl: url,
+    urlAnalysis: url ? urlDetails(url) : undefined,
+  };
+}
+
+export function buildUrlResult(req: AnalysisRequest & { content: string }): UrlAnalysisResult {
+  const url = req.content;
+  const details = urlDetails(url);
+  const isDanger = details.flags.some((f) => f.severity === 'high');
+  const isCaution = details.flags.some((f) => f.severity === 'medium');
+
+  return {
+    id: `anl_${Date.now()}`,
+    type: 'url',
+    content: url,
+    riskLevel: isDanger ? 'high' : isCaution ? 'medium' : 'low',
+    riskScore: isDanger ? 85 : isCaution ? 50 : 15,
+    smishingType: '기타 사기',
+    reasons: details.flags.map((f) => ({
+      code: f.type,
+      label: f.desc,
+      severity: f.severity,
+      matched: f.severity !== 'low',
+    })),
+    actionGuide: isDanger
+      ? [
+          { priority: 'critical', action: '이 URL은 절대 클릭하거나 방문하지 마세요' },
+          { priority: 'high', action: '이미 클릭했다면 즉시 인터넷을 끄고 비밀번호를 변경하세요' },
+          { priority: 'normal', action: '의심 URL을 신고해주세요', contact: { name: 'KISA 사이버신고센터', number: '118' } },
+        ]
+      : [{ priority: 'normal', action: '공식 도메인을 다시 한번 확인하세요' }],
+    similarCases: [],
+    damageScenario: isDanger ? damageStepsByType['기타 사기'] : undefined,
+    modelVersion: 'url-classifier-v1.0',
+    processingTime: 600 + Math.floor(Math.random() * 500),
+    cacheHit: false,
+    createdAt: nowIso(),
+    urlDetails: details,
+  };
+}
+
+export function buildImageResult(req: AnalysisRequest & { content: string; imageId?: string }): ImageAnalysisResult {
+  const ocrText = req.content;
+  const smsResult = buildSmsResult({ type: 'sms', content: ocrText });
+  return {
+    ...smsResult,
+    id: `anl_${Date.now()}`,
+    type: 'image',
+    content: ocrText,
+    ocrText,
+    imageId: req.imageId ?? `img_${Date.now()}`,
+    imageUrl: undefined,
+  };
+}
+
+// ───────────────────────────────────────────
+// Mock 데이터 — 발신번호
+// ───────────────────────────────────────────
+
+export const senderDb: Record<string, SenderLookupResult> = {
+  '010-8821-3947': {
+    number: '010-8821-3947',
+    trustScore: 12,
+    status: 'danger',
+    reportCount: 342,
+    lastReportedAt: '2026-06-04T14:23:00+09:00',
+    categories: ['공공기관 사칭', '보험 피싱'],
+    history: [
+      { date: '2026.06.04', type: '공공기관 사칭', count: 47 },
+      { date: '2026.05.28', type: '보험 피싱', count: 31 },
+      { date: '2026.05.21', type: '공공기관 사칭', count: 28 },
+    ],
+  },
+  '010-3392-1847': {
+    number: '010-3392-1847',
+    trustScore: 18,
+    status: 'danger',
+    reportCount: 218,
+    lastReportedAt: '2026-06-05T09:12:00+09:00',
+    categories: ['보이스피싱', '기관 사칭'],
+    history: [
+      { date: '2026.06.05', type: '보이스피싱', count: 22 },
+      { date: '2026.05.29', type: '기관 사칭', count: 18 },
+    ],
+  },
+  '1588-1234': {
+    number: '1588-1234',
+    trustScore: 92,
+    status: 'safe',
+    reportCount: 0,
+    lastReportedAt: null,
+    categories: [],
+    history: [],
+  },
+};
+
+export function mockSenderLookup(number: string): SenderLookupResult {
+  return (
+    senderDb[number] ?? {
+      number,
+      trustScore: 60 + Math.floor(Math.random() * 30),
+      status: 'caution',
+      reportCount: 0,
+      lastReportedAt: null,
+      categories: [],
+      history: [],
+    }
+  );
+}
+
+// ───────────────────────────────────────────
+// Mock 데이터 — 이력 (백업 보관)
+// ───────────────────────────────────────────
+
+export const mockHistoryItems: HistoryItem[] = [
+  { id: 'h1', type: 'sms', content: '【국민건강보험】미납보험료 89,200원이 있습니다. 즉시 납부...', riskLevel: 'high', riskScore: 88, smishingType: '공공기관 사칭', sender: '0212345678', createdAt: '2026-06-05T14:32:11+09:00' },
+  { id: 'h2', type: 'sms', content: '카카오 인증번호는 [394821]입니다. 타인에게 절대 알려주지...', riskLevel: 'low', riskScore: 8, smishingType: '정상 문자', sender: '카카오', createdAt: '2026-06-05T13:18:44+09:00' },
+  { id: 'h3', type: 'sms', content: '[CJ대한통운] 고객님의 택배가 주소불명으로 반송될 예정입니다...', riskLevel: 'high', riskScore: 82, smishingType: '택배 사칭', sender: '010-5839-2847', createdAt: '2026-06-04T19:45:02+09:00' },
+  { id: 'h4', type: 'url', content: 'http://prize-samsung.xyz/claim', riskLevel: 'high', riskScore: 95, smishingType: '이벤트 사기', createdAt: '2026-06-04T11:22:31+09:00' },
+  { id: 'h5', type: 'sms', content: '【KB국민은행】 고객님의 계좌에서 비정상 접근이 감지되었습니다...', riskLevel: 'high', riskScore: 90, smishingType: '금융 피싱', sender: '0215889999', createdAt: '2026-06-03T09:05:00+09:00' },
+  { id: 'h6', type: 'sms', content: '엄마 나 폰 고장나서 번호 바뀌었어. 급하게 상품권 결제 좀...', riskLevel: 'high', riskScore: 93, smishingType: '가족/지인 사칭', sender: '010-9382-7461', createdAt: '2026-06-02T16:40:00+09:00' },
+];
+
+// ───────────────────────────────────────────
+// Mock 데이터 — 사례 (백업 보관)
+// ───────────────────────────────────────────
+
+export const mockCases: CaseStudy[] = [
+  {
+    id: 'c1',
+    year: '2024',
+    title: '국민건강보험 사칭 대규모 피싱 캠페인',
+    category: '공공기관 사칭',
+    damage: '약 42억원',
+    victims: '1만 8천명',
+    method: '공공기관 공식 발신번호 스푸핑 + 가짜 납부 페이지',
+    actualTexts: [
+      '【국민건강보험】미납보험료 89,200원이 있습니다. 즉시 납부하지 않으면 급여가 정지됩니다. http://nhis-pay.kr-notice.com/pay',
+    ],
+    redFlags: ['nhis.or.kr이 아닌 다른 도메인', '급여 정지 위협', '즉시 납부 요구'],
+    prevention: ['nhis.or.kr 공식 사이트에서 직접 확인', '전화로 공단에 직접 문의', '링크 클릭 금지'],
+    outcome: '2024년 11월 사이버수사대 검거, 피의자 7명 구속. 서버는 중국 소재.',
+    severity: 'critical',
+    arrested: true,
+  },
+  {
+    id: 'c2',
+    year: '2024',
+    title: '택배 배송 불가 대규모 스미싱',
+    category: '택배 사칭',
+    damage: '약 18억원',
+    victims: '6천 200명',
+    method: 'CJ대한통운·쿠팡·롯데택배 순환 사칭 + 배송비 결제 유도',
+    actualTexts: [
+      '[CJ대한통운] 고객님의 택배가 주소불명으로 반송될 예정입니다. 배송 재신청: http://cjlogistics.re-delivery.net/confirm',
+    ],
+    redFlags: ['공식 도메인 아닌 유사 URL', '배송비 직접 결제 요구', '개인번호 발신'],
+    prevention: ['앱에서 직접 배송 조회', '배송비는 절대 SMS 링크로 결제 금지', '의심 전화번호 112 신고'],
+    outcome: '현재 수사 중. 피의자 해외 도피 추정.',
+    severity: 'high',
+    arrested: false,
+  },
+  {
+    id: 'c3',
+    year: '2023',
+    title: 'KB국민은행 보안 점검 피싱',
+    category: '금융 피싱',
+    damage: '약 63억원',
+    victims: '2만 4천명',
+    method: '은행 공식 앱 UI 완벽 복제 + 보안 인증서 위조',
+    actualTexts: [
+      '【KB국민은행】고객님의 계좌에서 비정상 접근이 감지되었습니다. 24시간 내 본인확인 필수. 확인: http://kbbank-secure.com/verify',
+    ],
+    redFlags: ['kbstar.com이 아닌 도메인', '24시간 기한 압박', 'OTP 전체 입력 요구'],
+    prevention: ['OTP는 누구에게도 공유 금지', '은행 공식 앱만 사용'],
+    outcome: '2024년 3월 검거. 주범 1명 징역 8년.',
+    severity: 'critical',
+    arrested: true,
+  },
+];
+
+// ───────────────────────────────────────────
+// 백업 라우터 등록
+// ───────────────────────────────────────────
+
+export const backupMockRoutes = (router: any) => {
+  // 이력
+  router.register('GET', '/api/history', () => ({
+    items: mockHistoryItems,
+    total: mockHistoryItems.length,
+    page: 1,
+    pageSize: 20,
+    hasMore: false,
+  } satisfies Paginated<HistoryItem>));
+
+  // 신고 영수증 상세
+  router.register('GET', '/api/reports/NB20260605-001234', () => ({
+    receiptId: 'NB20260605-001234',
+    status: 'received',
+    createdAt: '2026-06-05T14:32:00+09:00',
+  } satisfies ReportResponse));
+
+  // 신고 통계
+  router.register('GET', '/api/reports/stats', () => ({
+    total: 996,
+    byCategory: [
+      { category: '공공기관 사칭', count: 342 },
+      { category: '금융 피싱', count: 218 },
+      { category: '택배 사칭', count: 156 },
+      { category: '이벤트 사기', count: 124 },
+      { category: '대출 사기', count: 89 },
+      { category: '기타 사기', count: 67 },
+    ],
+    byStatus: [{ status: 'received', count: 996 }],
+    period: { from: '2026-06-01T00:00:00+09:00', to: nowIso() },
+  } satisfies ReportStats));
+
+  // 피드백
+  router.register('POST', '/api/feedback', () => ({ ok: true as const }));
+
+  // 공유
+  router.register('POST', '/api/share', (_body: any) => {
+    return {
+      shareId: `shr_${Date.now()}`,
+      shortUrl: `https://nb.shield/r/${Date.now().toString(36)}`,
+      expiresAt: new Date(Date.now() + 30 * 24 * 3600 * 1000).toISOString(),
+    } satisfies ShareResponse;
+  });
+
+  // 사례
+  router.register('GET', '/api/cases', () => ({
+    items: mockCases,
+    total: mockCases.length,
+    page: 1,
+    pageSize: 20,
+    hasMore: false,
+  } satisfies Paginated<CaseStudy>));
+
+  router.register('GET', '/api/cases/c1', () => mockCases[0]);
+  router.register('GET', '/api/cases/c2', () => mockCases[1]);
+  router.register('GET', '/api/cases/c3', () => mockCases[2]);
+
+  // 비동기 작업
+  router.register('GET', '/api/jobs/job_demo_001', () => ({
+    jobId: 'job_demo_001',
+    status: 'completed',
+    progress: 100,
+    currentStep: 'done',
+    result: null,
+  }));
+};

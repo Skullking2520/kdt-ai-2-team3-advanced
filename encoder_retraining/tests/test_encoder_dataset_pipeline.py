@@ -579,3 +579,34 @@ def test_pipeline_runner_resolves_candidate_model() -> None:
         training_results_dir=Path("training"),
         candidate_experiment="focal_no_oversampling",
     ) == "training/focal_no_oversampling/final_model"
+
+
+def test_pipeline_runner_uses_training_max_length_for_comparison(
+    tmp_path: Path,
+) -> None:
+    training_dir = tmp_path / "training"
+    training_dir.mkdir()
+    (training_dir / "best_params.json").write_text(
+        json.dumps({"max_length": 64}),
+        encoding="utf-8",
+    )
+
+    max_length, source = runner.resolve_comparison_max_length(
+        training_results_dir=training_dir,
+        fallback_max_length=128,
+    )
+
+    assert max_length == 64
+    assert source == "training_best_params"
+
+
+def test_pipeline_runner_falls_back_when_training_params_are_missing(
+    tmp_path: Path,
+) -> None:
+    max_length, source = runner.resolve_comparison_max_length(
+        training_results_dir=tmp_path / "missing-training",
+        fallback_max_length=128,
+    )
+
+    assert max_length == 128
+    assert source == "pipeline_argument"
