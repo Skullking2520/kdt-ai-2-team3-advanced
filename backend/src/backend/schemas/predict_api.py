@@ -47,15 +47,6 @@ class ActionGuideItem(BaseModel):
     contact: Optional[ActionGuideContact] = None
 
 
-class SimilarCase(BaseModel):
-    id: str
-    title: str
-    similarity: int
-    year: str
-    category: str
-    preview: Optional[str] = None
-
-
 class DamageStep(BaseModel):
     step: int
     icon: Literal["message", "click", "site", "info", "damage"]
@@ -94,7 +85,6 @@ class PredictResponse(BaseModel):
     smishingType: str
     reasons: List[DetectionReason]
     actionGuide: List[ActionGuideItem]
-    similarCases: List[SimilarCase]
     damageScenario: Optional[List[DamageStep]] = None
     modelVersion: str
     processingTime: Optional[int] = None
