@@ -58,7 +58,6 @@ export interface AnalysisResultBase {
   smishingType: SmishingType;
   reasons: DetectionReason[];
   actionGuide: ActionGuideItem[];
-  similarCases: SimilarCase[];
   damageScenario?: DamageStep[];    // high/medium일 때만
   modelVersion: string;             // 백엔드 모델 ID (정직: dev 측정 불가, 실제 모델 ID는 백엔드 응답으로만)
   processingTime?: number;          // ms (정직: dev 측정 불가, 백엔드 응답 시 채워짐)
@@ -183,17 +182,8 @@ export interface DetectionReason {
 }
 
 // ───────────────────────────────────────────
-// 8. 유사 사례 (RAG 결과)
+// (8. 유사 사례 RAG 결과 — 2026-06-23 사용자 결정으로 완전 제거)
 // ───────────────────────────────────────────
-
-export interface SimilarCase {
-  id: string;
-  title: string;
-  similarity: number;               // 0~100
-  year: string;
-  category: SmishingType;
-  preview?: string;                 // 사례 미리보기 (선택)
-}
 
 // ───────────────────────────────────────────
 

@@ -453,7 +453,14 @@ export function SeniorAnalyzer() {
                 {/* 3버튼 — 신고 / 가족 / 다시검사 */}
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                   <button
-                    onClick={() => nav("/report")}
+                    onClick={() =>
+                      nav("/report", {
+                        state: {
+                          type: "sms" as const,
+                          content: textInput,
+                        },
+                      })
+                    }
                     className="flex items-center justify-center gap-2 px-4 py-4 rounded-2xl bg-red-500/20 border-2 border-red-500/50 text-red-700 dark:text-red-100 hover:bg-red-500/30 active:scale-95 transition-all text-lg"
                     style={{ fontWeight: 600, lineHeight: 1.2 }}
                   >

@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from "react";
 import { useLocation, useNavigate } from "react-router";
 import {
   ShieldAlert, ShieldCheck, AlertTriangle, Send, RotateCcw,
-  CheckCircle2, XCircle, ChevronRight, ArrowRight, ThumbsUp,
+  CheckCircle2, XCircle, ChevronRight, ThumbsUp,
   ThumbsDown, BookOpen, Phone, Flag,
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
@@ -474,12 +474,7 @@ export function Analyzer() {
                     </div>
                   ))}
                 </div>
-                <button
-                  onClick={() => window.location.href = "/cases"}
-                  className="mt-3 flex items-center gap-1 text-xs text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 transition-all"
-                >
-                  전체 피해 사례 보기 <ArrowRight size={11} />
-                </button>
+                {/* /cases 라우트 부재로 dead link. 발표 중 404 방지를 위해 제거. */}
               </div>
             )}
 

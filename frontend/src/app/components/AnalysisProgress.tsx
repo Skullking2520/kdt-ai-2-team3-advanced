@@ -132,6 +132,12 @@ export function AnalysisProgress() {
         <div className="w-full max-w-lg bg-white dark:bg-[#111c30] border border-gray-200 dark:border-white/10 rounded-2xl p-8 shadow-lg dark:shadow-black/20">
           <ErrorState
             type={error}
+            title={error === "timeout" ? "AI 서버가 준비 중입니다" : undefined}
+            description={
+              error === "timeout"
+                ? "첫 요청 시 AI 모델을 불러오는 과정에서 30초~1분 정도 소요될 수 있습니다. 잠시 후 다시 시도해주세요."
+                : undefined
+            }
             onRetry={handleRetry}
             onHome={handleHome}
             showHome
