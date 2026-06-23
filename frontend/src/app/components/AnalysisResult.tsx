@@ -4,11 +4,11 @@ import {motion, AnimatePresence} from "motion/react";
 import {ThumbsUp, ThumbsDown, Flag, Share2, RotateCcw, Home, CheckCircle, Send, ShieldCheck} from "lucide-react";
 import {RiskLevelCard} from "./result/RiskLevelCard";
 import {DetectionReasonsCard} from "./result/DetectionReasonsCard";
-import {SimilarCasesCard} from "./result/SimilarCasesCard";
 import {DamageScenarioCard} from "./result/DamageScenarioCard";
 import {ActionGuideCard} from "./result/ActionGuideCard";
-import {analyzeSms, toLegacyRiskLevel} from "@/lib/smsAnalysis";
+import {toLegacyRiskLevel} from "@/lib/smsAnalysis";
 import {api, ApiException} from "@/lib/api";
+import {ErrorState, type ErrorType} from "./ErrorState";
 import type {SmsAnalysisResult, ReportResponse} from "@/types/api";
 
 interface AnalysisResult {
@@ -17,7 +17,6 @@ interface AnalysisResult {
   smishing_type: string;
   reasons: string[];
   action_guide: string[];
-  similar_cases: { title: string; similarity: number; year: string }[];
   has_url: boolean;
   has_impersonation: boolean;
   has_payment_request: boolean;
@@ -33,6 +32,8 @@ export function AnalysisResult() {
   const navigate = useNavigate();
   const text = searchParams.get("text") || "";
   const [result, setResult] = useState<AnalysisResult | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [errorType, setErrorType] = useState<ErrorType>("unknown");
   const [feedback, setFeedback] = useState<"correct" | "incorrect" | null>(null);
 
   // 인라인 신고 폼 state (ReportPage /report 라우터 기능을 이 버튼에 통합)
@@ -47,6 +48,10 @@ export function AnalysisResult() {
   useEffect(() => {
     if (!text) return;
     let cancelled = false;
+    // 새 분석 시작 시 error/result 초기화
+    setError(null);
+    setErrorType("unknown");
+    setResult(null);
     (async () => {
       try {
         // P0 연동: 백엔드 API 호출 (VITE_USE_MOCK=false 면 실제 fetch, true 면 mock)
@@ -59,12 +64,17 @@ export function AnalysisResult() {
         }
       } catch (e) {
         if (cancelled) return;
+        // silent fallback 제거: 백엔드 실패 시 ErrorState로 정직 표시
         if (e instanceof ApiException) {
-          console.warn("[AnalysisResult] API 실패, mock fallback:", e.message);
+          setError(e.message);
+          if (e.code === "NETWORK") setErrorType("network");
+          else if (e.code === "MODEL_TIMEOUT") setErrorType("timeout");
+          else if (e.code === "INTERNAL") setErrorType("server");
+          else setErrorType("unknown");
+        } else {
+          setError("분석 중 알 수 없는 오류가 발생했습니다.");
+          setErrorType("unknown");
         }
-        // 정직한 fallback: mock 휴리스틱 (백엔드 AI 모델 연동 시 자동 교체)
-        const sms = analyzeSms(text);
-        setResult(adaptSmsMock(sms));
       }
     })();
     return () => { cancelled = true; };
@@ -78,27 +88,10 @@ export function AnalysisResult() {
       smishing_type: resp.smishingType,
       reasons: resp.reasons.map((r) => r.label),
       action_guide: resp.actionGuide.map((a) => a.action + (a.detail ? ` — ${a.detail}` : "")),
-      similar_cases: resp.similarCases.map((c) => ({ title: c.title, similarity: c.similarity, year: c.year })),
       has_url: !!resp.extractedUrl,
       has_impersonation: resp.reasons.some((r) => r.code.includes("impersonat") || r.label.includes("사칭")),
       has_payment_request: resp.reasons.some((r) => r.code.includes("payment") || r.label.includes("결제")),
       has_personal_info_request: resp.reasons.some((r) => r.code.includes("personal") || r.label.includes("개인정보")),
-    };
-  }
-
-  /** mock fallback: analyzeSms() 휴리스틱 결과를 컴포넌트 내부 형태로 변환 */
-  function adaptSmsMock(sms: ReturnType<typeof analyzeSms>): AnalysisResult {
-    return {
-      risk_level: toLegacyRiskLevel(sms.risk_level),
-      risk_score: sms.risk_score,
-      smishing_type: sms.smishing_type,
-      reasons: sms.reasons,
-      action_guide: sms.action_guide,
-      similar_cases: sms.similar_cases,
-      has_url: sms.has_url,
-      has_impersonation: sms.has_impersonation,
-      has_payment_request: sms.has_payment_request,
-      has_personal_info_request: sms.has_personal_info_request,
     };
   }
 
@@ -157,6 +150,21 @@ export function AnalysisResult() {
     navigate("/analyze");
   };
 
+  if (error) {
+    return (
+      <div className="px-4 sm:px-6 py-8 max-w-2xl mx-auto">
+        <ErrorState
+          type={errorType}
+          title={errorType === "unknown" ? "분석에 실패했어요" : undefined}
+          description={errorType === "unknown" ? error : undefined}
+          onRetry={handleReAnalyze}
+          showHome
+          onHome={() => navigate("/")}
+        />
+      </div>
+    );
+  }
+
   if (!result) {
     return (
       <div className="min-h-[calc(100vh-200px)] flex items-center justify-center">
@@ -208,28 +216,6 @@ export function AnalysisResult() {
 
         {/* 2. 탐지 근거 카드 */}
         <DetectionReasonsCard reasons={result.reasons} riskLevel={result.risk_level} />
-
-        {/* 3. 유사 사례 카드 — RAG 미연동 시 정직한 안내 표시 (가짜 사례 X) */}
-        {result.similar_cases.length > 0 ? (
-          <SimilarCasesCard cases={result.similar_cases} />
-        ) : (
-          <div className="rounded-xl border border-dashed border-amber-500/40 bg-amber-500/5 p-4">
-            <div className="flex items-start gap-3">
-              <div className="mt-0.5 grid h-6 w-6 place-items-center rounded-full bg-amber-500/15 text-amber-700 text-xs" style={{ fontWeight: 700 }}>
-                !
-              </div>
-              <div>
-                <p className="text-sm text-amber-800 dark:text-amber-200" style={{ fontWeight: 600 }}>
-                  유사 사례 검색 (RAG 미연동)
-                </p>
-                <p className="mt-1 text-xs text-amber-700/80 dark:text-amber-300/80 leading-relaxed">
-                  과거 스미싱 사례 검색은 Pinecone RAG 시스템이 백엔드에 연동되면 자동으로 활성화됩니다.
-                  현재는 추측성 사례를 표시하지 않습니다.
-                </p>
-              </div>
-            </div>
-          </div>
-        )}
 
         {/* 4. 예상 피해 시나리오 카드 */}
         <DamageScenarioCard riskLevel={result.risk_level} />

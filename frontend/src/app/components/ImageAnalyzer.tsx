@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback } from "react";
+import { useState, useCallback, useId, useRef } from "react";
 import { ImageIcon, Upload, FileText, ChevronRight, RotateCcw, CheckCircle2, Loader2, AlertCircle,   Edit3, Save, Flag, ShieldCheck } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { useNavigate } from "react-router";
@@ -36,12 +36,15 @@ export function ImageAnalyzer() {
   const [ocrStep, setOcrStep] = useState(-1);
   const [ocrRunning, setOcrRunning] = useState(false);
   const [ocrText, setOcrText] = useState<string | null>(null);
+  const [textToAnalyze, setTextToAnalyze] = useState<string>("");
   const [isEditing, setIsEditing] = useState(false);
   const [editedText, setEditedText] = useState("");
   const [dragOver, setDragOver] = useState(false);
   const [ocrError, setOcrError] = useState(false);
-  const fileRef = useRef<HTMLInputElement>(null);
+  const [uploadError, setUploadError] = useState<string | null>(null);
   const nav = useNavigate();
+  const fileInputId = useId();
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const selectedImage = images[selectedIndex] ?? null;
 
   const resetOcrState = () => {
@@ -56,15 +59,16 @@ export function ImageAnalyzer() {
   const handleFiles = (files: File[]) => {
     const result = selectImageFiles(files, MAX_IMAGE_BYTES);
     if (result.accepted.length === 0) {
-      alert("이미지 파일만 업로드 가능하며, 파일 크기는 10MB 이하여야 합니다.");
+      setUploadError("이미지 파일만 업로드 가능하며, 파일 크기는 10MB 이하여야 합니다.");
       return;
     }
+    setUploadError(null);
     images.forEach((img) => URL.revokeObjectURL(img.preview));
     setImages(result.accepted.map((file) => ({ file, preview: URL.createObjectURL(file) })));
     setSelectedIndex(0);
     resetOcrState();
     if (result.rejected.length > 0) {
-      alert(`조건에 맞지 않는 파일 ${result.rejected.length}개는 제외했습니다.`);
+      setUploadError(`조건에 맞지 않는 파일 ${result.rejected.length}개는 제외했습니다.`);
     }
   };
 
@@ -130,6 +134,7 @@ export function ImageAnalyzer() {
   const handleEditSave = () => {
     if (editedText.trim()) {
       setOcrText(editedText);
+      setTextToAnalyze(editedText);
       setIsEditing(false);
     }
   };
@@ -148,13 +153,30 @@ export function ImageAnalyzer() {
         <p className="text-sm text-gray-600 dark:text-white/60 leading-relaxed">
           스크린샷에서 텍스트를 자동으로 추출한 뒤 스미싱 여부를 분석합니다
         </p>
+        {/* P1-3: alert 제거 — 업로드 에러를 인라인 메시지로 */}
+        {uploadError && (
+          <div className="mt-3 p-3 rounded-xl bg-red-50 dark:bg-red-500/10 border border-red-200 dark:border-red-500/30 flex items-start gap-2">
+            <AlertCircle size={16} className="text-red-600 dark:text-red-400 shrink-0 mt-0.5" />
+            <p className="text-sm text-red-700 dark:text-red-200">{uploadError}</p>
+          </div>
+        )}
       </div>
 
       <div className="space-y-4">
-        {/* 업로드 영역 — native label/htmlFor 연결로 파일 선택창을 연다. */}
+        {/* P1-1: OCR Mock 정직 표시 배너 — 실제 OCR 연동 시 제거 */}
+        {ocrText && (
+          <div className="p-2.5 rounded-xl bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/30 flex items-start gap-2">
+            <AlertCircle size={14} className="text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
+            <p className="text-xs text-amber-700 dark:text-amber-200">
+              시연용 OCR 결과입니다. 실제 OCR 엔진 연동 전 단계로, 4개 예시 텍스트 중 하나가 표시됩니다.
+            </p>
+          </div>
+        )}
+
+        {/* 업로드 영역 — input은 항상 DOM에 유지 (조건부 unmount 방지), label/UI만 조건부 */}
         {!selectedImage ? (
           <label
-            htmlFor="file-input-image"
+            htmlFor={fileInputId}
             onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
             onDragLeave={() => setDragOver(false)}
             onDrop={handleDrop}
@@ -174,16 +196,16 @@ export function ImageAnalyzer() {
               <p className="text-xs sm:text-sm text-gray-500 dark:text-white/40">PNG, JPG, WEBP 지원 · 최대 10MB</p>
             </div>
             <input
-              id="file-input-image"
-              ref={fileRef}
+              ref={fileInputRef}
+              id={fileInputId}
               type="file"
-              accept="image/*"
+              accept="image/jpeg,image/png,image/webp,image/gif,image/*"
               multiple
               aria-label="이미지 파일 선택"
-              className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
+              className="absolute inset-0 w-full h-full cursor-pointer opacity-0"
               onChange={(e) => {
                 handleFiles(Array.from(e.target.files ?? []));
-                e.currentTarget.value = "";
+                e.target.value = "";
               }}
             />
           </label>
@@ -437,7 +459,14 @@ export function ImageAnalyzer() {
                     </button>
 
                     <button
-                      onClick={() => nav("/report")}
+                      onClick={() =>
+                        nav("/report", {
+                          state: {
+                            type: "image" as const,
+                            content: textToAnalyze,
+                          },
+                        })
+                      }
                       className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl border border-red-200 dark:border-red-700/30 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/15 transition-all text-sm"
                       style={{ fontWeight: 600 }}
                     >

@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback } from "react";
+import { useState, useCallback, useId, useRef } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { useNavigate } from "react-router";
 import {
@@ -48,7 +48,8 @@ export function SeniorImageAnalyzer() {
   const [editedText, setEditedText] = useState("");
   const [dragOver, setDragOver] = useState(false);
   const [ocrError, setOcrError] = useState(false);
-  const fileRef = useRef<HTMLInputElement>(null);
+  const fileInputId = useId();
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const nav = useNavigate();
   const { senior: seniorMode } = useSenior();
   const selectedImage = images[selectedIndex] ?? null;
@@ -191,10 +192,10 @@ export function SeniorImageAnalyzer() {
         </div>
 
         <div className="space-y-4">
-          {/* 업로드 영역 */}
+          {/* 업로드 영역 — input은 항상 DOM에 유지 (조건부 unmount 방지), label/UI만 조건부 */}
           {!selectedImage ? (
 <label
-            htmlFor="file-input-senior-image"
+            htmlFor={fileInputId}
             onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
             onDragLeave={() => setDragOver(false)}
             onDrop={handleDrop}
@@ -214,16 +215,16 @@ export function SeniorImageAnalyzer() {
               <p className="text-slate-500 dark:text-white/50 text-lg">PNG, JPG, WEBP 지원 · 최대 10MB</p>
             </div>
             <input
-              id="file-input-senior-image"
-              ref={fileRef}
+              ref={fileInputRef}
+              id={fileInputId}
               type="file"
-              accept="image/*"
+              accept="image/jpeg,image/png,image/webp,image/gif,image/*"
               multiple
               aria-label="이미지 파일 선택"
-              className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
+              className="absolute inset-0 w-full h-full cursor-pointer opacity-0"
               onChange={(e) => {
                 handleFiles(Array.from(e.target.files ?? []));
-                e.currentTarget.value = "";
+                e.target.value = "";
               }}
             />
           </label>
@@ -475,7 +476,14 @@ export function SeniorImageAnalyzer() {
                     </button>
 
                     <button
-                      onClick={() => nav("/report")}
+                      onClick={() =>
+                        nav("/report", {
+                          state: {
+                            type: "image" as const,
+                            content: ocrText ?? "",
+                          },
+                        })
+                      }
                       className="w-full flex items-center justify-center gap-3 px-5 py-4 rounded-2xl border-2 border-red-300 dark:border-red-700/40 text-red-700 dark:text-red-200 hover:bg-red-50 dark:hover:bg-red-900/15 transition-all text-xl"
                       style={{ fontWeight: 700, lineHeight: 1.2 }}
                     >

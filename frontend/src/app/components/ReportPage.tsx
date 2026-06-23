@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useLocation } from "react-router";
 import { motion, AnimatePresence } from "motion/react";
 import {
   Flag,
@@ -17,31 +18,38 @@ import {
 import { api, ApiException } from "@/lib/api";
 import type { ReportResponse } from "@/types/api";
 
-// 카테고리 메타. `count`는 백엔드(`/api/reports/stats`)에서 가져올 통계.
-// 백엔드 연동 전까지는 placeholder("—") 표시.
-const CATEGORIES = [
-  { value: "gov", label: "공공기관 사칭", icon: "🏛️" },
-  { value: "finance", label: "금융/은행 피싱", icon: "🏦" },
-  { value: "delivery", label: "택배 사기", icon: "📦" },
-  { value: "event", label: "이벤트/경품 사기", icon: "🎁" },
-  { value: "loan", label: "대출/투자 사기", icon: "💰" },
-  { value: "other", label: "기타", icon: "⚠️" },
+// 카테고리 메타. value는 SmishingType enum 값 그대로 사용해 백엔드 검증 통과.
+// (발표 직전: 백엔드 enum 거절 시 silent 실패 방지를 위해 enum 매칭)
+import type { SmishingType } from "@/types/api";
+
+const CATEGORIES: { value: SmishingType; label: string; icon: string }[] = [
+  { value: "공공기관 사칭", label: "공공기관 사칭", icon: "🏛️" },
+  { value: "금융 피싱", label: "금융/은행 피싱", icon: "🏦" },
+  { value: "택배 사칭", label: "택배 사기", icon: "📦" },
+  { value: "이벤트 사기", label: "이벤트/경품 사기", icon: "🎁" },
+  { value: "대출 사기", label: "대출/투자 사기", icon: "💰" },
+  { value: "기타 사기", label: "기타", icon: "⚠️" },
 ];
 
 // 사이드바의 "최근 제보" 카드는 통째로 백엔드 연동 안내 카드로 대체됨
 // (이전 placeholder "—" 표시는 사용자 입장에서 "고장난 화면"처럼 보였음).
 
 export function ReportPage() {
+  const location = useLocation();
+  // 검사 페이지에서 전달된 state — "신고하기" 누른 페이지에서 자동 입력
+  const incomingState = (location.state as { content?: string; type?: "sms" | "url" | "image"; url?: string } | null) ?? null;
+
   const [step, setStep] = useState<"form" | "success">("form");
-  const [category, setCategory] = useState("");
+  const [category, setCategory] = useState<SmishingType | "">("");
   const [sender, setSender] = useState("");
-  const [messageText, setMessageText] = useState("");
-  const [hasUrl, setHasUrl] = useState(false);
-  const [url, setUrl] = useState("");
+  const [messageText, setMessageText] = useState(incomingState?.content ?? "");
+  const [hasUrl, setHasUrl] = useState(Boolean(incomingState?.url));
+  const [url, setUrl] = useState(incomingState?.url ?? "");
   const [notes, setNotes] = useState("");
   const [catOpen, setCatOpen] = useState(false);
   const [agreeShare, setAgreeShare] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
   const [_receipt, setReceipt] = useState<ReportResponse | null>(null);
 
   const selectedCat = CATEGORIES.find((c) => c.value === category);
@@ -60,8 +68,7 @@ export function ReportPage() {
       const resp = await api.submitReport({
         type: "sms",
         content: messageText,
-        // category 는 백엔드 enum에 매핑 필요. 일단 라벨 그대로 전달.
-        category: (selectedCat?.label ?? "기타") as never,
+        category: (selectedCat?.value ?? "기타 사기"),
         sender: sender || undefined,
         url: hasUrl ? url : undefined,
         notes: notes || undefined,
@@ -71,9 +78,9 @@ export function ReportPage() {
       setStep("success");
     } catch (e) {
       if (e instanceof ApiException) {
-        alert(`신고 접수 실패: ${e.message}`);
+        setSubmitError(`신고 접수 실패: ${e.message}`);
       } else {
-        alert("신고 접수 중 알 수 없는 오류가 발생했습니다.");
+        setSubmitError("신고 접수 중 알 수 없는 오류가 발생했습니다.");
       }
     } finally {
       setSubmitting(false);
@@ -108,6 +115,14 @@ export function ReportPage() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Form */}
         <div className="lg:col-span-2">
+          {/* P1-3: alert 제거 — 제출 에러 인라인 표시 */}
+          {submitError && (
+            <div className="mb-4 p-3 rounded-xl bg-red-50 dark:bg-red-500/10 border border-red-200 dark:border-red-500/30 flex items-start gap-2">
+              <AlertTriangle size={16} className="text-red-600 dark:text-red-400 shrink-0 mt-0.5" />
+              <p className="text-sm text-red-700 dark:text-red-200">{submitError}</p>
+            </div>
+          )}
+
           {/* 제보 가이드 — 입력 폼 위쪽으로 이동 (UX-07).
               사용자가 신고 작성 전에 핵심 주의사항(개인정보 삭제)을 먼저 확인하도록.
               개인정보 보호 강조: 아이콘 + 구조화 텍스트 + 빨간색 강조 */}
