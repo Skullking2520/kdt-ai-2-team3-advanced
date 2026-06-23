@@ -1,7 +1,7 @@
 import {useState} from "react";
 import {useNavigate} from "react-router";
 import {motion, AnimatePresence} from "motion/react";
-import {Link2, Search, ShieldCheck, RefreshCw, Globe, Flag} from "lucide-react";
+import {Link2, Search, ShieldCheck, ShieldAlert, ShieldX, RefreshCw, Globe, Flag} from "lucide-react";
 import {Card} from "./ui/Primitives";
 import {api, ApiException} from "@/lib/api";
 import type { UrlAnalysisResult } from "@/types/api";
@@ -23,25 +23,26 @@ type ViewState =
 interface URLResult {
   url: string;
   domain: string;
-  vtVerdict?: {
-    malicious: number;
-    suspicious: number;
-    harmless: number;
-    undetected: number;
-    total: number;
-    lastCheckedAt?: string;
-    status: "pending" | "completed" | "failed" | "not_checked";
-  };
+  riskLevel: "high" | "medium" | "low";
+  riskScore: number;
+  reasons: { label: string; severity: string }[];
 }
 
-/** api.analyze() UrlAnalysisResult → 컴포넌트 내부 URLResult 어댑터 (VT 데이터만) */
 function adaptUrlResult(r: UrlAnalysisResult): URLResult {
   return {
     url: r.content,
     domain: r.urlDetails.domain,
-    vtVerdict: r.urlDetails.vtVerdict,
+    riskLevel: r.riskLevel,
+    riskScore: r.riskScore,
+    reasons: r.reasons.map((x) => ({ label: x.label, severity: x.severity })),
   };
 }
+
+const RISK_CONFIG = {
+  high:   { label: "위험", color: "text-red-400",    border: "border-red-500/20",    bg: "bg-red-500/5",    Icon: ShieldX },
+  medium: { label: "주의", color: "text-amber-400",  border: "border-amber-500/20",  bg: "bg-amber-500/5",  Icon: ShieldAlert },
+  low:    { label: "안전", color: "text-emerald-400", border: "border-emerald-500/20", bg: "bg-emerald-500/5", Icon: ShieldCheck },
+} as const;
 
 const SAMPLE_URLS = [
   "http://nhis-pay.kr/login",
@@ -201,11 +202,6 @@ export function URLAnalyzer() {
   );
 }
 
-/**
- * SuccessResultPanel — vtVerdict 유무에 따라 VT 영역만 분기
- * - vtVerdict 존재 + status === "completed": VT 통계 (큰 동그라미 + 4-카드)
- * - vtVerdict 없음/실패/pending: amber 안내 카드 (분석 자체는 성공)
- */
 function SuccessResultPanel({
   data,
   onReport,
@@ -215,6 +211,9 @@ function SuccessResultPanel({
   onReport: () => void;
   onReset: () => void;
 }) {
+  const cfg = RISK_CONFIG[data.riskLevel];
+  const { Icon } = cfg;
+
   return (
     <motion.div
       key="url-result-card"
@@ -222,19 +221,42 @@ function SuccessResultPanel({
       animate={{ opacity: 1, y: 0 }}
       className="bg-[#0b1120] rounded-2xl p-4 space-y-4"
     >
-      {/* URL 정보 헤더 — 정상 분석 결과 */}
-      <div className="rounded-2xl border border-emerald-500/20 bg-emerald-500/5 p-4">
-        <div className="flex items-center gap-2 mb-1">
-          <ShieldCheck size={14} className="text-emerald-400" />
-          <p className="text-sm text-emerald-300" style={{ fontWeight: 600 }}>URL 분석 완료</p>
+      {/* 위험도 헤더 */}
+      <div className={`rounded-2xl border ${cfg.border} ${cfg.bg} p-4`}>
+        <div className="flex items-center justify-between mb-2">
+          <div className="flex items-center gap-2">
+            <Icon size={14} className={cfg.color} />
+            <p className={`text-sm ${cfg.color}`} style={{ fontWeight: 600 }}>
+              {cfg.label} — URL 분석 완료
+            </p>
+          </div>
+          <span className={`text-xs px-2 py-0.5 rounded-full border ${cfg.border} ${cfg.color}`} style={{ fontWeight: 700 }}>
+            위험도 {data.riskScore}점
+          </span>
         </div>
-        <div className="flex items-center gap-2 mt-2">
-          <Link2 size={14} className="text-white/60" />
+        <div className="flex items-center gap-2 mt-1">
+          <Link2 size={13} className="text-white/50" />
           <p className="text-sm text-white/80" style={{ fontWeight: 600 }}>{data.domain}</p>
         </div>
         <p className="text-[11px] text-white/40 mt-1 break-all">{data.url}</p>
       </div>
 
+      {/* 탐지 이유 */}
+      {data.reasons.length > 0 && (
+        <div className="space-y-1.5">
+          <p className="text-[11px] text-white/40 mb-1">탐지 근거</p>
+          {data.reasons.map((r, i) => (
+            <div key={i} className="flex items-start gap-2 px-3 py-2 rounded-lg bg-white/5 border border-white/8">
+              <span className={`mt-0.5 text-[9px] px-1.5 py-0.5 rounded uppercase tracking-wide border ${
+                r.severity === "high" ? "text-red-400 border-red-500/30 bg-red-500/10" :
+                r.severity === "medium" ? "text-amber-400 border-amber-500/30 bg-amber-500/10" :
+                "text-slate-400 border-white/10 bg-white/5"
+              }`} style={{ fontWeight: 700 }}>{r.severity}</span>
+              <p className="text-xs text-white/70 flex-1">{r.label}</p>
+            </div>
+          ))}
+        </div>
+      )}
 
       <div className="flex items-center gap-3">
         <button
