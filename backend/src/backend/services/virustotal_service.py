@@ -1,5 +1,6 @@
 import asyncio
 import base64
+import logging
 import time
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
@@ -8,6 +9,8 @@ from email.utils import parsedate_to_datetime
 import httpx
 from sqlalchemy import select, text
 from sqlalchemy.ext.asyncio import AsyncSession
+
+logger = logging.getLogger(__name__)
 
 from ..core.pydantic_settings import settings
 from ..models.static_patterns import (
@@ -385,3 +388,112 @@ async def process_pending_url_candidates() -> dict[str, int]:
             )
 
     return counts
+
+
+# ─── 사용자 URL 분석 응답용: 동기 vtVerdict + metaDetails ──────────────
+def _epoch_to_iso(epoch: int | None) -> str | None:
+    if epoch is None:
+        return None
+    try:
+        return datetime.fromtimestamp(epoch, tz=timezone.utc).isoformat()
+    except (TypeError, ValueError, OverflowError):
+        return None
+
+
+def _parse_vt_payload_for_url_response(payload: dict) -> dict | None:
+    """curl /api/v3/urls/{id} 응답 본문 → 프론트가 받는 {vtVerdict, metaDetails} 형태로 변환.
+    반환: {vtVerdict: {...}, metaDetails: {...}} 또는 verdict 없으면 None.
+    """
+    data = payload.get("data")
+    if not data:
+        return None
+    attrs = data.get("attributes") or {}
+    stats = attrs.get("last_analysis_stats")
+    if not stats:
+        return None
+
+    malicious = int(stats.get("malicious", 0))
+    suspicious = int(stats.get("suspicious", 0))
+    harmless = int(stats.get("harmless", 0))
+    undetected = int(stats.get("undetected", 0))
+    timeout = int(stats.get("timeout", 0))
+    total = malicious + suspicious + harmless + undetected + timeout
+
+    last_http = attrs.get("last_http_response_content_type") or ""
+    last_http_headers = attrs.get("last_http_response_headers") or {}
+    categories = attrs.get("categories") or {}
+    tags = attrs.get("tags") or []
+
+    return {
+        "vtVerdict": {
+            "malicious": malicious,
+            "suspicious": suspicious,
+            "harmless": harmless,
+            "undetected": undetected,
+            "timeout": timeout,
+            "total": total,
+            "status": "completed",
+            "lastCheckedAt": _epoch_to_iso(attrs.get("last_analysis_date")),
+        },
+        "metaDetails": {
+            "categories": categories,
+            "tags": tags,
+            "lastHttpStatus": attrs.get("last_http_response_code"),
+            "lastHttpContentType": last_http,
+            "lastHttpServer": (
+                last_http_headers.get("Server")
+                or last_http_headers.get("server")
+                or None
+            ),
+            "ipCountry": attrs.get("country"),
+            "lastAnalysisDate": _epoch_to_iso(attrs.get("last_analysis_date")),
+            "firstSubmissionDate": _epoch_to_iso(attrs.get("first_submission_date")),
+        },
+    }
+
+
+async def fetch_vt_verdict_full(url: str) -> dict | None:
+    """사용자 URL 분석 응답용 동기 호출. VIRUSTOTAL_API_KEY 없거나 호출 실패 시 None 반환.
+    404 (URL 미등록) 시 VT_SUBMIT_UNKNOWN_URLS=true면 등록 후 None 반환 (재조회 필요).
+    """
+    if not settings.VIRUSTOTAL_API_KEY:
+        logger.warning("[VT] VIRUSTOTAL_API_KEY 미설정 — vtVerdict/metaDetails 응답 안 함")
+        return None
+
+    url_id = _url_identifier(url)
+    try:
+        async with httpx.AsyncClient(timeout=settings.VT_TIMEOUT_SECONDS) as client:
+            response = await _request_vt(
+                client,
+                "GET",
+                f"https://www.virustotal.com/api/v3/urls/{url_id}",
+                allowed_statuses={404},
+            )
+            if response.status_code == 404:
+                if settings.VT_SUBMIT_UNKNOWN_URLS:
+                    try:
+                        await _request_vt(
+                            client,
+                            "POST",
+                            "https://www.virustotal.com/api/v3/urls",
+                            data={"url": url},
+                        )
+                    except Exception as exc:
+                        logger.warning("[VT] URL 등록 실패 (신규 URL): %s", exc)
+                logger.info("[VT] %s 분석 결과 없음 (신규 URL)", url)
+                return None
+            payload = response.json()
+            parsed = _parse_vt_payload_for_url_response(payload)
+            if parsed:
+                logger.info(
+                    "[VT] %s 분석 성공 — malicious=%s suspicious=%s total=%s",
+                    url, parsed["vtVerdict"]["malicious"],
+                    parsed["vtVerdict"]["suspicious"], parsed["vtVerdict"]["total"],
+                )
+            return parsed
+    except VirusTotalRateLimitError as exc:
+        logger.warning("[VT] rate limit reached (%ss) — vtVerdict 응답 안 함", exc.retry_after_seconds)
+        return None
+    except Exception as exc:
+        logger.warning("[VT] 호출 실패 (%s): %s — vtVerdict 응답 안 함", type(exc).__name__, exc)
+        return None

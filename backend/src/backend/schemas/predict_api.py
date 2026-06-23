@@ -29,14 +29,6 @@ class ActionGuideItem(BaseModel):
     detail: Optional[str] = None
 
 
-class SimilarCase(BaseModel):
-    id: str
-    title: str
-    similarity: int
-    year: str
-    category: str
-
-
 class GovernmentCriterion(BaseModel):
     id: str
     label: str
@@ -55,6 +47,30 @@ class UrlFlag(BaseModel):
     severity: RiskLevel
 
 
+class VtVerdict(BaseModel):
+    """VirusTotal last_analysis_stats + 상태 — 사용자 URL 응답에 동기로 채움"""
+    malicious: int
+    suspicious: int
+    harmless: int
+    undetected: int
+    timeout: int = 0
+    total: int
+    status: Literal["pending", "completed", "failed", "not_checked"]
+    lastCheckedAt: Optional[str] = None
+
+
+class UrlMetaDetails(BaseModel):
+    """VirusTotal 응답의 부가 메타 — categories / tags / http / server / dates"""
+    categories: dict = Field(default_factory=dict)
+    tags: List[str] = Field(default_factory=list)
+    lastHttpStatus: Optional[int] = None
+    lastHttpContentType: Optional[str] = None
+    lastHttpServer: Optional[str] = None
+    ipCountry: Optional[str] = None
+    lastAnalysisDate: Optional[str] = None
+    firstSubmissionDate: Optional[str] = None
+
+
 class UrlDetails(BaseModel):
     domain: str
     ssl: SslInfo
@@ -63,6 +79,8 @@ class UrlDetails(BaseModel):
     ipCountry: str
     similarDomains: List[str]
     flags: List[UrlFlag]
+    vtVerdict: Optional[VtVerdict] = None
+    metaDetails: Optional[UrlMetaDetails] = None
 
 
 class PredictResponse(BaseModel):
@@ -74,7 +92,6 @@ class PredictResponse(BaseModel):
     smishingType: str
     reasons: List[DetectionReason]
     actionGuide: List[ActionGuideItem]
-    similarCases: List[SimilarCase]
     governmentCriteria: List[GovernmentCriterion]
     modelVersion: str
     processingTime: int
