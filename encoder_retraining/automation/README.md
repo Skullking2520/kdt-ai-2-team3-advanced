@@ -99,10 +99,10 @@ cleanlab-audit/
 | `ENCODER_CLEANLAB_AUDIT_URL` | secret | optional | Cleanlab audit S3 prefix 또는 `.tar.gz` 다운로드 URL |
 | `AWS_ACCESS_KEY_ID` | secret | S3 required | S3 다운로드용 AWS access key |
 | `AWS_SECRET_ACCESS_KEY` | secret | S3 required | S3 다운로드용 AWS secret key |
-| `AWS_REGION` | variable | S3 required | S3 bucket region. 현재 값은 `ap-northeast-2` |
+| `AWS_REGION` | variable | S3 required | S3 bucket region |
 
-현재 repository에 설정된 값은 위 네 가지가 기준이다. 아래 값들은 workflow가
-호환성이나 선택 기능을 위해 읽을 수 있지만, 현재 repository에는 설정되어 있지 않다.
+실행 전 repository settings에서 위 값을 설정한다. 아래 값들은 workflow가
+호환성이나 선택 기능을 위해 읽을 수 있는 선택 항목이다.
 
 | Name | Type | Purpose |
 | --- | --- | --- |
@@ -113,21 +113,21 @@ cleanlab-audit/
 | `AWS_SESSION_TOKEN` | secret | 임시 AWS credential 사용 시 session token |
 | `HF_TOKEN` | secret | Hugging Face model upload token |
 
-`HF_TOKEN`은 실제 Hugging Face 업로드 단계에서만 필요하다. 현재 repository에는
-설정되어 있지 않으므로, `upload_to_hf=true`를 사용하려면 먼저 secret을 추가해야 한다.
-현재 자동 재학습 입력은 `ENCODER_CLEANLAB_AUDIT_URL`을 우선 사용한다.
+`HF_TOKEN`은 실제 Hugging Face 업로드 단계에서만 필요하다. `upload_to_hf=true`를
+사용하려면 repository secret에 추가해야 한다. 자동 재학습 입력은
+`ENCODER_CLEANLAB_AUDIT_URL` 또는 수동 실행 입력을 사용한다.
 
-PR #24가 다음처럼 S3 prefix에 Cleanlab 결과 파일 5개를 올리는 경우에는
+Cleanlab 작업이 다음처럼 S3 prefix에 결과 파일 5개를 올리는 경우에는
 `ENCODER_CLEANLAB_AUDIT_URL`에 prefix를 그대로 넣는다.
 
 ```text
-s3://smishing-dev-newbies-2026/cleanlab-audit/<run_name>/<timestamp>/
+s3://<bucket>/cleanlab-audit/<run_name>/<timestamp>/
 ```
 
 `<run_name>/<timestamp>/`가 매번 바뀌면 상위 prefix만 지정할 수도 있다.
 
 ```text
-s3://smishing-dev-newbies-2026/cleanlab-audit/
+s3://<bucket>/cleanlab-audit/
 ```
 
 workflow는 이 값이 `s3://`로 시작하면 해당 prefix 아래에서 가장 최근

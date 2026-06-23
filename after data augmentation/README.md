@@ -1,5 +1,8 @@
 # Keyword Balanced Encoder Experiments
 
+> 이 폴더는 키워드 과민반응 완화를 검토한 과거 실험 기록이다. 현재 운영 재학습과
+> 모델 승격 기준은 `encoder_retraining/README.md`를 따른다.
+
 이 폴더는 Encoder 모델의 키워드 과민반응을 완화하기 위한 증강 학습과 평가 코드를
 정리한다. PR #8의 `aug-50`, `aug-100` 실험 위치와 맞추기 위해 루트의
 `after data augmentation/` 아래에서 관리한다.

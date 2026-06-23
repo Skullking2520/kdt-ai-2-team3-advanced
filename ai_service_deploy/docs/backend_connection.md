@@ -7,7 +7,7 @@
 text는 일반 스미싱 문자 메시지 입력한 것, ocr_text는 ocr로 추출한 이미지 (없으면 ""), "route_override"는 강제로 langgraph의 분기 방향을 결정하는 선택적 파라미터다.
 
 ```txt
-POST https://leekipil98--ai-service-rag-fastapi-app.modal.run/api/v1/graph/invoke
+POST https://<modal-app>.modal.run/api/v1/graph/invoke
 
 {
     "text": "[국민건강보험공단] 2026년 건강보험료 과납분 87,600원 환급 대상입니다. 7일 내 신청하지 않으면 소멸됩니다. 신청: http://nhis-refund.net/req",
@@ -33,7 +33,7 @@ POST https://leekipil98--ai-service-rag-fastapi-app.modal.run/api/v1/graph/invok
 다음은 "route_override": "general"인 경우이다. encoder에서 is_smishing=true일경우 "general"로 일반 이유 출력를 출력하는 용도다.
 
 ```txt
-POST https://leekipil98--ai-service-rag-fastapi-app.modal.run/api/v1/graph/invoke
+POST https://<modal-app>.modal.run/api/v1/graph/invoke
 
 {
     "text": "[국민건강보험공단] 2026년 건강보험료 과납분 87,600원 환급 대상입니다. 7일 내 신청하지 않으면 소멸됩니다. 신청: http://nhis-refund.net/req",
@@ -56,6 +56,7 @@ POST https://leekipil98--ai-service-rag-fastapi-app.modal.run/api/v1/graph/invok
 }
 ```
 
-주의사항: 서버리스이므로 cold start와 timeout 대비 정책을 잘 세워서 백엔드에서 대응한다.
+실제 URL은 backend의 `DECODER_ENDPOINT_URL` 환경변수로만 관리한다. 서버리스이므로
+cold start와 timeout 대비 정책을 백엔드에서 적용한다.
 
 내부적으로 vectordb, llm 호출은 스스로 처리하나 딜레이가 있다.

@@ -1,5 +1,8 @@
 # [기능] 스미싱 RAG 데이터 자동 수집·정제·벡터화 파이프라인 구축
 
+> 이 문서는 과거 실험 PR의 기록이다. 현재 운영 재학습 흐름은
+> `encoder_retraining/README.md`와 `encoder_retraining/automation/README.md`를 기준으로 한다.
+
 ## 요약
 
 <!-- 연관 이슈 번호: closes #이슈번호 -->

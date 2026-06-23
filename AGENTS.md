@@ -77,19 +77,20 @@
 
 ```txt
 
-├── frontend/    # React 18 + Vite 6 + TypeScript + Tailwind 4
-├── backend/     # FastAPI + SQLAlchemy + MySQL
-├── ai_service/  # LangGraph + Langfuse + Pinecone
-├── docs/        # 문서 (PR_TEMPLATE.md, AI_MODEL_METRICS.md, BACKEND_WIKI.md 등)
-├── deploy_wrapper/  # AWS 배포 래퍼
-├── prometheus/  # 모니터링
-├── infra/       # 인프라 설정
-└── e2e_tests/   # E2E 테스트
+├── frontend/            # React + Vite + TypeScript 웹 화면
+├── backend/             # FastAPI + SQLAlchemy + MySQL API
+├── ai_service/          # LangGraph, RAG, 모델 실험과 로컬 검증
+├── ai_service_deploy/   # Modal 기반 LLM/RAG 배포 코드
+├── encoder_retraining/  # 재학습, 모델 비교, 승격 자동화
+├── datatest/            # 데이터 수집과 Cleanlab 품질 점검
+├── prometheus/          # 모니터링 설정
+├── load_tests/          # Locust 부하 테스트
+└── e2e_tests/           # E2E 테스트
 ```
 
 ## 참고 문서
 
-- [docs/BACKEND_WIKI.md](docs/BACKEND_WIKI.md) — 백엔드 위키
-- [docs/CONTRIBUTING.md](docs/CONTRIBUTING.md) — 기여 가이드
-- [docs/MONOREPO.md](docs/MONOREPO.md) — 모노레포 구조
-- [docs/SCAFFOLDING.md](docs/SCAFFOLDING.md) — 스캐폴딩 가이드
+- [README.md](README.md) — 프로젝트 개요와 실행 순서
+- [backend/README.md](backend/README.md) — 백엔드 API와 배포 안내
+- [frontend/README.md](frontend/README.md) — 프론트엔드 개발 안내
+- [encoder_retraining/README.md](encoder_retraining/README.md) — 재학습 및 승격 파이프라인

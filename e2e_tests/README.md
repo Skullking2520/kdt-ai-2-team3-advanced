@@ -1,2 +1,7 @@
-folder for e2e tests
-playwright으로 e2e test
+# E2E Tests
+
+이 폴더는 브라우저 기반 E2E 시나리오를 둘 위치다. 현재는 시나리오와 도구 선정만
+정리되어 있으며, 실행 가능한 Playwright 테스트 파일은 아직 포함하지 않는다.
+
+추가할 때는 문자 분석, URL 분석, 이미지 OCR, 신고 제출의 핵심 사용자 흐름을
+mock과 실제 backend 모드로 구분해 검증한다.

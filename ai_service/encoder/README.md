@@ -37,7 +37,7 @@
 | True Negative | 25,833 |
 | True Positive | 3,372 |
 
-상세 수치는 [results/focal_no_oversampling/test_metrics.json](results/focal_no_oversampling/test_metrics.json)을 참고한다.
+상세 학습 산출물은 대용량·재생성 가능 파일이라 Git에 포함하지 않는다. 위 표는 선택 모델의 기록된 테스트 결과를 요약한 것이다.
 
 ## Experiment Summary
 
@@ -52,7 +52,7 @@
 - `focal_positive_oversampling_0p6`
 - `focal_positive_oversampling_0p7`
 
-전체 비교 결과는 [results/comparison/experiment_comparison_final.csv](results/comparison/experiment_comparison_final.csv)를 참고한다.
+전체 비교 결과 CSV도 재생성 가능한 로컬 산출물로 관리하며 Git에 포함하지 않는다.
 
 ## Training Code
 
@@ -122,8 +122,8 @@ uv run --group encoder python \
 - 8자리 이상 전화번호 형태는 `<PHONE>`으로 치환
 - 5-6자리 인증번호처럼 짧은 숫자는 유지
 
-서비스 추론 시에는 `deploy_wrapper/app`의 wrapper가 Encoder Endpoint 호출 전 동일한 모델
-입력 정규화를 적용한다.
+서비스 추론 시에는 backend의 예측 서비스가 Encoder Endpoint 호출 전 동일한 모델
+입력 정규화를 적용한다. Endpoint URL과 인증 정보는 backend 환경변수로만 관리한다.
 
 ## What Is Not Committed
 

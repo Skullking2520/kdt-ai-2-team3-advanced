@@ -1,4 +1,7 @@
-# modal cli 및 rag_app 모니터링 방법 정리
+# Modal RAG 앱 디버깅 메모
+
+> 이 문서는 Modal CLI를 사용한 개발·장애 확인 메모다. 배포 URL과 Secret 값은
+> 기록하지 않는다.
 
 1. 개발 모드로 실시간 로그 확인 (modal serve)
 
