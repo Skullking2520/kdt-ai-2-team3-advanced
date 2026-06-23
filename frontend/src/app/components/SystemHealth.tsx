@@ -98,6 +98,16 @@ export function SystemHealth() {
 
   return (
     <div className="px-4 sm:px-6 py-8 max-w-5xl mx-auto space-y-5">
+      {/* P1-2: Mock 데이터 정직 표시 배너 */}
+      <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/30 flex items-start gap-2">
+        <AlertTriangle size={16} className="text-amber-400 shrink-0 mt-0.5" />
+        <div>
+          <p className="text-sm text-amber-200" style={{ fontWeight: 600 }}>시연용 데이터입니다</p>
+          <p className="text-xs text-amber-300/80 mt-0.5">
+            실제 운영 헬스 상태가 아닌 발표 시연용 mock입니다. 백엔드 연동 전 단계로 동작합니다.
+          </p>
+        </div>
+      </div>
       {/* Header */}
       <div className="flex items-start justify-between flex-wrap gap-3">
         <div>

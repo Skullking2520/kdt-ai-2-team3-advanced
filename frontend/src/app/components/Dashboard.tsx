@@ -172,6 +172,17 @@ function CustomBarChart({ data }: { data: typeof categoryData }) {
 export function Dashboard() {
   return (
     <div className="px-4 sm:px-6 py-8 space-y-6 max-w-7xl mx-auto">
+      {/* P1-2: Mock 데이터 정직 표시 배너 (심사위원 오해 방지) */}
+      <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/30 flex items-start gap-2">
+        <AlertTriangle size={16} className="text-amber-400 shrink-0 mt-0.5" />
+        <div>
+          <p className="text-sm text-amber-200" style={{ fontWeight: 600 }}>시연용 데이터입니다</p>
+          <p className="text-xs text-amber-300/80 mt-0.5">
+            실제 운영 통계가 아닌 발표 시연용 mock 데이터입니다. 발표 환경에서는 백엔드 연동 전 단계로 동작합니다.
+          </p>
+        </div>
+      </div>
+
       {/* Header */}
       <div>
         <div className="inline-flex items-center gap-2 mb-3 px-3 py-1 rounded-full bg-cyan-500/10 border border-cyan-500/20">

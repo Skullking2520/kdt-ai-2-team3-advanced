@@ -22,7 +22,6 @@ import type {
   CaseStudy,
   DamageStep,
   DetectionReason,
-  SimilarCase,
   ActionGuideItem,
 } from '@/types/api';
 
@@ -64,9 +63,9 @@ const urlDetails = (url: string): UrlAnalysisResult['urlDetails'] => {
           { type: '의심 TLD', desc: '피싱에 자주 사용되는 패턴', severity: 'medium' },
         ]
       : [{ type: '이상 없음', desc: '명시적인 위험 징후가 발견되지 않았습니다', severity: 'low' }],
-    // 정직 처리: metaDetails는 VirusTotal API를 우리 백엔드가 직접 호출해서 받아와야 표시할 수 있음.
-    // mock에서 가짜 메타(등록일 2025-11-12, IP 175.221.43.127, PHISHING 카테고리 등)를 만들면 정직하지 않음.
-    // 백엔드 운영팀이 VT API key를 발급·연동하면 자동으로 적재됨.
+    // 정직 처리: vtVerdict / metaDetails는 VirusTotal API를 우리 백엔드가 직접 호출해서 받아와야 표시할 수 있음.
+    // 백엔드 virustotal_service.fetch_vt_verdict_full() 결과로 응답에 채워짐 (백엔드 연동 시).
+    // mock에서는 의도적으로 null로 두어 프론트의 "추가 보안 검사 정보를 불러올 수 없습니다" 분기 작동.
   };
 };
 
@@ -203,13 +202,6 @@ function buildSmsResult(req: AnalysisRequest & { content: string }): SmsAnalysis
     actionGuide.push({ priority: 'normal', action: '그래도 개인정보나 금융정보 입력을 요구한다면 반드시 의심하세요' });
   }
 
-  // 정직 처리: similarCases는 RAG 파이프라인(Pinecone + OpenAI)이 실제로 매칭한 결과여야 정직.
-  // mock에서 5건 가짜 사례(택배 사칭/공공기관 환급/가족 사칭/단축 URL/이벤트 당첨)를 만들면
-  // 정직하지 않음 — 가짜 매칭은 사용자에게 "유사 사례 있음" 으로 오해 유발.
-  // lib/smsAnalysis.ts의 SIMILAR_CASES_HIGH/MEDIUM 도 이미 빈 배열로 정직 처리됨.
-  // RAG 연동 시 real fetch가 Pinecone 검색 결과로 채움. mock fallback은 빈 배열 반환.
-  const similarCases: SimilarCase[] = [];
-
   const reasonsWithMatched: DetectionReason[] = reasons.map((c) => {
     if (c.code === 'impersonation') return { ...c, matched: impersonation };
     if (c.code === 'payment_request') return { ...c, matched: hasPayment };
@@ -226,7 +218,6 @@ function buildSmsResult(req: AnalysisRequest & { content: string }): SmsAnalysis
     smishingType,
     reasons: reasonsWithMatched,
     actionGuide,
-    similarCases,
     damageScenario: riskLevel !== 'low' ? damageStepsByType[smishingType] : undefined,
     modelVersion: 'kc-electra-v1.2.3',
     processingTime: 800 + Math.floor(Math.random() * 800),
@@ -264,10 +255,6 @@ function buildUrlResult(req: AnalysisRequest & { content: string }): UrlAnalysis
           { priority: 'normal', action: '의심 URL을 신고해주세요', contact: { name: 'KISA 사이버신고센터', number: '118' } },
         ]
       : [{ priority: 'normal', action: '공식 도메인을 다시 한번 확인하세요' }],
-    // 정직 처리: similarCases는 RAG가 실제로 매칭한 결과여야 정직.
-    // 가짜 '피싱 도메인 사칭 사례' 1건은 mock에서 만든 데이터로 정직하지 않음.
-    // RAG 연동 시 backend가 Pinecone 검색 결과로 채움. mock fallback은 빈 배열.
-    similarCases: [],
     damageScenario: isDanger ? damageStepsByType['기타 사기'] : undefined,
     modelVersion: 'url-classifier-v1.0',
     processingTime: 600 + Math.floor(Math.random() * 500),

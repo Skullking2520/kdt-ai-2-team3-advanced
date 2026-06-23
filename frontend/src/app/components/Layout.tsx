@@ -219,12 +219,13 @@ export function Layout() {
     setMobileOpen(false);
   }, [location.pathname]);
 
-  // 어드민 라우트 진입 시 시니어 모드 자동 해제 (admin UI는 senior-mode CSS 무효화)
+  // 어드민 라우트 진입 시점에 시니어 모드 OFF (이후 senior 토글은 자유롭게 작동).
+  // deps는 isAdminRoute만 — senior 토글 → /senior-home navigate 시 race condition 방지.
   useEffect(() => {
-    if (isAdminRoute && seniorMode) {
+    if (isAdminRoute) {
       setSenior(false);
     }
-  }, [isAdminRoute, seniorMode, setSenior]);
+  }, [isAdminRoute]);
 
   const scanPaths = SCAN_ITEMS.map((s) => s.to);
   const isScanActive = scanPaths.includes(location.pathname);

@@ -127,7 +127,7 @@ async function request<T>(path: string, options: RequestOptions = {}): Promise<T
   } catch (e) {
     if (e instanceof ApiException) throw e;
     if ((e as Error).name === 'AbortError') {
-      throw new ApiException('MODEL_TIMEOUT', 'Request timeout');
+      throw new ApiException('MODEL_TIMEOUT', 'AI 서버가 준비중입니다. 잠시 후 다시 시도해주세요.');
     }
     throw new ApiException('NETWORK', (e as Error).message ?? 'Network error');
   } finally {
