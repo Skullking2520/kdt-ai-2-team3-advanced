@@ -30,11 +30,7 @@ from ..utils.preprocessor import (
     kw_pattern,
     money_pattern,
 )
-from .url_candidate_service import (
-    register_model_url_candidates,
-    register_reported_url_candidates,
-)
-from .virustotal_service import fetch_vt_verdict_full
+from .url_candidate_service import register_model_url_candidates
 
 logger = logging.getLogger(__name__)
 
@@ -310,25 +306,11 @@ async def _predict_url(
         )
         result = build_static_pattern_response(url, url_matches)
     else:
-        # 블랙리스트 미등록 신규 URL도 VirusTotal 검증 큐에 등록한다.
-        await register_reported_url_candidates(
-            db, urls=[url], report_type="URL 직접 분석",
-        )
         log = await create_smishing_log(
             db, url, is_smishing=False, detection_type=DetectionType.STATIC_PATTERN,
             input_type=InputType.URL,
         )
         result = build_safe_response(url, 10)
-
-    # VirusTotal 실제 API 호출 — vtVerdict + metaDetails 채움
-    # VT_API_KEY 없거나 실패 시 None으로 두어 프론트의 vt_connection_error 분기 작동
-    vt_payload = await fetch_vt_verdict_full(url)
-    if vt_payload:
-        result["urlDetails"]["vtVerdict"] = vt_payload["vtVerdict"]
-        result["urlDetails"]["metaDetails"] = vt_payload["metaDetails"]
-    else:
-        result["urlDetails"]["vtVerdict"] = None
-        result["urlDetails"]["metaDetails"] = None
 
     result.update({
         "id": str(log.id),
