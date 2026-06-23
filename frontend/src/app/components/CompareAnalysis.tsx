@@ -1,6 +1,8 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { SplitSquareHorizontal, BarChart2, RefreshCw, Lightbulb } from "lucide-react";
+import { api } from "@/lib/api";
+import type { AnalysisResult } from "@/types/api";
 
 const RISK_KW = ["즉시", "긴급", "정지", "동결", "납부", "미납", "경고", "당첨", "소멸", "혐의", "체포", "대출", "클릭", "확인"];
 function analyze(text: string) {
@@ -16,6 +18,16 @@ function analyze(text: string) {
   if (text.length < 30) reasons.push("지나치게 짧은 메시지");
   if (reasons.length === 0) reasons.push("위험 패턴 미감지");
   return { score, level, reasons, keywords: kws };
+}
+
+// 백엔드 분석 응답(/api/predict)을 비교 화면 구조로 변환
+function adapt(resp: AnalysisResult): ReturnType<typeof analyze> {
+  return {
+    score: Math.max(1, Math.min(10, Math.round(resp.riskScore / 10))),
+    level: resp.riskLevel.toUpperCase() as "HIGH" | "MEDIUM" | "LOW",
+    reasons: resp.reasons.map((r) => r.label),
+    keywords: [],
+  };
 }
 
 const LEVEL_COLOR: { [k: string]: { text: string; bg: string; border: string; bar: string } } = {
@@ -41,10 +53,22 @@ export function CompareAnalysis() {
   const [results, setResults] = useState<{ a: ReturnType<typeof analyze>; b: ReturnType<typeof analyze> } | null>(null);
   const [loading, setLoading] = useState(false);
 
-  const handleAnalyze = () => {
+  const handleAnalyze = async () => {
     if (!textA.trim() || !textB.trim()) return;
     setLoading(true);
-    setTimeout(() => { setResults({ a: analyze(textA), b: analyze(textB) }); setLoading(false); }, 900);
+    setResults(null);
+    try {
+      // 두 문자를 백엔드(/api/predict)로 동시 분석
+      const [a, b] = await Promise.all([
+        api.analyze({ type: "sms", content: textA }),
+        api.analyze({ type: "sms", content: textB }),
+      ]);
+      setResults({ a: adapt(a), b: adapt(b) });
+    } catch {
+      setResults(null);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const loadSample = (pair: typeof SAMPLE_PAIRS[0]) => {

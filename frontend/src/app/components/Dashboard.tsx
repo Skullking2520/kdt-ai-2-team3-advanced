@@ -1,60 +1,29 @@
-import { ShieldAlert, ShieldCheck, AlertTriangle, TrendingUp, Activity, Flag, MessageSquare } from "lucide-react";
-import { Card, MetricBig, SectionHeader, FeedItem } from "./ui/Primitives";
+import { useState, useEffect } from "react";
+import { ShieldAlert, ShieldCheck, AlertTriangle, TrendingUp, Activity } from "lucide-react";
+import { Card, MetricBig, SectionHeader } from "./ui/Primitives";
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 
-const weeklyData = [
-  { day: "월", high: 12, medium: 8, low: 32 },
-  { day: "화", high: 19, medium: 14, low: 41 },
-  { day: "수", high: 8, medium: 11, low: 28 },
-  { day: "목", high: 24, medium: 18, low: 53 },
-  { day: "금", high: 31, medium: 22, low: 67 },
-  { day: "토", high: 15, medium: 9, low: 44 },
-  { day: "일", high: 9, medium: 6, low: 38 },
-];
-
-const pieData = [
-  { name: "HIGH", value: 118, color: "#ef4444" },
-  { name: "MEDIUM", value: 88, color: "#f97316" },
-  { name: "LOW", value: 303, color: "#22c55e" },
-];
-
-const categoryData = [
-  { category: "공공기관 사칭", count: 89 },
-  { category: "금융 피싱", count: 73 },
-  { category: "택배 사기", count: 61 },
-  { category: "이벤트/경품", count: 48 },
-  { category: "대출 사기", count: 37 },
-  { category: "기타", count: 27 },
-];
-
-const recentAlerts = [
-  { time: "2분 전", type: "HIGH", text: "【국민건강보험】미납보험료 즉시 납부 요청", category: "공공기관 사칭" },
-  { time: "7분 전", type: "HIGH", text: "[CJ대한통운] 주소불명 반송 예정 확인 요청", category: "택배 사기" },
-  { time: "15분 전", type: "MEDIUM", text: "특별 이벤트 당첨! 링크를 통해 수령하세요", category: "이벤트 사기" },
-  { time: "23분 전", type: "LOW", text: "카카오 인증번호 [394821]", category: "정상" },
-  { time: "31분 전", type: "HIGH", text: "KB국민은행 비정상 접근 감지 즉시 확인 필요", category: "금융 피싱" },
-];
-
-// 신고/피드백 알림 데이터
-const reportStats = [
-  { label: "미처리 신고", value: 7, color: "text-red-400", bg: "bg-red-500/10 border-red-500/20" },
-  { label: "검토 중", value: 3, color: "text-amber-400", bg: "bg-amber-500/10 border-amber-500/20" },
-  { label: "완료 처리", value: 24, color: "text-emerald-400", bg: "bg-emerald-500/10 border-emerald-500/20" },
-];
-const feedbackStats = [
-  { label: "정확해요", value: 89, color: "text-emerald-400" },
-  { label: "틀렸어요", value: 11, color: "text-red-400" },
-];
-
-const statCards = [
-  { label: "오늘 총 분석",     value: 509, sublabel: "+12.4% 전일 대비", icon: Activity,     accent: "cyan"    as const },
-  { label: "HIGH 위험 탐지",  value: 118, sublabel: "전체의 23.2%",      icon: ShieldAlert,  accent: "red"     as const },
-  { label: "MEDIUM 위험",     value: 88,  sublabel: "전체의 17.3%",      icon: AlertTriangle,accent: "amber"   as const },
-  { label: "정상 판정",       value: 303, sublabel: "전체의 59.5%",      icon: ShieldCheck,  accent: "emerald" as const },
-];
+/* ── 백엔드 통계 API 응답 타입 (GET /api/stats/dashboard) ── */
+interface WeeklyPoint {
+  day: string;
+  date: string;
+  high: number;
+  medium: number;
+  low: number;
+}
+interface PieSlice {
+  name: string;
+  value: number;
+  color: string;
+}
+interface DashboardStats {
+  todayTotal: number;
+  today: { high: number; medium: number; low: number };
+  weeklyTrend: WeeklyPoint[];
+}
 
 /* ── Area Chart (Recharts) ─────────────────────────── */
-function CustomAreaChart({ data }: { data: typeof weeklyData }) {
+function CustomAreaChart({ data }: { data: WeeklyPoint[] }) {
   return (
     <ResponsiveContainer width="100%" height={240}>
       <AreaChart data={data} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
@@ -110,11 +79,21 @@ function CustomAreaChart({ data }: { data: typeof weeklyData }) {
 }
 
 /* ── Custom Donut Chart ────────────────────────────── */
-function CustomDonutChart({ data }: { data: typeof pieData }) {
+function CustomDonutChart({ data }: { data: PieSlice[] }) {
   const total = data.reduce((s, d) => s + d.value, 0);
   const cx = 110, cy = 110, ro = 90, ri = 60;
-  let angle = -Math.PI / 2;
 
+  if (total === 0) {
+    return (
+      <svg viewBox="0 0 220 220" className="w-full h-[220px]" preserveAspectRatio="xMidYMid meet">
+        <circle cx={cx} cy={cy} r={(ro + ri) / 2} fill="none" stroke="rgba(255,255,255,0.08)" strokeWidth={ro - ri} />
+        <text x={cx} y={cy - 8} textAnchor="middle" fontSize={24} fill="white" fontWeight="700" fontFamily="system-ui,sans-serif">0</text>
+        <text x={cx} y={cy + 14} textAnchor="middle" fontSize={11} fill="rgba(255,255,255,0.4)" fontFamily="system-ui,sans-serif">건</text>
+      </svg>
+    );
+  }
+
+  let angle = -Math.PI / 2;
   const slices = data.map((d) => {
     const sweep = (d.value / total) * 2 * Math.PI;
     const x1 = cx + ro * Math.cos(angle);
@@ -131,7 +110,7 @@ function CustomDonutChart({ data }: { data: typeof pieData }) {
     return { ...d, path };
   });
 
-return (
+  return (
     <svg viewBox="0 0 220 220" className="w-full h-[220px]" preserveAspectRatio="xMidYMid meet">
       {slices.map((s) => (
         <path key={s.name} d={s.path} fill={s.color} fillOpacity={0.85} />
@@ -142,34 +121,42 @@ return (
   );
 }
 
-/* ── Custom Horizontal Bar Chart ──────────────────── */
-function CustomBarChart({ data }: { data: typeof categoryData }) {
-  const maxVal = Math.max(...data.map((d) => d.count));
-  const barH = 24, gap = 12;
-  const chartH = data.length * (barH + gap);
-  const labelW = 120, barAreaW = 300, numW = 50;
-  const totalW = labelW + barAreaW + numW;
-
-  return (
-    <svg viewBox={`0 0 ${totalW} ${chartH}`} className="w-full" style={{ height: `${Math.max(chartH, 220)}px` }} preserveAspectRatio="xMidYMid meet">
-      {data.map((d, i) => {
-        const y = i * (barH + gap);
-        const bw = (d.count / maxVal) * barAreaW;
-        return (
-          <g key={d.category}>
-            <text x={labelW - 10} y={y + barH / 2 + 5} textAnchor="end" fontSize={12} fill="rgba(255,255,255,0.7)" fontFamily="system-ui,sans-serif" fontWeight="500">{d.category}</text>
-            <rect x={labelW} y={y} width={barAreaW} height={barH} rx={5} fill="rgba(255,255,255,0.06)" />
-            <rect x={labelW} y={y} width={bw} height={barH} rx={5} fill="#3b82f6" fillOpacity={0.85} />
-            <text x={labelW + bw + 8} y={y + barH / 2 + 5} fontSize={12} fill="white" fontFamily="system-ui,sans-serif" fontWeight="600">{d.count}</text>
-          </g>
-        );
-      })}
-    </svg>
-  );
-}
-
 /* ── Dashboard ─────────────────────────────────────── */
 export function Dashboard() {
+  const [stats, setStats] = useState<DashboardStats | null>(null);
+  const [error, setError] = useState(false);
+
+  useEffect(() => {
+    const base = import.meta.env.VITE_API_BASE_URL ?? "";
+    fetch(`${base}/api/stats/dashboard`)
+      .then((r) => {
+        if (!r.ok) throw new Error("stats fetch failed");
+        return r.json();
+      })
+      .then((d: DashboardStats) => setStats(d))
+      .catch(() => setError(true));
+  }, []);
+
+  const today = stats?.today ?? { high: 0, medium: 0, low: 0 };
+  const total = stats?.todayTotal ?? 0;
+  const pct = (n: number) => (total > 0 ? ((n / total) * 100).toFixed(1) : "0.0");
+
+  const statCards = [
+    { label: "오늘 총 분석", value: total, sublabel: "분석 이력 기준", icon: Activity, accent: "cyan" as const },
+    { label: "HIGH 위험 탐지", value: today.high, sublabel: `전체의 ${pct(today.high)}%`, icon: ShieldAlert, accent: "red" as const },
+    { label: "MEDIUM 위험", value: today.medium, sublabel: `전체의 ${pct(today.medium)}%`, icon: AlertTriangle, accent: "amber" as const },
+    { label: "정상 판정", value: today.low, sublabel: `전체의 ${pct(today.low)}%`, icon: ShieldCheck, accent: "emerald" as const },
+  ];
+
+  const pieData: PieSlice[] = [
+    { name: "HIGH", value: today.high, color: "#ef4444" },
+    { name: "MEDIUM", value: today.medium, color: "#f97316" },
+    { name: "LOW", value: today.low, color: "#22c55e" },
+  ];
+
+  const weeklyData = stats?.weeklyTrend ?? [];
+  const todayLabel = new Date().toLocaleDateString("ko-KR", { year: "numeric", month: "2-digit", day: "2-digit" });
+
   return (
     <div className="px-4 sm:px-6 py-8 space-y-6 max-w-7xl mx-auto">
       {/* Header */}
@@ -179,8 +166,14 @@ export function Dashboard() {
           <span className="text-[11px] text-cyan-400 tracking-wider uppercase">실시간 현황</span>
         </div>
         <h1 className="text-white mb-1" style={{ fontWeight: 800, fontSize: "1.9rem", letterSpacing: "-0.02em" }}>대시보드</h1>
-        <p className="text-sm text-white/50">오늘 2026.05.04 기준 탐지 현황입니다.</p>
+        <p className="text-sm text-white/50">{todayLabel} 기준 분석 이력(smishing_logs) 현황입니다.</p>
       </div>
+
+      {error && (
+        <div className="rounded-xl border border-red-500/30 bg-red-500/5 p-4 text-sm text-red-300">
+          통계 데이터를 불러오지 못했습니다. 백엔드 통계 API 연결을 확인해주세요.
+        </div>
+      )}
 
       {/* MetricBig stat cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
@@ -194,45 +187,6 @@ export function Dashboard() {
             accent={card.accent}
           />
         ))}
-      </div>
-
-      {/* 신고/피드백 알림 카드 */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        {/* 신고 알림 */}
-        <Card padding="p-4">
-          <div className="flex items-center justify-between mb-3">
-            <div className="flex items-center gap-2">
-              <Flag size={14} className="text-red-400" />
-              <span className="text-sm text-white/80" style={{ fontWeight: 600 }}>신고 알림</span>
-            </div>
-          </div>
-          <div className="grid grid-cols-3 gap-3">
-            {reportStats.map((s) => (
-              <div key={s.label} className={`rounded-xl p-3 border ${s.bg} text-center`}>
-                <p className={`text-xl ${s.color}`} style={{ fontWeight: 700 }}>{s.value}</p>
-                <p className="text-[10px] text-white/40 mt-0.5">{s.label}</p>
-              </div>
-            ))}
-          </div>
-        </Card>
-
-        {/* 피드백 알림 */}
-        <Card padding="p-4">
-          <div className="flex items-center justify-between mb-3">
-            <div className="flex items-center gap-2">
-              <MessageSquare size={14} className="text-cyan-400" />
-              <span className="text-sm text-white/80" style={{ fontWeight: 600 }}>피드백 분석</span>
-            </div>
-          </div>
-          <div className="grid grid-cols-2 gap-3">
-            {feedbackStats.map((s) => (
-              <div key={s.label} className="rounded-xl p-3 border border-white/10 text-center">
-                <p className={`text-xl ${s.color}`} style={{ fontWeight: 700 }}>{s.value}<span className="text-sm text-white/40">%</span></p>
-                <p className="text-[10px] text-white/40 mt-0.5">{s.label}</p>
-              </div>
-            ))}
-          </div>
-        </Card>
       </div>
 
       {/* Charts row */}
@@ -261,38 +215,6 @@ export function Dashboard() {
                 </div>
                 <span className="text-xs text-white/70">{d.value}건</span>
               </div>
-            ))}
-          </div>
-        </Card>
-      </div>
-
-      {/* Bottom row */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        {/* Category bar chart */}
-        <Card padding="p-5">
-          <div className="flex items-center justify-between mb-1">
-            <SectionHeader title="피싱 유형별 분류" sub="누적 탐지 수" />
-            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-amber-500/10 border border-amber-500/20 text-[10px] text-amber-400" style={{ fontWeight: 600 }}>
-              <AlertTriangle size={10} />
-              데모용 가상 데이터
-            </span>
-          </div>
-          <p className="text-[11px] text-white/40 mb-3">백엔드 통계 API 미연동 · 발표 시연용 mock 데이터입니다</p>
-          <CustomBarChart data={categoryData} />
-        </Card>
-
-        {/* Recent alerts — FeedItem 사용 */}
-        <Card padding="p-5">
-          <SectionHeader title="최근 탐지 알림" sub="실시간 업데이트" />
-          <div className="space-y-2">
-            {recentAlerts.map((alert, i) => (
-              <FeedItem
-                key={i}
-                level={alert.type as "HIGH" | "MEDIUM" | "LOW"}
-                sender={alert.category}
-                preview={alert.text}
-                time={alert.time}
-              />
             ))}
           </div>
         </Card>

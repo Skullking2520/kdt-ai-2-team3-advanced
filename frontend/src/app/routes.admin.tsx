@@ -48,11 +48,9 @@ function adminGuard() {
   return null;
 }
 
-export const adminRoutes: RouteObject[] = import.meta.env.DEV
-  ? [
-      { path: "admin", Component: AdminLogin },
-      { path: "dashboard", Component: Dashboard },
-      { path: "compare", Component: CompareAnalysis, loader: adminGuard },
-      { path: "health", Component: SystemHealth, loader: adminGuard },
-    ]
-  : [];
+export const adminRoutes: RouteObject[] = [
+  { path: "admin", Component: AdminLogin },
+  { path: "dashboard", Component: Dashboard, loader: adminGuard },
+  { path: "compare", Component: CompareAnalysis, loader: adminGuard },
+  { path: "health", Component: SystemHealth, loader: adminGuard },
+];
