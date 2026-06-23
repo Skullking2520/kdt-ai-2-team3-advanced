@@ -41,11 +41,12 @@ jobs:
         with:
           node-version: 20
           cache: "npm"
-          cache-dependency-path: "./frontend/package-lock.json"
+          cache-dependency-path: "./package-lock.json"
 
-      - name: Install Frontend Dependencies
-        working-directory: ./frontend
-        run: npm ci
+      # npm workspace 구조이므로 의존성은 루트에서 한 번에 설치한다.
+      # (frontend 단독 설치 시 rollup optional dependency가 hoisting 과정에서 누락됨)
+      - name: Install Dependencies (workspace root)
+        run: npm install
 
       - name: Build Frontend
         working-directory: ./frontend

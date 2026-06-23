@@ -107,7 +107,6 @@ def build_static_pattern_response(
         "smishingType": _classify_smishing_type(content),
         "reasons": reasons,
         "actionGuide": RISK_ACTION_GUIDE,
-        "similarCases": [],
         "governmentCriteria": _build_government_criteria(content, {"urls": url_values}),
         "extractedUrl": extracted_url,
         "urlDetails": {
@@ -136,7 +135,6 @@ def build_safe_response(content: str, score: int) -> dict:
             },
         ],
         "actionGuide": SAFE_ACTION_GUIDE,
-        "similarCases": [],
         "governmentCriteria": _build_government_criteria(content, {"urls": []}),
         "extractedUrl": None,
         "urlDetails": {
@@ -195,7 +193,6 @@ def build_model_smishing_response(
         "smishingType": _classify_smishing_type(content),
         "reasons": reasons,
         "actionGuide": RISK_ACTION_GUIDE,
-        "similarCases": [],
         "governmentCriteria": _build_government_criteria(content, extracted),
         "extractedUrl": extracted_url,
     }
