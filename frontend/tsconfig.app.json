@@ -23,7 +23,6 @@
     "noUncheckedSideEffectImports": true,
 
     /* Path alias (vite.config.ts 와 일치) */
-    "baseUrl": ".",
     "paths": {
       "@/*": ["./src/*"]
     },

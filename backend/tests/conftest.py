@@ -21,5 +21,15 @@ def client(monkeypatch):
         "create_db_tables",
         AsyncMock(),
     )
+    monkeypatch.setattr(
+        backend_main,
+        "_warmup_ocr",
+        AsyncMock(),
+    )
+    monkeypatch.setattr(
+        backend_main,
+        "_start_vt_worker",
+        AsyncMock(),
+    )
     with TestClient(backend_main.app) as c:
         yield c
