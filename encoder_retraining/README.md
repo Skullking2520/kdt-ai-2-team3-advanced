@@ -4,12 +4,12 @@
 
 이 파이프라인은 전처리/Cleanlab 담당 영역에서 생성한 Cleanlab audit 산출물
 또는 prepared dataset을 받아 Encoder를 재학습하고, 기존 운영 모델과 후보 모델을
-같은 test set으로 비교한다. Cleanlab 실행 자체는 PR #24 담당 영역에서 수행하며,
+같은 test set으로 비교한다. Cleanlab 실행 자체는 `datatest/cleanlab/` 영역에서 수행하며,
 이 폴더는 그 결과를 재학습 가능한 입력 형식으로 변환하고 학습/평가/승격 검토를
 담당한다.
 
 ```text
-PR #24 Cleanlab audit 산출물
+Cleanlab audit 산출물
         ↓
 prepare_from_cleanlab_audit.py
         ↓
@@ -27,8 +27,8 @@ promotion_manifest.json
 ```
 
 전처리/Cleanlab 담당 영역에서 S3에 `cleanlab-audit` 산출물을 먼저 만들면
-`prepare_from_cleanlab_audit.py`가 `cleaned_dataset.jsonl`을 PR23 workflow가
-기대하는 prepared dataset 형식으로 변환한다.
+`prepare_from_cleanlab_audit.py`가 `cleaned_dataset.jsonl`을 주간 재학습 workflow가
+사용하는 prepared dataset 형식으로 변환한다.
 
 ```text
 Cleanlab audit archive
@@ -89,7 +89,7 @@ uv run --group encoder python \
 
 ## Cleanlab Audit Shortcut
 
-PR #24처럼 Cleanlab 실행 결과가 다음 파일을 포함하는 archive로 전달되는 경우,
+Cleanlab 실행 결과가 다음 파일을 포함하는 archive 또는 S3 prefix로 전달되는 경우,
 prepared dataset을 수동으로 만들지 않고 변환 스크립트를 먼저 실행한다.
 
 ```text
@@ -232,12 +232,12 @@ encoder-v2/
 
 ## 3. External Cleanlab Output
 
-현재 라벨 품질 점검과 Cleanlab 실행은 PR #24 담당 영역에서 수행한다.
-이 PR의 재학습 파이프라인은 `cleaned_dataset.jsonl`이 포함된 Cleanlab audit
+현재 라벨 품질 점검과 Cleanlab 실행은 `datatest/cleanlab/` 영역에서 수행한다.
+이 재학습 파이프라인은 `cleaned_dataset.jsonl`이 포함된 Cleanlab audit
 산출물 또는 이미 split이 끝난 prepared dataset을 입력으로 받는다.
 
-따라서 이 폴더 안에서 Cleanlab을 다시 실행하지 않는다. 필요한 경우 PR #24에서
-생성한 아래 산출물을 S3 prefix 또는 archive로 전달한다.
+따라서 이 폴더 안에서 Cleanlab을 다시 실행하지 않는다. 필요한 경우 아래
+산출물을 S3 prefix 또는 archive로 전달한다.
 
 ```text
 cleanlab-audit/

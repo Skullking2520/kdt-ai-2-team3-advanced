@@ -10,7 +10,6 @@ SMS 피싱 탐지 데이터셋에서 잘못 레이블된 샘플을 자동 탐지
 datatest/cleanlab/
 ├── run_cleanlab_label_audit.py   # 노이즈 탐지 실행
 ├── generate_report.py            # HTML 리포트 생성
-├── prepare_dataset.py            # 재학습용 데이터셋 변환
 ├── explain.md                    # 이 문서
 └── results/
     └── stage3/                   # 최종 결과 (91K, 5-fold)
@@ -110,9 +109,12 @@ $PYTHON -m datatest.cleanlab.run_cleanlab_label_audit \
 $PYTHON -m datatest.cleanlab.generate_report --results-dir datatest/cleanlab/results/stage3
 
 # 재학습용 데이터셋 변환
-$PYTHON -m datatest.cleanlab.prepare_dataset \
-    --cleaned-data datatest/cleanlab/results/stage3/cleaned_dataset.jsonl \
-    --dataset-version encoder-v4
+uv run --group encoder python \
+    encoder_retraining/pipeline/prepare_from_cleanlab_audit.py \
+    --cleaned-data-path datatest/cleanlab/results/stage3/cleaned_dataset.jsonl \
+    --audit-dir datatest/cleanlab/results/stage3 \
+    --dataset-version encoder-v4 \
+    --output-dir encoder_retraining/data/prepared/encoder-v4
 ```
 
 ---
@@ -125,7 +127,7 @@ $PYTHON -m datatest.cleanlab.prepare_dataset \
 | `pred_probs.npy` | K-fold 결과 캐시. `--use-cached-probs`로 재사용 가능 |
 | `label_audit_report.csv` | 전체 91K + 노이즈 여부 + 품질점수. 수동 검토용 |
 | `suspected_noisy_labels.csv` | 노이즈 의심 샘플만, 품질점수 낮은 순. 레이블 수정 목록 |
-| `cleaned_dataset.jsonl` | 노이즈 제거 데이터. `prepare_dataset.py` 입력 |
+| `cleaned_dataset.jsonl` | 노이즈 제거 데이터. 재학습 prepared dataset 변환의 입력 |
 | `audit_log.json` | 실행 파라미터 + 결과 요약. S3 자동 업로드 |
 | `report.html` | 팀원 공유용. 브라우저에서 바로 열림 |
 
@@ -133,7 +135,7 @@ $PYTHON -m datatest.cleanlab.prepare_dataset \
 
 ## 재학습용 데이터셋 스키마
 
-`prepare_dataset.py`가 `cleaned_dataset.jsonl` → `encoder_retraining/data/prepared/<version>/` 변환.
+`encoder_retraining/pipeline/prepare_from_cleanlab_audit.py`가 `cleaned_dataset.jsonl`을 `encoder_retraining/data/prepared/<version>/`으로 변환한다.
 
 ```
 encoder-v4/
@@ -147,7 +149,12 @@ split: 80/10/10 stratified. 레이블 비율 유지.
 
 버전 업 시:
 ```bash
-$PYTHON -m datatest.cleanlab.prepare_dataset --dataset-version encoder-v5
+uv run --group encoder python \
+    encoder_retraining/pipeline/prepare_from_cleanlab_audit.py \
+    --cleaned-data-path <cleanlab-audit>/cleaned_dataset.jsonl \
+    --audit-dir <cleanlab-audit> \
+    --dataset-version encoder-v5 \
+    --output-dir encoder_retraining/data/prepared/encoder-v5
 ```
 
 ---
@@ -171,7 +178,7 @@ Stage 3 노이즈 1,608개:
 
 완료 시 자동 업로드:
 ```
-s3://smishing-dev-newbies-2026/cleanlab-audit/{run_name}/{timestamp}/
+s3://<bucket>/cleanlab-audit/{run_name}/{timestamp}/
   ├── pred_probs.npy
   ├── label_audit_report.csv
   ├── suspected_noisy_labels.csv
@@ -180,7 +187,7 @@ s3://smishing-dev-newbies-2026/cleanlab-audit/{run_name}/{timestamp}/
 ```
 
 ```bash
-aws s3 ls s3://smishing-dev-newbies-2026/cleanlab-audit/ --recursive
+aws s3 ls s3://<bucket>/cleanlab-audit/ --recursive
 ```
 
 ---

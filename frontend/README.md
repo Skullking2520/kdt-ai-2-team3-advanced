@@ -15,7 +15,7 @@
 | **프레임워크** | React 18 |
 | **스타일** | Tailwind CSS 4 (유틸리티 클래스) |
 | **UI 키트** | Radix UI (shadcn-style) + Lucide Icons |
-| **차트** | Recharts 2 (Dashboard) |
+| **차트** | Recharts 2 (개발용 비교 분석 화면) |
 | **라우팅** | React Router 7 |
 | **HTTP** | Native `fetch` (axios 없음) |
 | **상태** | useState/useEffect (전역은 Context: `AdminContext`, `SeniorContext`) |
@@ -28,7 +28,7 @@
 
 ```bash
 npm install
-cp .env.example .env       # 처음 한 번만
+cp .env.example .env.local # 처음 한 번만, 로컬 값은 Git에 커밋하지 않음
 npm run dev               # → http://localhost:5173
 ```
 
@@ -42,7 +42,7 @@ npm run dev               # → http://localhost:5173
 
 ##  환경변수
 
-`.env` 파일에 정의 (`frontend/.env`):
+`.env.local` 파일에 정의 (`frontend/.env.local`):
 
 | 변수 | 기본값 | 설명 |
 |---|---|---|
@@ -51,7 +51,7 @@ npm run dev               # → http://localhost:5173
 | `VITE_API_TIMEOUT` | `10000` | HTTP 타임아웃 (ms) |
 | `VITE_MOCK_DELAY_MS` | `400` | Mock 응답 지연 (발표 데모용) |
 | `VITE_DEBUG` | `true` | 디버그 로그 |
-| `VITE_ADMIN_PASSWORD` | `newbiz2026` | 어드민 GNB 로그인 (학원 데모용 — 운영 시 강력한 랜덤 값으로 교체) |
+| `VITE_ADMIN_PASSWORD` | 없음 | 개발용 어드민 화면 잠금값. `VITE_` 값은 브라우저에 노출되므로 운영 인증 수단으로 사용하지 않음 |
 
 ---
 
@@ -63,10 +63,10 @@ npm run dev               # → http://localhost:5173
 │   ├── App.tsx
 │   ├── routes.tsx        router 정의 (Layout + catch-all NotFound)
 │   ├── routes.public.tsx  일반 사용자 라우트 (11개, 실서비스 빌드 포함)
-│   ├── routes.admin.tsx   어드민 라우트 (4개, DEV 빌드에서만)
+│   ├── routes.admin.tsx   개발용 어드민 라우트 (2개, DEV 빌드에서만)
 │   ├── components/        페이지 컴포넌트 (18개)
 │   │   ├── ui/            공통 UI 프리미티브
-│   │   ├── result/        결과 카드 (5종)
+│   │   ├── result/        결과 카드 (4종)
 │   │   └── senior/        시니어 모드 전용 (SeniorBottomBar)
 │   └── context/
 │       ├── AdminContext.tsx
@@ -75,7 +75,7 @@ npm run dev               # → http://localhost:5173
 ├── lib/                  ← 백엔드 연동 레이어
 │   ├── api.ts            API 클라이언트
 │   ├── env.ts            환경변수
-│   ├── smsAnalysis.ts    클라이언트 사이드 분석 (Mock, API 마이그레이션 예정)
+│   ├── smsAnalysis.ts    API 장애 또는 mock 모드에서 사용하는 간이 분석 보조 로직
 │   ├── imageFiles.ts     이미지 업로드 유틸 (테스트 포함)
 │   └── mock/             VITE_USE_MOCK=true일 때 응답
 │
@@ -98,7 +98,7 @@ npm run dev               # → http://localhost:5173
 | 시니어 모드 토글/메뉴 | `src/app/components/Layout.tsx` + `SeniorContext` |
 | API 호출 함수 | `src/lib/api.ts` |
 | API 타입/스키마 | `src/types/api.ts` |
-| 환경변수 | `src/lib/env.ts` + `.env` |
+| 환경변수 | `src/lib/env.ts` + `.env.local` |
 | 공통 UI (버튼/카드 등) | `src/app/components/ui/Primitives.tsx` |
 | 결과 카드 | `src/app/components/result/` |
 | 에러 UI | `src/app/components/ErrorState.tsx` |
@@ -110,18 +110,16 @@ npm run dev               # → http://localhost:5173
 ```
 [페이지 컴포넌트]
     └─ await api.analyze({...})         ← src/lib/api.ts
-         └─ fetch('/api/analyze', ...)  ← VITE_API_BASE_URL 사용
+         └─ fetch('/api/predict', ...)  ← VITE_API_BASE_URL 사용
               └─ 백엔드 응답
                    └─ src/types/api.ts 의 AnalysisResult 로 파싱
 ```
 
-**현재 상태**: 백엔드 연동 진행 중.
-현재는 Mock 응답을 기본 사용하며,
-일부 페이지는 API 마이그레이션이 진행 중이다.
+**현재 상태**: `VITE_USE_MOCK=false`이면 문자·URL·이미지 OCR·신고 요청은 백엔드 API를 호출한다.
+개발 환경 기본값은 mock이며, 일부 화면은 API 장애 시 간이 분석 결과를 표시할 수 있다.
 
-**연동 시**: `.env` 에서 `VITE_USE_MOCK=false`, `VITE_API_BASE_URL=...` 설정.
-각 페이지의 API 마이그레이션 완료 시
-실 백엔드 호출이 동작한다.
+**연동 시**: `.env.local`에서 `VITE_USE_MOCK=false`, `VITE_API_BASE_URL=...` 설정.
+실제 모델·OCR 연결 확인에는 브라우저 Network 탭 또는 백엔드 로그를 함께 확인한다.
 
 ---
 
@@ -207,7 +205,7 @@ const result = await api.myEndpoint({ foo: 'hello' });
 
 | 증상 | 확인 |
 |---|---|
-| API 호출 안 됨 | `.env` 의 `VITE_USE_MOCK` / `VITE_API_BASE_URL` 확인. `VITE_DEBUG=true` 켜면 로그 출력 |
+| API 호출 안 됨 | `.env.local`의 `VITE_USE_MOCK` / `VITE_API_BASE_URL` 확인. `VITE_DEBUG=true` 켜면 로그 출력 |
 | 타입 에러 | `npm run typecheck` |
 | 린트 에러 | `npm run lint` (수정: `npm run lint:fix`) |
 | 빌드 실패 | `node_modules` 삭제 후 `npm install` 재시도 |
@@ -227,7 +225,7 @@ const result = await api.myEndpoint({ foo: 'hello' });
 - [ ] ESLint 에러 0건 (`npm run lint`)
 - [ ] 빌드 성공 (`npm run build`)
 - [ ] 테스트 통과 (`npm run test`)
-- [ ] `.env` 파일 커밋 안 됨
+- [ ] `.env.local` 파일 커밋 안 됨
 - [ ] console.log 디버그 코드 제거
 - [ ] 다크모드 / 시니어 큰글씨 모드 깨지지 않음
 - [ ] 모바일 (375px / 360px 폭) 깨지지 않음
@@ -237,24 +235,23 @@ const result = await api.myEndpoint({ foo: 'hello' });
 
 ---
 
-## 어드민 모드 (발표용 데모)
+## 어드민 모드 (개발용)
 
-`/admin` 경로에서 어드민 인증 후 운영 도구 사용 가능:
+`/admin` 경로에서 개발용 비교 도구에 접근할 수 있습니다.
 
 ```bash
-# .env의 VITE_ADMIN_PASSWORD 확인
-# 기본값: newbiz2026 (학원 데모용)
+# frontend/.env.local에 VITE_ADMIN_PASSWORD를 설정
+# 실제 비밀번호나 운영 인증 정보는 넣지 않음
 ```
 
-인증 후 `localStorage["nb_admin_auth"] = "true"` 저장. 로그아웃 또는 `isAdmin` 컨텍스트의 `logout()` 함수로 해제.
+인증 후 `localStorage["nb_admin_auth"] = "true"`를 저장합니다. 이 기능은 `import.meta.env.DEV`일 때만 라우터에 포함되며, 프로덕션 인증 수단이 아닙니다.
 
-운영 도구 (4개 라우트, GNB 노출 3개 — 모두 `import.meta.env.DEV` 가드로 DEV 빌드에서만 활성화):
-- **어드민 로그인** (`/admin`) — AdminLogin. 로그인 후 대시보드로 자동 이동
-- **대시보드** (`/dashboard`) — Recharts 차트, 신고/피드백 카드
-- **비교 분석** (`/compare`) — CompareAnalysis (다중 분석 결과 비교)
-- **헬스 체크** (`/health`) — SystemHealth (서버·API 상태 모니터링)
+개발용 라우트는 다음 두 개입니다.
 
-GNB 노출: 대시보드 / 비교 분석 / 헬스 체크 (3개). 어드민 로그아웃 시 GNB에서 자동 숨김 처리.
+- **어드민 로그인** (`/admin`) — AdminLogin
+- **비교 분석** (`/compare`) — CompareAnalysis
+
+운영 대시보드와 서버 헬스 화면은 mock 데이터 의존성을 줄이기 위해 제거되었습니다.
 
 ## 시니어 모드
 

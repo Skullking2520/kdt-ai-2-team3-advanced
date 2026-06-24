@@ -96,8 +96,9 @@ curl -X POST http://127.0.0.1:8080/api/v1/graph/invoke \
 - 운영 단계에서는 라우터 출력이 JSON이 아닌 키워드 문자열이라 파싱은 쉽지만 취약할 수 있다. 이후 `with_structured_output` 또는 enum parser로 바꾸는 것을 권장한다.
 - Ollama 모델명은 `OLLAMA_MODEL_NAME` 환경변수로 통일했다. 로컬에서 실행 중인 모델명이 다르면 `.env`에서 이 값만 맞추면 된다.
 
-## Notes
+## 서비스 연결 범위
 
 - 대용량 모델 파일과 dataset은 Git에 올리지 않는다.
-- 실제 서비스에서 Hugging Face Endpoint를 호출하는 wrapper는 `deploy_wrapper/`에서 관리한다.
-- `ai_service/`는 학습, 평가, 실험 이력을 정리하는 모델링 담당 영역으로 둔다.
+- `ai_service/`는 Encoder/Decoder 실험, LangGraph, RAG의 로컬 검증을 담당한다.
+- 운영용 LLM/RAG 배포 코드는 `ai_service_deploy/`에 있으며, backend는 `DECODER_ENDPOINT_URL`로 해당 서비스를 호출한다.
+- Encoder Endpoint 호출과 모델 입력 전처리는 backend의 예측 서비스가 담당한다.

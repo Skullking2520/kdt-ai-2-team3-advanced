@@ -1,5 +1,8 @@
 # Smishing 테스트 환경 셋업
 
+> 이 폴더는 데이터 저장소와 벡터 검색을 검증한 실험 환경이다. 현재 서비스 실행과
+> Encoder 재학습의 기준은 각각 `backend/README.md`, `encoder_retraining/README.md`다.
+
 ChromaDB + ko-sroberta 임베딩 동작을 확인하기 위한 최소 테스트 환경.
 스미싱 탐지 파이프라인의 벡터 검색 부분을 검증한다.
 
@@ -28,7 +31,7 @@ curl -LsSf https://astral.sh/uv/install.sh | sh
 
 ```bash
 # 이 폴더로 이동
-cd smishing-test-setup
+cd datatest/test-code
 
 # Python 버전 고정 (선택)
 uv python pin 3.11
@@ -46,7 +49,7 @@ uv run python test_chroma.py
 ## 2. pip로 시작하기 (uv 안 쓸 때)
 
 ```bash
-cd smishing-test-setup
+cd datatest/test-code
 
 # 가상환경 생성
 python -m venv .venv
@@ -91,7 +94,7 @@ python test_chroma.py
 ## 4. 실행 후 생기는 것
 
 ```
-smishing-test-setup/
+datatest/test-code/
 ├── chroma_db/             # ChromaDB가 자동 생성 (DB 본체)
 │   ├── chroma.sqlite3
 │   └── ...

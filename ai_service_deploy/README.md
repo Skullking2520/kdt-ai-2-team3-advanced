@@ -1,6 +1,11 @@
-# AI Service Deploy (Modal)
+# AI Service Deploy
 
-Modal을 사용한 `ai_service` 서버리스 배포 가이드
+`ai_service_deploy/`는 `ai_service/`의 LLM·RAG 코드를 Modal에 배포하기 위한
+실험 및 배포 코드다. backend는 이 서비스의 주소를 `DECODER_ENDPOINT_URL`로 받아
+설명 생성 요청을 보낸다.
+
+> 이 문서는 Modal 배포 방식을 설명한다. 실제 Endpoint 주소와 인증 정보는 문서에
+> 적지 않고 배포 Secret 또는 backend 환경변수로 관리한다.
 
 ## Modal 소개
 
