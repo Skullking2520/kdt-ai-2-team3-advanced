@@ -8,4 +8,5 @@ from .report import router as report
 from .root import router as root
 from .sender import router as sender
 from .share import router as share
+from .stats import router as stats
 from .url_candidates import router as url_candidates

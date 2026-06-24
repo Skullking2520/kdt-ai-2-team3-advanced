@@ -56,6 +56,7 @@ jobs:
           VITE_API_BASE_URL: https://smishing-detect-kdt2.cloud
           VITE_API_TIMEOUT: 10000
           VITE_DEBUG: false
+          VITE_ADMIN_PASSWORD: ${{ secrets.VITE_ADMIN_PASSWORD }}
 
       # 5. EC2에 프론트엔드 빌드 파일 전송
       - name: Copy Frontend to EC2
